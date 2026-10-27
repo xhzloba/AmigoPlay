@@ -104,6 +104,8 @@ private const val NeighborShift = 0.5f
 private const val DotWindow = 5
 private val ReflectionHeight = 104.dp
 private val CaptionLift = 48.dp
+private val LogoNudge = 20.dp
+private val MetaNudge = 12.dp
 
 private data class PosterPalette(val primary: Color, val secondary: Color)
 
@@ -464,14 +466,15 @@ private fun MovieCaption(movie: Movie?) {
             contentAlignment = Alignment.Center,
         ) {
             if (movie != null) {
-                LogoOrTitle(movie)
+                LogoOrTitle(movie, Modifier.offset(y = -LogoNudge))
             }
         }
         Spacer(Modifier.height(8.dp))
         Box(
             modifier = Modifier
                 .height(22.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .offset(y = -MetaNudge),
             contentAlignment = Alignment.Center,
         ) {
             if (movie != null) {
@@ -513,7 +516,7 @@ private fun MovieCaption(movie: Movie?) {
 }
 
 @Composable
-private fun LogoOrTitle(movie: Movie) {
+private fun LogoOrTitle(movie: Movie, modifier: Modifier = Modifier) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     var logoFailed by remember(movie.id, movie.logoUrl) {
         mutableStateOf(movie.logoUrl.isNullOrBlank())
@@ -525,7 +528,7 @@ private fun LogoOrTitle(movie: Movie) {
             contentScale = ContentScale.Fit,
             alignment = Alignment.Center,
             onError = { logoFailed = true },
-            modifier = Modifier
+            modifier = modifier
                 .height(52.dp)
                 .width(220.dp),
         )
@@ -540,6 +543,7 @@ private fun LogoOrTitle(movie: Movie) {
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = modifier,
         )
     }
 }
@@ -584,6 +588,7 @@ internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
         ) {
             Box(
                 modifier = Modifier
+                    .offset(y = -LogoNudge)
                     .width(220.dp)
                     .height(52.dp)
                     .clip(RoundedCornerShape(8.dp))
@@ -593,6 +598,7 @@ internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(8.dp))
         Box(
             modifier = Modifier
+                .offset(y = -MetaNudge)
                 .width(64.dp)
                 .height(20.dp)
                 .clip(RoundedCornerShape(6.dp))
