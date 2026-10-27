@@ -2,9 +2,11 @@ package com.example.movie.presentation.settings
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +41,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -145,6 +149,17 @@ private fun AboutPage(modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState())
             .padding(bottom = 96.dp),
     ) {
+        Image(
+            painter = painterResource(R.drawable.amigoplay_logo),
+            contentDescription = "AmigoPlay",
+            modifier = Modifier
+                .padding(horizontal = 22.dp)
+                .height(36.dp)
+                .aspectRatio(754f / 186f, matchHeightConstraintsFirst = true),
+            alignment = Alignment.CenterStart,
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.settings_version),
             modifier = Modifier.padding(horizontal = 22.dp),
