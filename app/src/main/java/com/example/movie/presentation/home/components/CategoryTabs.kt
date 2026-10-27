@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import com.example.movie.R
 import com.example.movie.domain.model.Shelf
+import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.PlayBlue
@@ -77,6 +78,7 @@ fun CategoryTabs(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+    HapticOnChange(Unit) { selectedId }
     LaunchedEffect(selectedId, shelves) {
         val index = shelves.indexOfFirst { it.id == selectedId }
         if (index < 0) return@LaunchedEffect
