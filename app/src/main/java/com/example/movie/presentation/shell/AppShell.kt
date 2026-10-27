@@ -49,10 +49,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,16 +77,17 @@ private val BarShape = RoundedCornerShape(32.dp)
 private val PillShape = RoundedCornerShape(26.dp)
 private val SelectedWeight = 2.2f
 private val IdleWeight = 1f
+private val DragPill = 40.dp
 private val Move = spring<Float>(
     dampingRatio = 1f,
     stiffness = 380f,
 )
 
-private enum class AppTab(@StringRes val label: Int) {
-    Home(R.string.nav_home),
-    Catalog(R.string.nav_catalog),
-    Favorites(R.string.nav_favorites),
-    Settings(R.string.nav_settings),
+private enum class AppTab(@StringRes val label: Int, val color: Color) {
+    Home(R.string.nav_home, Color(0xFF3B6EF5)),
+    Catalog(R.string.nav_catalog, Color(0xFF14A36A)),
+    Favorites(R.string.nav_favorites, Color(0xFFE23B5A)),
+    Settings(R.string.nav_settings, Color(0xFFD4920A)),
     ;
 
     fun icon(selected: Boolean): ImageVector = when (this) {
@@ -98,20 +105,28 @@ fun AppShell(onMovieClick: (String) -> Unit) {
     BackHandler(enabled = tab != AppTab.Home) {
         tabName = AppTab.Home.name
     }
+    val hazeState = rememberHazeState()
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(CinemaBlack),
     ) {
-        when (tab) {
-            AppTab.Home -> HomeRoute(onMovieClick = onMovieClick)
-            AppTab.Catalog -> SectionScreen(title = stringResource(R.string.nav_catalog))
-            AppTab.Favorites -> SectionScreen(title = stringResource(R.string.nav_favorites))
-            AppTab.Settings -> SettingsRoute()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeSource(state = hazeState),
+        ) {
+            when (tab) {
+                AppTab.Home -> HomeRoute(onMovieClick = onMovieClick)
+                AppTab.Catalog -> SectionScreen(title = stringResource(R.string.nav_catalog))
+                AppTab.Favorites -> SectionScreen(title = stringResource(R.string.nav_favorites))
+                AppTab.Settings -> SettingsRoute()
+            }
         }
         AppBottomBar(
             selected = tab,
             onSelect = { tabName = it.name },
+            hazeState = hazeState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
@@ -150,10 +165,13 @@ private fun SectionScreen(title: String) {
     }
 }
 
+private val BarGlass = Color(0xFF1C1C1E)
+
 @Composable
 private fun AppBottomBar(
     selected: AppTab,
     onSelect: (AppTab) -> Unit,
+    hazeState: dev.chrisbanes.haze.HazeState,
     modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
@@ -164,6 +182,8 @@ private fun AppBottomBar(
     val tickNow by rememberUpdatedState(tick)
     var dragging by remember { mutableStateOf(false) }
     var fingerLeft by remember { mutableStateOf<Float?>(null) }
+    var fingerX by remember { mutableStateOf<Float?>(null) }
+    var hoverIndex by remember { mutableStateOf(-1) }
     val pillLeft = remember { Animatable(0f) }
     val placed = remember { mutableStateOf(false) }
     Box(
@@ -173,7 +193,15 @@ private fun AppBottomBar(
             .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
             .height(58.dp)
             .clip(BarShape)
-            .background(Color(0xFF1C1C1E))
+            .hazeEffect(
+                state = hazeState,
+                style = HazeDefaults.style(
+                    backgroundColor = BarGlass,
+                    tint = HazeTint(BarGlass.copy(alpha = 0.78f)),
+                    blurRadius = 20.dp,
+                    noiseFactor = 0f,
+                ),
+            )
             .border(0.5.dp, Color.White.copy(alpha = 0.10f), BarShape),
     ) {
         BoxWithConstraints(
@@ -192,7 +220,7 @@ private fun AppBottomBar(
                         val grab = down.position.x - visualLeft
                         var moved = false
                         var detent = currentIndex
-                        while (true) {
+                        try { while (true) {
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) {
@@ -231,15 +259,20 @@ private fun AppBottomBar(
                             val desired = change.position.x - grab
                             val maxLeft = (track - pillPx).coerceAtLeast(0f)
                             fingerLeft = desired.coerceIn(0f, maxLeft)
+                            fingerX = change.position.x
                             val nearest = ((fingerLeft ?: visualLeft) / idlePx)
                                 .roundToInt()
                                 .coerceIn(0, tabs.lastIndex)
                             if (nearest != detent) {
                                 detent = nearest
+                                hoverIndex = nearest
                                 tickNow?.invoke()
                             }
                         }
-                        if (moved) dragging = false
+                        } finally {
+                            hoverIndex = -1
+                            if (moved) dragging = false
+                        }
                     }
                 },
         ) {
@@ -248,11 +281,36 @@ private fun AppBottomBar(
             val idleWidth = maxWidth * (IdleWeight / total)
             val density = LocalDensity.current
             val idlePx = with(density) { idleWidth.toPx() }
+            val fullPx = with(density) { pillWidth.toPx() }
+            val trackPx = with(density) { maxWidth.toPx() }
+            val widthFraction = remember { Animatable(1f) }
+            val arrived = hoverIndex in tabs.indices
+            LaunchedEffect(dragging, arrived) {
+                val compact = dragging && !arrived
+                widthFraction.animateTo(
+                    if (compact) 0f else 1f,
+                    spring(dampingRatio = 1f, stiffness = 380f),
+                )
+            }
+            val shownWidth = lerp(DragPill.coerceAtMost(pillWidth), pillWidth, widthFraction.value)
+            val shownPx = with(density) { shownWidth.toPx() }
             LaunchedEffect(index, maxWidth, dragging) {
                 if (dragging) return@LaunchedEffect
-                fingerLeft?.let { from ->
-                    pillLeft.snapTo(from)
+                val from = fingerLeft
+                val x = fingerX
+                if (from != null && x != null && fullPx > 0f) {
+                    val grab = (x - from).coerceIn(0f, fullPx)
+                    val visual = x - shownPx * (grab / fullPx)
+                    val parked = visual - (fullPx - shownPx) / 2f
+                    val maxLeft = (trackPx - fullPx).coerceAtLeast(0f)
+                    pillLeft.snapTo(parked.coerceIn(0f, maxLeft))
                     fingerLeft = null
+                    fingerX = null
+                } else {
+                    from?.let {
+                        pillLeft.snapTo(it)
+                        fingerLeft = null
+                    }
                 }
                 val target = index * idlePx
                 if (!placed.value) {
@@ -262,19 +320,28 @@ private fun AppBottomBar(
                 }
                 pillLeft.animateTo(target, spring(dampingRatio = 1f, stiffness = 380f))
             }
+            val litIndex = if (hoverIndex in tabs.indices) hoverIndex else index
+            val heldX = fingerX
+            val heldLeft = fingerLeft
+            val visualLeft = if (heldX != null && heldLeft != null && fullPx > 0f) {
+                val grab = (heldX - heldLeft).coerceIn(0f, fullPx)
+                heldX - shownPx * (grab / fullPx)
+            } else {
+                pillLeft.value + (fullPx - shownPx) / 2f
+            }.coerceIn(0f, (trackPx - shownPx).coerceAtLeast(0f))
             Box(
                 modifier = Modifier
-                    .offset { IntOffset((fingerLeft ?: pillLeft.value).roundToInt(), 0) }
-                    .width(pillWidth)
+                    .offset { IntOffset(visualLeft.roundToInt(), 0) }
+                    .width(shownWidth)
                     .fillMaxHeight()
                     .clip(PillShape)
-                    .background(Color.White.copy(alpha = 0.12f)),
+                    .background(tabs[litIndex].color.copy(alpha = 0.92f)),
             )
             Row(modifier = Modifier.fillMaxSize()) {
-                tabs.forEach { tab ->
-                    val on = tab == selected
+                tabs.forEachIndexed { i, tab ->
+                    val lit = i == litIndex
                     val weight by animateFloatAsState(
-                        targetValue = if (on) SelectedWeight else IdleWeight,
+                        targetValue = if (lit) SelectedWeight else IdleWeight,
                         animationSpec = Move,
                         label = tab.name,
                     )
@@ -286,7 +353,7 @@ private fun AppBottomBar(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TabFace(tab = tab, selected = on)
+                        TabFace(tab = tab, selected = lit, lit = lit)
                     }
                 }
             }
@@ -311,15 +378,15 @@ private fun slotOf(
 }
 
 @Composable
-private fun TabFace(tab: AppTab, selected: Boolean) {
+private fun TabFace(tab: AppTab, selected: Boolean, lit: Boolean) {
     Row(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
     Icon(
-        imageVector = tab.icon(selected),
+        imageVector = tab.icon(lit),
         contentDescription = if (selected) null else stringResource(tab.label),
-        tint = if (selected) Color.White else Color(0xFF8A8A90),
+        tint = if (lit) Color.White else Color(0xFF8A8A90),
         modifier = Modifier.size(22.dp),
     )
     AnimatedVisibility(
