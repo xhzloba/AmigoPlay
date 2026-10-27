@@ -126,6 +126,7 @@ fun AppShell(onMovieClick: (String) -> Unit) {
                 AppTab.Home -> HomeRoute(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
+                    onOpenCatalog = { tabName = AppTab.Catalog.name },
                 )
                 AppTab.Catalog -> SectionScreen(title = stringResource(R.string.nav_catalog))
                 AppTab.Favorites -> SectionScreen(title = stringResource(R.string.nav_favorites))

@@ -33,6 +33,7 @@ class HomeViewModel(
     init {
         loadShelves()
         loadRecommendations()
+        loadCatalogPreview()
         loadTop()
         loadBest()
     }
@@ -96,6 +97,9 @@ class HomeViewModel(
         if (!_state.value.recommendationsReady || _state.value.recommendations.isEmpty()) {
             loadRecommendations()
         }
+        if (!_state.value.catalogPreviewReady || _state.value.catalogPreview.isEmpty()) {
+            loadCatalogPreview()
+        }
         if (!_state.value.topReady || _state.value.top.isEmpty()) {
             loadTop()
         }
@@ -127,6 +131,27 @@ class HomeViewModel(
                     _state.value = _state.value.copy(
                         recommendations = emptyList(),
                         recommendationsReady = true,
+                    )
+                }
+        }
+    }
+
+    private fun loadCatalogPreview() {
+        viewModelScope.launch {
+            if (_state.value.catalogPreview.isEmpty()) {
+                _state.value = _state.value.copy(catalogPreviewReady = false)
+            }
+            getShelfMovies(CatalogQuery(sort = "popular"))
+                .onSuccess { movies ->
+                    _state.value = _state.value.copy(
+                        catalogPreview = movies.take(3),
+                        catalogPreviewReady = true,
+                    )
+                }
+                .onFailure {
+                    _state.value = _state.value.copy(
+                        catalogPreview = emptyList(),
+                        catalogPreviewReady = true,
                     )
                 }
         }

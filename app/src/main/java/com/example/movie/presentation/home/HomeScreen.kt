@@ -58,6 +58,7 @@ import com.example.movie.domain.model.ContentKind
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
+import com.example.movie.presentation.home.components.CatalogPlaque
 import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
 import com.example.movie.presentation.home.components.CoverStackSkeleton
@@ -79,6 +80,7 @@ fun HomeScreen(
     onOpenSearch: () -> Unit,
     onSearchQuery: (String) -> Unit,
     onCloseSearch: () -> Unit,
+    onOpenCatalog: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var play by remember { mutableStateOf(PlayBlue) }
@@ -226,6 +228,14 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    if (!state.catalogPreviewReady || state.catalogPreview.isNotEmpty()) {
+                        Spacer(Modifier.height(24.dp))
+                        CatalogPlaque(
+                            movies = state.catalogPreview,
+                            onClick = onOpenCatalog,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     if (!state.topReady || state.top.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
@@ -295,6 +305,8 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
             onMoviePeek = {},
             title = stringResource(R.string.section_recommendations),
         )
+        Spacer(Modifier.height(24.dp))
+        CatalogPlaque(movies = emptyList())
         Spacer(Modifier.height(24.dp))
         RecommendationRail(
             movies = emptyList(),
@@ -375,6 +387,7 @@ private fun HomeScreenPreview() {
             onOpenSearch = {},
             onSearchQuery = {},
             onCloseSearch = {},
+            onOpenCatalog = {},
         )
     }
 }
