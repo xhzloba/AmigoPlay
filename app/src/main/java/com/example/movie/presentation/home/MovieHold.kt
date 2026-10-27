@@ -102,9 +102,14 @@ internal fun Modifier.holdCue(progress: Float): Modifier = drawWithContent {
 }
 
 private fun DrawScope.drawHoldCue(progress: Float) {
-    val amount = progress.coerceIn(0f, 1f)
-    drawRect(Color.Black.copy(alpha = 0.10f * amount))
+    val amount = smoothstep(progress)
+    drawRect(Color.Black.copy(alpha = 0.08f * amount))
     drawRainbowRipple(amount)
+}
+
+private fun smoothstep(t: Float): Float {
+    val x = t.coerceIn(0f, 1f)
+    return x * x * (3f - 2f * x)
 }
 
 private val Rainbow = listOf(
@@ -119,20 +124,21 @@ private val Rainbow = listOf(
 private fun DrawScope.drawRainbowRipple(amount: Float) {
     val reach = size.width * 0.42f
     repeat(Rainbow.size) { index ->
-        val shift = (amount * 1.35f + index / Rainbow.size.toFloat()) % 1f
+        val base = index / Rainbow.size.toFloat()
+        val y = 0.08f + base * 0.76f + amount * 0.08f
         val color = Rainbow[index]
         val opposite = Rainbow[(index + Rainbow.size / 2) % Rainbow.size]
-        drawSideLight(Offset(0f, size.height * shift), color, reach)
-        drawSideLight(Offset(size.width, size.height * ((shift + 0.37f) % 1f)), opposite, reach)
+        drawSideLight(Offset(0f, size.height * y), color, reach, amount)
+        drawSideLight(Offset(size.width, size.height * (1.08f - y)), opposite, reach, amount)
     }
 }
 
-private fun DrawScope.drawSideLight(spot: Offset, color: Color, reach: Float) {
+private fun DrawScope.drawSideLight(spot: Offset, color: Color, reach: Float, strength: Float) {
     drawCircle(
         brush = Brush.radialGradient(
             colorStops = arrayOf(
-                0f to color.copy(alpha = 0.82f),
-                0.42f to color.copy(alpha = 0.34f),
+                0f to color.copy(alpha = 0.58f * strength),
+                0.5f to color.copy(alpha = 0.20f * strength),
                 1f to Color.Transparent,
             ),
             center = spot,
