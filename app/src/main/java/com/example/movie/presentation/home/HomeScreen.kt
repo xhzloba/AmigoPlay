@@ -120,7 +120,7 @@ fun HomeScreen(
             }
         }
         if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(24.dp))
             RecommendationRail(
                 movies = state.recommendations,
                 onMovieClick = onMovieClick,
@@ -144,7 +144,7 @@ private fun HomeSkeleton(modifier: Modifier = Modifier) {
         CategoryTabsSkeleton()
         Spacer(Modifier.height(12.dp))
         CoverStackSkeleton(Modifier.fillMaxWidth())
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(24.dp))
         RecommendationRailSkeleton()
     }
 }
