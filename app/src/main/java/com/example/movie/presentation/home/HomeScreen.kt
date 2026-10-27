@@ -171,7 +171,7 @@ fun HomeScreen(
                         selectedId = state.selectedId,
                         onSelect = onSelectShelf,
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(36.dp))
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
                         PosterSkeleton(Modifier.fillMaxWidth())
                     } else {
@@ -239,7 +239,7 @@ private fun DataError.message(): String = when (this) {
 private fun HomeSkeleton(modifier: Modifier = Modifier) {
     Column(modifier = modifier.padding(top = 32.dp)) {
         CategoryTabsSkeleton()
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(36.dp))
         CoverStackSkeleton(Modifier.fillMaxWidth())
         Spacer(Modifier.height(24.dp))
         RecommendationRail(

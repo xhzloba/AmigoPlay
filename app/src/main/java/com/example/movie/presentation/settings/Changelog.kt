@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.9.3",
+            fixed = listOf(
+                "Первый слайдер ниже полок.",
+            ),
+        ),
+        Release(
             version = "1.9.2",
             added = listOf(
                 "В «О программе» над версией логотип.",
