@@ -375,7 +375,7 @@ fun PosterCarousel(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
                         )
-                        .holdCue(holdProgress, 22.dp, shineTint)
+                        .holdCue(holdProgress)
                         .clickable(
                             interactionSource = remember(movie.id) { MutableInteractionSource() },
                             indication = null,

@@ -8,17 +8,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.Dp
 import com.example.movie.presentation.haptic.HoldHaptic
 import com.example.movie.presentation.haptic.rememberHoldHaptic
 import kotlinx.coroutines.coroutineScope
@@ -28,7 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 internal const val HoldMillis = 800L
-private const val BuzzAfterNanos = 120_000_000L
+private const val CueAfterNanos = 260_000_000L
 
 @Composable
 internal fun Modifier.holdToPeek(
@@ -55,14 +51,17 @@ internal fun Modifier.holdToPeek(
                     var buzzing = false
                     while (isActive && epoch == token) {
                         val elapsed = System.nanoTime() - t0
-                        if (!buzzing && elapsed >= BuzzAfterNanos) {
-                            buzzing = true
-                            motor[0]?.start()
-                        }
                         if (epoch != token) return@launch
-                        val progress = (elapsed / 1_000_000f / HoldMillis).coerceIn(0f, 1f)
-                        reporter[0].invoke(progress)
-                        if (progress >= 1f) break
+                        if (elapsed >= CueAfterNanos) {
+                            if (!buzzing) {
+                                buzzing = true
+                                motor[0]?.start()
+                            }
+                            val span = (HoldMillis * 1_000_000L - CueAfterNanos).toFloat()
+                            val progress = ((elapsed - CueAfterNanos).toFloat() / span).coerceIn(0f, 1f)
+                            reporter[0].invoke(progress)
+                        }
+                        if (elapsed >= HoldMillis * 1_000_000L) break
                         delay(16)
                     }
                 }
@@ -97,69 +96,50 @@ internal fun Modifier.holdToPeek(
     }
 }
 
-internal fun Modifier.holdCue(progress: Float, corner: Dp, tint: Color): Modifier = drawWithContent {
+internal fun Modifier.holdCue(progress: Float): Modifier = drawWithContent {
     drawContent()
-    if (progress > 0.01f) drawHoldCue(progress, corner.toPx(), tint)
+    if (progress > 0.01f) drawHoldCue(progress)
 }
 
-private fun DrawScope.drawHoldCue(progress: Float, cornerPx: Float, tint: Color) {
+private fun DrawScope.drawHoldCue(progress: Float) {
     val amount = progress.coerceIn(0f, 1f)
-    val inset = size.minDimension * 0.08f
-    val radius = (cornerPx - inset).coerceAtLeast(0f)
-    val outline = Path().apply {
-        addRoundRect(
-            RoundRect(
-                left = inset,
-                top = inset,
-                right = size.width - inset,
-                bottom = size.height - inset,
-                cornerRadius = CornerRadius(radius, radius),
-            ),
-        )
+    drawRect(Color.Black.copy(alpha = 0.10f * amount))
+    drawRainbowRipple(amount)
+}
+
+private val Rainbow = listOf(
+    Color(0xFF64D2FF),
+    Color(0xFF5E5CE6),
+    Color(0xFFFF375F),
+    Color(0xFFFF9F0A),
+    Color(0xFFFFD60A),
+    Color(0xFF30D158),
+)
+
+private fun DrawScope.drawRainbowRipple(amount: Float) {
+    val reach = size.width * 0.42f
+    repeat(Rainbow.size) { index ->
+        val shift = (amount * 1.35f + index / Rainbow.size.toFloat()) % 1f
+        val color = Rainbow[index]
+        val opposite = Rainbow[(index + Rainbow.size / 2) % Rainbow.size]
+        drawSideLight(Offset(0f, size.height * shift), color, reach)
+        drawSideLight(Offset(size.width, size.height * ((shift + 0.37f) % 1f)), opposite, reach)
     }
-    val measure = PathMeasure().apply { setPath(outline, false) }
-    val traveled = (measure.length * amount).coerceAtLeast(1f).coerceAtMost(measure.length)
-    val ink = Color(
-        red = (tint.red * 0.45f + 0.55f).coerceIn(0f, 1f),
-        green = (tint.green * 0.45f + 0.55f).coerceIn(0f, 1f),
-        blue = (tint.blue * 0.45f + 0.55f).coerceIn(0f, 1f),
-    )
-    drawRect(Color.Black.copy(alpha = 0.08f * amount))
-    val head = measure.getPosition(traveled)
-    val glow = size.minDimension * 0.62f
+}
+
+private fun DrawScope.drawSideLight(spot: Offset, color: Color, reach: Float) {
     drawCircle(
         brush = Brush.radialGradient(
             colorStops = arrayOf(
-                0f to Color.White.copy(alpha = 0.20f),
-                0.22f to ink.copy(alpha = 0.22f),
-                0.55f to ink.copy(alpha = 0.07f),
+                0f to color.copy(alpha = 0.82f),
+                0.42f to color.copy(alpha = 0.34f),
                 1f to Color.Transparent,
             ),
-            center = head,
-            radius = glow,
+            center = spot,
+            radius = reach,
         ),
-        radius = glow,
-        center = head,
+        radius = reach,
+        center = spot,
         blendMode = BlendMode.Screen,
     )
-    val span = measure.length * 0.12f
-    repeat(2) { index ->
-        val near = (index + 1f) / 2f
-        val distance = (traveled - span * (1f - near)).coerceIn(0f, measure.length)
-        val center = measure.getPosition(distance)
-        val radiusPx = glow * (0.72f + 0.2f * near)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colorStops = arrayOf(
-                    0f to ink.copy(alpha = 0.10f * near),
-                    1f to Color.Transparent,
-                ),
-                center = center,
-                radius = radiusPx,
-            ),
-            radius = radiusPx,
-            center = center,
-            blendMode = BlendMode.Screen,
-        )
-    }
 }

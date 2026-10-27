@@ -170,7 +170,7 @@ private fun RecommendationPager(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
                         )
-                        .holdCue(holdProgress, 16.dp, Color.White)
+                        .holdCue(holdProgress)
                         .clickable(
                             interactionSource = remember(movie.id) { MutableInteractionSource() },
                             indication = null,
