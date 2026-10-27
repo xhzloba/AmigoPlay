@@ -8,6 +8,8 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -52,11 +54,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -92,14 +96,18 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.PI
 import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.exp
 import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 private val CardShape = RoundedCornerShape(22.dp)
 private const val CoverWidthFraction = 0.5f
@@ -240,6 +248,19 @@ fun PosterCarousel(
                 offset = pagerState.currentPageOffsetFraction,
                 colors = posterColors,
             )
+            val glowReveal = remember { Animatable(0f) }
+            var revealMovies by remember { mutableStateOf(movies) }
+            val glowStrength = if (revealMovies != movies) 0f else glowReveal.value
+            LaunchedEffect(movies) {
+                glowReveal.snapTo(0f)
+                revealMovies = movies
+                if (movies.isEmpty()) return@LaunchedEffect
+                snapshotFlow {
+                    val index = pagerState.currentPage % movies.size
+                    posterColors[movies[index].id]?.primary?.alpha ?: 0f
+                }.first { it > 0.04f }
+                glowReveal.animateTo(1f, tween(720, easing = FastOutSlowInEasing))
+            }
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -272,32 +293,32 @@ fun PosterCarousel(
                                 radius = leftRadius,
                                 color = glow.primary,
                                 mid = 0.42f,
-                                coreAlpha = 0.95f,
-                                midAlpha = 0.5f,
+                                coreAlpha = 0.95f * glowStrength,
+                                midAlpha = 0.5f * glowStrength,
                             )
                             feather(
                                 center = Offset(size.width * 0.72f, size.height * 0.22f),
                                 radius = rightRadius,
                                 color = glow.secondary,
                                 mid = 0.4f,
-                                coreAlpha = 0.8f,
-                                midAlpha = 0.38f,
+                                coreAlpha = 0.8f * glowStrength,
+                                midAlpha = 0.38f * glowStrength,
                             )
                             feather(
                                 center = Offset(size.width * 0.28f, size.height * 0.82f),
                                 radius = leftRadius,
                                 color = glow.primary,
                                 mid = 0.42f,
-                                coreAlpha = 0.95f,
-                                midAlpha = 0.5f,
+                                coreAlpha = 0.95f * glowStrength,
+                                midAlpha = 0.5f * glowStrength,
                             )
                             feather(
                                 center = Offset(size.width * 0.72f, size.height * 0.78f),
                                 radius = rightRadius,
                                 color = glow.secondary,
                                 mid = 0.4f,
-                                coreAlpha = 0.8f,
-                                midAlpha = 0.38f,
+                                coreAlpha = 0.8f * glowStrength,
+                                midAlpha = 0.38f * glowStrength,
                             )
                         },
                 )
@@ -318,6 +339,19 @@ fun PosterCarousel(
                 val movie = movies[page % movies.size]
                 val pageOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
                 val distance = pageOffset.absoluteValue
+                val active = page == pagerState.currentPage && distance < 0.12f
+                var posterReady by remember(movie.id) { mutableStateOf(false) }
+                val shine = remember(page) { Animatable(0f) }
+                val travel = shine.value
+                val shineTint = posterColors[movie.id]?.primary ?: Color.White
+                LaunchedEffect(active, posterReady) {
+                    if (!active || !posterReady) {
+                        shine.snapTo(0f)
+                        return@LaunchedEffect
+                    }
+                    delay(520)
+                    shine.animateTo(1f, tween(1600, easing = FastOutSlowInEasing))
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -340,9 +374,36 @@ fun PosterCarousel(
                                 tick?.invoke()
                                 onMovieClick(movie.id)
                             },
-                        ),
+                        )
+                        .drawWithContent {
+                            drawContent()
+                            if (!active || !posterReady || travel <= 0f || travel >= 1f) return@drawWithContent
+                            val envelope = sin(travel * PI.toFloat())
+                            val lift = Color(
+                                red = (shineTint.red * 0.55f + 0.45f).coerceIn(0f, 1f),
+                                green = (shineTint.green * 0.55f + 0.45f).coerceIn(0f, 1f),
+                                blue = (shineTint.blue * 0.55f + 0.45f).coerceIn(0f, 1f),
+                                alpha = 0.28f * envelope,
+                            )
+                            drawRect(
+                                brush = Brush.radialGradient(
+                                    colorStops = arrayOf(
+                                        0f to lift,
+                                        0.7f to lift.copy(alpha = lift.alpha * 0.55f),
+                                        1f to Color.Transparent,
+                                    ),
+                                    center = Offset(size.width * 0.5f, size.height * 0.4f),
+                                    radius = size.maxDimension * 0.85f,
+                                ),
+                                blendMode = BlendMode.Screen,
+                            )
+                        },
                 ) {
-                    PosterPage(movie = movie, modifier = Modifier.fillMaxSize())
+                    PosterPage(
+                        movie = movie,
+                        modifier = Modifier.fillMaxSize(),
+                        onReady = { posterReady = true },
+                    )
                     val shade = lerp(0f, 0.46f, distance.coerceIn(0f, 1f))
                     if (shade > 0.01f) {
                         Box(
@@ -791,12 +852,17 @@ private fun PosterReflection(
 }
 
 @Composable
-private fun PosterPage(movie: Movie, modifier: Modifier = Modifier) {
+private fun PosterPage(
+    movie: Movie,
+    modifier: Modifier = Modifier,
+    onReady: () -> Unit = {},
+) {
     AsyncImage(
         model = movie.posterUrl ?: movie.backdropUrl,
         contentDescription = stringResource(R.string.poster_content_description, movie.title),
         contentScale = ContentScale.Crop,
         modifier = modifier.background(Color(0xFF2A2A2E)),
+        onSuccess = { onReady() },
     )
 }
 

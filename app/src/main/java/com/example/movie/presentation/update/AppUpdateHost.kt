@@ -37,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,6 +55,7 @@ import com.example.movie.BuildConfig
 import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.AppRelease
+import com.example.movie.domain.model.DownloadProgress
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.CinemaSurface
@@ -86,7 +86,7 @@ fun AppUpdateHost() {
     var release by remember { mutableStateOf<AppRelease?>(null) }
     var visible by remember { mutableStateOf(false) }
     var phase by remember { mutableStateOf(UpdatePhase.Ready) }
-    var progress by remember { mutableFloatStateOf(0f) }
+    var progress by remember { mutableStateOf(DownloadProgress()) }
     var download by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(Unit) {
@@ -118,7 +118,7 @@ fun AppUpdateHost() {
         download?.cancel()
         download = scope.launch {
             phase = UpdatePhase.Downloading
-            progress = 0f
+            progress = DownloadProgress()
             try {
                 val file = container.apkInstaller.download(
                     url = item.apkUrl,
@@ -165,12 +165,12 @@ fun AppUpdateHost() {
 private fun UpdateSheet(
     release: AppRelease,
     phase: UpdatePhase,
-    progress: Float,
+    progress: DownloadProgress,
     onLater: () -> Unit,
     onUpdate: () -> Unit,
 ) {
     val animated by animateFloatAsState(
-        targetValue = progress,
+        targetValue = progress.fraction,
         animationSpec = tween(120),
         label = "updateProgress",
     )
@@ -218,7 +218,7 @@ private fun UpdateSheet(
             )
             if (release.notes.isNotBlank()) {
                 Text(
-                    text = release.notes,
+                    text = dashedNotes(release.notes),
                     modifier = Modifier
                         .padding(top = 16.dp)
                         .heightIn(max = 168.dp)
@@ -238,9 +238,17 @@ private fun UpdateSheet(
                 )
             }
             if (phase == UpdatePhase.Downloading) {
+                Text(
+                    text = downloadStatus(progress),
+                    modifier = Modifier.padding(top = 16.dp),
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
+                )
                 Box(
                     modifier = Modifier
-                        .padding(top = 18.dp)
+                        .padding(top = 10.dp)
                         .fillMaxWidth()
                         .height(2.dp)
                         .clip(RoundedCornerShape(1.dp))
