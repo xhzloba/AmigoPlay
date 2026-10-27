@@ -1,5 +1,6 @@
 package com.example.movie.presentation.home.components
 
+import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -11,6 +12,7 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -73,6 +75,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -94,6 +98,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.atan2
 import kotlin.math.exp
 import kotlin.math.hypot
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private val CardShape = RoundedCornerShape(22.dp)
@@ -106,6 +111,7 @@ private val ReflectionHeight = 104.dp
 private val CaptionLift = 48.dp
 private val LogoNudge = 20.dp
 private val MetaNudge = 12.dp
+private val LogoSlot = 52.dp
 
 private data class PosterPalette(val primary: Color, val secondary: Color)
 
@@ -459,14 +465,24 @@ private fun MovieCaption(movie: Movie?) {
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        var targetLift by remember { mutableStateOf(0.dp) }
+        val extraLift by animateDpAsState(
+            targetValue = targetLift,
+            animationSpec = tween(durationMillis = 220),
+            label = "caption-gap",
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
+                .height(LogoSlot),
             contentAlignment = Alignment.Center,
         ) {
             if (movie != null) {
-                LogoOrTitle(movie, Modifier.offset(y = -LogoNudge))
+                LogoOrTitle(
+                    movie = movie,
+                    modifier = Modifier.offset(y = -LogoNudge),
+                    onContentHeight = { targetLift = it },
+                )
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -474,7 +490,7 @@ private fun MovieCaption(movie: Movie?) {
             modifier = Modifier
                 .height(22.dp)
                 .fillMaxWidth()
-                .offset(y = -MetaNudge),
+                .offset(y = -(MetaNudge + extraLift)),
             contentAlignment = Alignment.Center,
         ) {
             if (movie != null) {
@@ -516,8 +532,13 @@ private fun MovieCaption(movie: Movie?) {
 }
 
 @Composable
-private fun LogoOrTitle(movie: Movie, modifier: Modifier = Modifier) {
+private fun LogoOrTitle(
+    movie: Movie,
+    modifier: Modifier = Modifier,
+    onContentHeight: (Dp) -> Unit,
+) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
     var logoFailed by remember(movie.id, movie.logoUrl) {
         mutableStateOf(movie.logoUrl.isNullOrBlank())
     }
@@ -527,9 +548,33 @@ private fun LogoOrTitle(movie: Movie, modifier: Modifier = Modifier) {
             contentDescription = movie.title,
             contentScale = ContentScale.Fit,
             alignment = Alignment.Center,
+            onSuccess = { state ->
+                val raw = (state.result.drawable as? BitmapDrawable)?.bitmap ?: return@AsyncImage
+                val bitmap = if (raw.config == Bitmap.Config.HARDWARE) {
+                    raw.copy(Bitmap.Config.ARGB_8888, false) ?: return@AsyncImage
+                } else {
+                    raw
+                }
+                val width = bitmap.width
+                val height = bitmap.height
+                if (width <= 0 || height <= 0) return@AsyncImage
+                val row = IntArray(width)
+                var bottom = height - 1
+                while (bottom > 0) {
+                    bitmap.getPixels(row, 0, width, 0, bottom, width, 1)
+                    if (row.any { it ushr 24 > 24 }) break
+                    bottom--
+                }
+                val maxW = with(density) { 220.dp.toPx() }
+                val maxH = with(density) { LogoSlot.toPx() }
+                val scale = min(maxW / width, maxH / height)
+                val scaledHeight = height * scale
+                val below = (maxH - scaledHeight) / 2f + (height - 1 - bottom) * scale
+                onContentHeight(with(density) { below.toDp() }.coerceAtLeast(0.dp))
+            },
             onError = { logoFailed = true },
             modifier = modifier
-                .height(52.dp)
+                .height(LogoSlot)
                 .width(220.dp),
         )
     } else {
@@ -543,6 +588,10 @@ private fun LogoOrTitle(movie: Movie, modifier: Modifier = Modifier) {
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            onTextLayout = { layout ->
+                val textHeight = with(density) { layout.size.height.toDp() }
+                onContentHeight(((LogoSlot - textHeight) / 2 + 10.dp).coerceAtLeast(0.dp))
+            },
             modifier = modifier,
         )
     }
