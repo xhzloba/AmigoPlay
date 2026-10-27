@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.7.1",
+            added = listOf(
+                "Проверочная сборка автообновления.",
+            ),
+        ),
+        Release(
             version = "1.7.0",
             added = listOf(
                 "Автообновление: новая версия находится сама, в карточке её номер и что изменилось.",
