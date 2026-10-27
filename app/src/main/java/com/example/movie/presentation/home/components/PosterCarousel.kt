@@ -111,6 +111,7 @@ private val ReflectionHeight = 104.dp
 private val CaptionLift = 48.dp
 private val LogoNudge = 20.dp
 private val MetaNudge = 12.dp
+private val DotsNudge = 16.dp
 private val LogoSlot = 52.dp
 
 private data class PosterPalette(val primary: Color, val secondary: Color)
@@ -403,6 +404,7 @@ private fun PagerDots(
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
         Box(
             modifier = Modifier
+                .offset(y = -DotsNudge)
                 .width(stride * window - 4.dp)
                 .height(12.dp)
                 .clipToBounds(),
@@ -654,7 +656,10 @@ internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
                 .background(Color.White.copy(alpha = pulse)),
         )
         Spacer(Modifier.height(18.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.offset(y = -DotsNudge),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             repeat(DotWindow) { index ->
                 Box(
                     modifier = Modifier.size(12.dp),

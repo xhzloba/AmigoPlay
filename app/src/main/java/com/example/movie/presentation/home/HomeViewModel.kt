@@ -2,6 +2,7 @@ package com.example.movie.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.usecase.GetHomeShelvesUseCase
@@ -26,6 +27,7 @@ class HomeViewModel(
     init {
         loadShelves()
         loadRecommendations()
+        loadBest()
     }
 
     fun select(id: String) {
@@ -37,6 +39,9 @@ class HomeViewModel(
     fun retry() {
         if (!_state.value.recommendationsReady || _state.value.recommendations.isEmpty()) {
             loadRecommendations()
+        }
+        if (!_state.value.bestReady || _state.value.best.isEmpty()) {
+            loadBest()
         }
         val selectedId = _state.value.selectedId
         if (_state.value.shelves.isEmpty() || selectedId == null) {
@@ -64,6 +69,21 @@ class HomeViewModel(
                         recommendations = emptyList(),
                         recommendationsReady = true,
                     )
+                }
+        }
+    }
+
+    private fun loadBest() {
+        viewModelScope.launch {
+            if (_state.value.best.isEmpty()) {
+                _state.value = _state.value.copy(bestReady = false)
+            }
+            getShelfMovies(CatalogQuery(sort = "rating", type = "movie"))
+                .onSuccess { movies ->
+                    _state.value = _state.value.copy(best = movies.take(15), bestReady = true)
+                }
+                .onFailure {
+                    _state.value = _state.value.copy(best = emptyList(), bestReady = true)
                 }
         }
     }
