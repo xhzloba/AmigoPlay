@@ -1,6 +1,7 @@
 package com.example.movie.presentation.haptic
 
 import android.os.VibrationEffect
+import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.Composable
@@ -32,26 +33,26 @@ internal fun rememberHapticTick(): (() -> Unit)? {
     return if (hardware && hapticOn.haptic) tick else null
 }
 
+internal class HoldHaptic(private val vibrator: Vibrator) {
+    fun start(millis: Long) {
+        val amplitude = if (vibrator.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
+        vibrator.vibrate(VibrationEffect.createOneShot(millis, amplitude))
+    }
+
+    fun stop() {
+        vibrator.cancel()
+    }
+}
+
 @Composable
-internal fun rememberStrongHaptic(): (() -> Unit)? {
+internal fun rememberHoldHaptic(): HoldHaptic? {
     val view = LocalView.current
     val hapticOn by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val vibrator = remember(view) {
         view.context.getSystemService(VibratorManager::class.java)?.defaultVibrator
     }
-    val buzz = remember(vibrator) {
-        vibrator?.let { motor ->
-            {
-                val effect = if (motor.hasAmplitudeControl()) {
-                    VibrationEffect.createOneShot(700, 255)
-                } else {
-                    VibrationEffect.createOneShot(700, VibrationEffect.DEFAULT_AMPLITUDE)
-                }
-                motor.vibrate(effect)
-            }
-        }
-    }
-    return if (vibrator?.hasVibrator() == true && hapticOn.haptic) buzz else null
+    val hold = remember(vibrator) { vibrator?.let(::HoldHaptic) }
+    return if (vibrator?.hasVibrator() == true && hapticOn.haptic) hold else null
 }
 
 @Composable

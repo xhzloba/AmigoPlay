@@ -93,6 +93,7 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
+import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
@@ -343,6 +344,7 @@ fun PosterCarousel(
                 val distance = pageOffset.absoluteValue
                 val active = page == pagerState.currentPage && distance < 0.12f
                 var posterReady by remember(movie.id) { mutableStateOf(false) }
+                var holdProgress by remember { mutableFloatStateOf(0f) }
                 val shine = remember(page) { Animatable(0f) }
                 val travel = shine.value
                 val shineTint = posterColors[movie.id]?.primary ?: Color.White
@@ -361,7 +363,7 @@ fun PosterCarousel(
                         .graphicsLayer {
                             val clamped = distance.coerceIn(0f, 1f)
                             val facing = 1f - clamped
-                            val scale = lerp(1f, NeighborScale, clamped)
+                            val scale = lerp(1f, NeighborScale, clamped) * (1f - 0.045f * holdProgress)
                             scaleX = scale
                             scaleY = scale
                             translationX = -pageOffset * size.width * NeighborShift +
@@ -369,7 +371,11 @@ fun PosterCarousel(
                             alpha = if (distance <= 1.05f) 1f else lerp(1f, 0f, (distance - 1.05f).coerceIn(0f, 1f))
                         }
                         .clip(CardShape)
-                        .holdToPeek { onMoviePeek(movie) }
+                        .holdToPeek(
+                            onPeek = { onMoviePeek(movie) },
+                            onProgress = { holdProgress = it },
+                        )
+                        .holdCue(holdProgress, 22.dp, shineTint)
                         .clickable(
                             interactionSource = remember(movie.id) { MutableInteractionSource() },
                             indication = null,

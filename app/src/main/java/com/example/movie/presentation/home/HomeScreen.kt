@@ -55,7 +55,6 @@ import com.example.movie.domain.model.ContentKind
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
-import com.example.movie.presentation.haptic.rememberStrongHaptic
 import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
 import com.example.movie.presentation.home.components.CoverStackSkeleton
@@ -75,11 +74,6 @@ fun HomeScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val buzz = rememberStrongHaptic()
-    val peek = { movie: Movie ->
-        buzz?.invoke()
-        onMoviePeek(movie)
-    }
     val background = MaterialTheme.colorScheme.background
     if (state.shelves.isEmpty()) {
         Box(
@@ -185,7 +179,7 @@ fun HomeScreen(
                         PosterCarousel(
                             movies = state.movies,
                             onMovieClick = onMovieClick,
-                            onMoviePeek = peek,
+                            onMoviePeek = onMoviePeek,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -194,7 +188,7 @@ fun HomeScreen(
                         RecommendationRail(
                             movies = state.recommendations,
                             onMovieClick = onMovieClick,
-                            onMoviePeek = peek,
+                            onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_recommendations),
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -204,7 +198,7 @@ fun HomeScreen(
                         RecommendationRail(
                             movies = state.best,
                             onMovieClick = onMovieClick,
-                            onMoviePeek = peek,
+                            onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_best),
                             modifier = Modifier.fillMaxWidth(),
                         )

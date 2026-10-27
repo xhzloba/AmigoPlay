@@ -26,11 +26,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
+import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -146,6 +151,7 @@ private fun RecommendationPager(
                 .height(posterHeight),
         ) {
             itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
+                var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
                 AsyncImage(
                     model = movie.posterUrl,
                     contentDescription = stringResource(R.string.poster_content_description, movie.title),
@@ -153,9 +159,18 @@ private fun RecommendationPager(
                     modifier = Modifier
                         .width(PosterWidth)
                         .height(posterHeight)
+                        .graphicsLayer {
+                            val scale = 1f - 0.045f * holdProgress
+                            scaleX = scale
+                            scaleY = scale
+                        }
                         .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.08f))
-                        .holdToPeek { onMoviePeek(movie) }
+                        .holdToPeek(
+                            onPeek = { onMoviePeek(movie) },
+                            onProgress = { holdProgress = it },
+                        )
+                        .holdCue(holdProgress, 16.dp, Color.White)
                         .clickable(
                             interactionSource = remember(movie.id) { MutableInteractionSource() },
                             indication = null,
