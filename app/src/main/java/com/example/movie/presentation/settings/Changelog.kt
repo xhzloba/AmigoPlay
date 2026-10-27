@@ -11,6 +11,17 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.14.0",
+            added = listOf(
+                "При зажатии свет на обложке сходится в центр, как фокус кадра.",
+                "В шапке стоит знак логотипа. «Play» берёт цвет обложки на первом слайдере.",
+                "Справа от названия появился поиск.",
+            ),
+            fixed = listOf(
+                "Версия больше не показывается в шапке.",
+            ),
+        ),
+        Release(
             version = "1.13.1",
             fixed = listOf(
                 "Радуга при зажатии проявляется плавнее.",

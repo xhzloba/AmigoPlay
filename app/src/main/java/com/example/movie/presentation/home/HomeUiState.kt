@@ -13,6 +13,11 @@ data class HomeUiState(
     val best: List<Movie> = emptyList(),
     val bestReady: Boolean = false,
     val phase: HomePhase = HomePhase.Loading,
+    val searchOpen: Boolean = false,
+    val searchQuery: String = "",
+    val searchResults: List<Movie> = emptyList(),
+    val searching: Boolean = false,
+    val searchError: DataError? = null,
 )
 
 sealed interface HomePhase {

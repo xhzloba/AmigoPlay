@@ -47,6 +47,15 @@ internal class MovieRepositoryImpl(
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
     }
 
+    override suspend fun search(name: String): Result<List<Movie>> = runApi {
+        api.search(name, token)
+            .channels
+            .map { it.toDomain() }
+            .filter { it.id.isNotBlank() && it.title.isNotBlank() }
+            .distinctBy { it.id }
+            .take(40)
+    }
+
     override suspend fun getMovie(id: String): Result<MovieDetail> = runApi {
         api.view(id, token).toMovieDetail()
     }

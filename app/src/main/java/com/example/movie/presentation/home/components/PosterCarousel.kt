@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -97,6 +98,8 @@ import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
+import com.example.movie.presentation.palette.forWordmark
+import com.example.movie.ui.theme.PlayBlue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -196,6 +199,7 @@ fun PosterCarousel(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onPlayColor: (Color) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val loop = movies.size > 1
@@ -213,6 +217,13 @@ fun PosterCarousel(
     val context = LocalContext.current
     val posterColors = remember { mutableStateMapOf<String, PosterPalette>() }
     val activeIndex = if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
+    val play = wordmarkPlay(
+        movies = movies,
+        activeIndex = activeIndex,
+        offset = pagerState.currentPageOffsetFraction,
+        colors = posterColors,
+    )
+    SideEffect { onPlayColor(play) }
     val active = movies.getOrNull(activeIndex)
     val tilt = rememberCoverTilt()
     val tick = rememberHapticTick()
@@ -873,6 +884,22 @@ private fun PosterPage(
         modifier = modifier.background(Color(0xFF2A2A2E)),
         onSuccess = { onReady() },
     )
+}
+
+private fun wordmarkPlay(
+    movies: List<Movie>,
+    activeIndex: Int,
+    offset: Float,
+    colors: Map<String, PosterPalette>,
+): Color {
+    if (movies.isEmpty()) return PlayBlue
+    val current = colors[movies[activeIndex].id]?.primary?.forWordmark() ?: return PlayBlue
+    val direction = if (offset >= 0f) 1 else -1
+    val neighbor = colors[movies[(activeIndex + direction).floorMod(movies.size)].id]
+        ?.primary
+        ?.forWordmark()
+        ?: current
+    return lerp(current, neighbor, offset.absoluteValue.coerceIn(0f, 1f))
 }
 
 private fun posterGlowColor(

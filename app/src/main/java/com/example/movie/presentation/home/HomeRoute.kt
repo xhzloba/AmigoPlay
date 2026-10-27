@@ -18,6 +18,7 @@ fun HomeRoute(
             getHomeShelves = container.getHomeShelves,
             getShelfMovies = container.getShelfMovies,
             getRecommendations = container.getRecommendations,
+            searchMovies = container.searchMovies,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -27,5 +28,8 @@ fun HomeRoute(
         onMovieClick = onMovieClick,
         onMoviePeek = onMoviePeek,
         onRetry = viewModel::retry,
+        onOpenSearch = viewModel::openSearch,
+        onSearchQuery = viewModel::search,
+        onCloseSearch = viewModel::closeSearch,
     )
 }

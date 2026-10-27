@@ -111,6 +111,19 @@ internal fun Color.forGlow(): Color {
     return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
+internal fun Color.forWordmark(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    if (hsv[1] < 0.14f) {
+        hsv[1] = 0f
+        hsv[2] = 0.86f
+        return Color(android.graphics.Color.HSVToColor(hsv))
+    }
+    hsv[1] = hsv[1].coerceAtMost(0.8f)
+    hsv[2] = (hsv[2] + 0.16f).coerceIn(0.7f, 0.9f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
 internal fun DominantColors.seat(): DominantColors = DominantColors(primary.seated(), secondary.seated())
 
 internal fun DominantColors.backdropBrush(): Brush {

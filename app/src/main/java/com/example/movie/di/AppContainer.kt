@@ -15,6 +15,7 @@ import com.example.movie.domain.usecase.GetHomeShelvesUseCase
 import com.example.movie.domain.usecase.GetMovieDetailUseCase
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
+import com.example.movie.domain.usecase.SearchMoviesUseCase
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -54,6 +55,8 @@ class AppContainer(context: Context) {
     val getShelfMovies: GetShelfMoviesUseCase = GetShelfMoviesUseCase(movieRepository)
 
     val getRecommendations: GetRecommendationsUseCase = GetRecommendationsUseCase(movieRepository)
+
+    val searchMovies: SearchMoviesUseCase = SearchMoviesUseCase(movieRepository)
 
     val getMovieDetail: GetMovieDetailUseCase = GetMovieDetailUseCase(movieRepository)
 

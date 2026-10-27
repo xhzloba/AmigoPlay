@@ -20,6 +20,9 @@
     <string name="section_sequels">Сиквелы и приквелы</string>
     <string name="section_recommendations">Возможно, вам понравится</string>
     <string name="section_best">Лучшее</string>
+    <string name="search">Поиск</string>
+    <string name="search_hint">Фильм или сериал</string>
+    <string name="search_cancel">Отмена</string>
     <string name="nav_home">Главная</string>
     <string name="nav_catalog">Каталог</string>
     <string name="nav_favorites">Избранное</string>

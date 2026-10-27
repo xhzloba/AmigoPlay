@@ -18,6 +18,7 @@ internal object ShellIcons {
     val favorite: ImageVector = icon(filled = false) { heart() }
     val favoriteFilled: ImageVector = icon(filled = true) { heart() }
     val settings: ImageVector = sliders()
+    val search: ImageVector = icon(filled = false) { magnifier() }
 }
 
 private fun icon(filled: Boolean, body: PathBuilder.() -> Unit): ImageVector =
@@ -58,6 +59,15 @@ private fun PathBuilder.grid() {
     roundRect(13.4f, 3.2f, 7.4f, 1.6f)
     roundRect(3.2f, 13.4f, 7.4f, 1.6f)
     roundRect(13.4f, 13.4f, 7.4f, 1.6f)
+}
+
+private fun PathBuilder.magnifier() {
+    moveTo(16.6f, 10.4f)
+    arcTo(6.2f, 6.2f, 0f, true, true, 4.2f, 10.4f)
+    arcTo(6.2f, 6.2f, 0f, true, true, 16.6f, 10.4f)
+    close()
+    moveTo(15.2f, 15.4f)
+    lineTo(20.4f, 20.6f)
 }
 
 private fun PathBuilder.heart() {

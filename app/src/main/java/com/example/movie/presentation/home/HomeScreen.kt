@@ -1,5 +1,6 @@
 package com.example.movie.presentation.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -32,9 +33,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +64,7 @@ import com.example.movie.presentation.home.components.CoverStackSkeleton
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
 import com.example.movie.ui.theme.MovieTheme
+import com.example.movie.ui.theme.PlayBlue
 
 private val HomeBottomClearance = 82.dp
 
@@ -72,8 +76,29 @@ fun HomeScreen(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onRetry: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onSearchQuery: (String) -> Unit,
+    onCloseSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var play by remember { mutableStateOf(PlayBlue) }
+    LaunchedEffect(state.movies.isEmpty(), state.selectedId) {
+        if (state.movies.isEmpty()) play = PlayBlue
+    }
+    BackHandler(enabled = state.searchOpen, onBack = onCloseSearch)
+    if (state.searchOpen) {
+        SearchPage(
+            query = state.searchQuery,
+            results = state.searchResults,
+            searching = state.searching,
+            error = state.searchError,
+            onQuery = onSearchQuery,
+            onClose = onCloseSearch,
+            onMovieClick = onMovieClick,
+            onMoviePeek = onMoviePeek,
+        )
+        return
+    }
     val background = MaterialTheme.colorScheme.background
     if (state.shelves.isEmpty()) {
         Box(
@@ -83,7 +108,10 @@ fun HomeScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             when (val phase = state.phase) {
-                HomePhase.Loading -> HomeSkeleton(Modifier.fillMaxSize())
+                HomePhase.Loading -> HomeSkeleton(
+                    onSearch = onOpenSearch,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 is HomePhase.Failed -> StatusMessage(
                     message = phase.reason.message(),
                     onRetry = onRetry,
@@ -119,7 +147,9 @@ fun HomeScreen(
                 CategoryTabs(
                     shelves = state.shelves,
                     selectedId = state.selectedId,
+                    playColor = play,
                     onSelect = onSelectShelf,
+                    onSearch = onOpenSearch,
                 )
                 StatusMessage(
                     message = if (state.phase is HomePhase.Failed) {
@@ -170,7 +200,9 @@ fun HomeScreen(
                     CategoryTabs(
                         shelves = state.shelves,
                         selectedId = state.selectedId,
+                        playColor = play,
                         onSelect = onSelectShelf,
+                        onSearch = onOpenSearch,
                     )
                     Spacer(Modifier.height(36.dp))
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
@@ -180,6 +212,7 @@ fun HomeScreen(
                             movies = state.movies,
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
+                            onPlayColor = { play = it },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -240,9 +273,9 @@ private fun DataError.message(): String = when (this) {
 }
 
 @Composable
-private fun HomeSkeleton(modifier: Modifier = Modifier) {
+private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier.padding(top = 32.dp)) {
-        CategoryTabsSkeleton()
+        CategoryTabsSkeleton(onSearch = onSearch)
         Spacer(Modifier.height(36.dp))
         CoverStackSkeleton(Modifier.fillMaxWidth())
         Spacer(Modifier.height(24.dp))
@@ -322,6 +355,9 @@ private fun HomeScreenPreview() {
             onMovieClick = {},
             onMoviePeek = {},
             onRetry = {},
+            onOpenSearch = {},
+            onSearchQuery = {},
+            onCloseSearch = {},
         )
     }
 }

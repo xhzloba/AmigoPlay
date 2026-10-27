@@ -8,7 +8,9 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.usecase.GetHomeShelvesUseCase
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
+import com.example.movie.domain.usecase.SearchMoviesUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,9 +20,11 @@ class HomeViewModel(
     private val getHomeShelves: GetHomeShelvesUseCase,
     private val getShelfMovies: GetShelfMoviesUseCase,
     private val getRecommendations: GetRecommendationsUseCase,
+    private val searchMovies: SearchMoviesUseCase,
 ) : ViewModel() {
     private val cache = mutableMapOf<String, List<Movie>>()
     private var moviesJob: Job? = null
+    private var searchJob: Job? = null
     private val _state = MutableStateFlow(HomeUiState())
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
@@ -34,6 +38,55 @@ class HomeViewModel(
         if (_state.value.shelves.none { it.id == id }) return
         if (id == _state.value.selectedId && _state.value.phase !is HomePhase.Failed) return
         showShelf(id)
+    }
+
+    fun openSearch() {
+        searchJob?.cancel()
+        _state.value = _state.value.copy(
+            searchOpen = true,
+            searchQuery = "",
+            searchResults = emptyList(),
+            searching = false,
+            searchError = null,
+        )
+    }
+
+    fun closeSearch() {
+        searchJob?.cancel()
+        _state.value = _state.value.copy(
+            searchOpen = false,
+            searchQuery = "",
+            searchResults = emptyList(),
+            searching = false,
+            searchError = null,
+        )
+    }
+
+    fun search(raw: String) {
+        _state.value = _state.value.copy(searchQuery = raw, searchError = null)
+        searchJob?.cancel()
+        val query = raw.trim()
+        if (query.length < 2) {
+            _state.value = _state.value.copy(searchResults = emptyList(), searching = false)
+            return
+        }
+        searchJob = viewModelScope.launch {
+            delay(280)
+            _state.value = _state.value.copy(searching = true, searchError = null)
+            searchMovies(query)
+                .onSuccess { movies ->
+                    if (_state.value.searchQuery.trim() != query) return@onSuccess
+                    _state.value = _state.value.copy(searchResults = movies, searching = false)
+                }
+                .onFailure { error ->
+                    if (_state.value.searchQuery.trim() != query) return@onFailure
+                    _state.value = _state.value.copy(
+                        searchResults = emptyList(),
+                        searching = false,
+                        searchError = error.asDataError(),
+                    )
+                }
+        }
     }
 
     fun retry() {
