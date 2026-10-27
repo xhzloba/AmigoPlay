@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.12.1",
+            fixed = listOf(
+                "Вибрация при зажатии срабатывает всегда.",
+            ),
+        ),
+        Release(
             version = "1.12.0",
             added = listOf(
                 "На обложке во время зажатия мягко проявляется свет.",

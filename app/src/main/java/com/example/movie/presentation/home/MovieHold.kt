@@ -49,14 +49,18 @@ internal fun Modifier.holdToPeek(
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val origin = down.position
-                val started = System.nanoTime()
                 val token = ++epoch
-                var buzzing = false
                 val frames = launch {
                     val t0 = System.nanoTime()
+                    var buzzing = false
                     while (isActive && epoch == token) {
-                        val progress = ((System.nanoTime() - t0) / 1_000_000f / HoldMillis).coerceIn(0f, 1f)
+                        val elapsed = System.nanoTime() - t0
+                        if (!buzzing && elapsed >= BuzzAfterNanos) {
+                            buzzing = true
+                            motor[0]?.start()
+                        }
                         if (epoch != token) return@launch
+                        val progress = (elapsed / 1_000_000f / HoldMillis).coerceIn(0f, 1f)
                         reporter[0].invoke(progress)
                         if (progress >= 1f) break
                         delay(16)
@@ -70,15 +74,12 @@ internal fun Modifier.holdToPeek(
                             val left = change == null || !change.pressed ||
                                 (change.position - origin).getDistance() > slop
                             if (left) return@withTimeoutOrNull true
-                            if (!buzzing && System.nanoTime() - started >= BuzzAfterNanos) {
-                                buzzing = true
-                                motor[0]?.start(HoldMillis)
-                            }
                         }
                         @Suppress("UNREACHABLE_CODE")
                         true
                     }
                     if (endedEarly != null) return@awaitEachGesture
+                    motor[0]?.stop()
                     peek()
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)

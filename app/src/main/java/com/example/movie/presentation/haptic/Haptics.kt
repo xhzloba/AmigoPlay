@@ -1,5 +1,6 @@
 package com.example.movie.presentation.haptic
 
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -34,9 +35,14 @@ internal fun rememberHapticTick(): (() -> Unit)? {
 }
 
 internal class HoldHaptic(private val vibrator: Vibrator) {
-    fun start(millis: Long) {
-        val amplitude = if (vibrator.hasAmplitudeControl()) 255 else VibrationEffect.DEFAULT_AMPLITUDE
-        vibrator.vibrate(VibrationEffect.createOneShot(millis, amplitude))
+    fun start() {
+        val effect = if (vibrator.hasAmplitudeControl()) {
+            VibrationEffect.createWaveform(longArrayOf(0, 600), intArrayOf(0, 255), 0)
+        } else {
+            VibrationEffect.createWaveform(longArrayOf(0, 600), 0)
+        }
+        val usage = VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH)
+        vibrator.vibrate(effect, usage)
     }
 
     fun stop() {
