@@ -226,6 +226,16 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    if (!state.topReady || state.top.isNotEmpty()) {
+                        Spacer(Modifier.height(24.dp))
+                        RecommendationRail(
+                            movies = state.top,
+                            onMovieClick = onMovieClick,
+                            onMoviePeek = onMoviePeek,
+                            title = stringResource(R.string.section_top),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     if (!state.bestReady || state.best.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
@@ -284,6 +294,13 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
             onMovieClick = {},
             onMoviePeek = {},
             title = stringResource(R.string.section_recommendations),
+        )
+        Spacer(Modifier.height(24.dp))
+        RecommendationRail(
+            movies = emptyList(),
+            onMovieClick = {},
+            onMoviePeek = {},
+            title = stringResource(R.string.section_top),
         )
         Spacer(Modifier.height(24.dp))
         RecommendationRail(

@@ -24,6 +24,12 @@ internal interface VokinoApi {
     @GET("v2/recommendations/list")
     suspend fun recommendations(@Query("token") token: String): CatalogResponseDto
 
+    @GET("v2/compilations/content/{id}")
+    suspend fun compilation(
+        @Path("id") id: String,
+        @Query("token") token: String,
+    ): CatalogResponseDto
+
     @GET("v2/search")
     suspend fun search(
         @Query("name") name: String,

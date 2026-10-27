@@ -8,6 +8,7 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.usecase.GetHomeShelvesUseCase
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
+import com.example.movie.domain.usecase.GetTopMoviesUseCase
 import com.example.movie.domain.usecase.SearchMoviesUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,6 +21,7 @@ class HomeViewModel(
     private val getHomeShelves: GetHomeShelvesUseCase,
     private val getShelfMovies: GetShelfMoviesUseCase,
     private val getRecommendations: GetRecommendationsUseCase,
+    private val getTopMovies: GetTopMoviesUseCase,
     private val searchMovies: SearchMoviesUseCase,
 ) : ViewModel() {
     private val cache = mutableMapOf<String, List<Movie>>()
@@ -31,6 +33,7 @@ class HomeViewModel(
     init {
         loadShelves()
         loadRecommendations()
+        loadTop()
         loadBest()
     }
 
@@ -93,6 +96,9 @@ class HomeViewModel(
         if (!_state.value.recommendationsReady || _state.value.recommendations.isEmpty()) {
             loadRecommendations()
         }
+        if (!_state.value.topReady || _state.value.top.isEmpty()) {
+            loadTop()
+        }
         if (!_state.value.bestReady || _state.value.best.isEmpty()) {
             loadBest()
         }
@@ -122,6 +128,21 @@ class HomeViewModel(
                         recommendations = emptyList(),
                         recommendationsReady = true,
                     )
+                }
+        }
+    }
+
+    private fun loadTop() {
+        viewModelScope.launch {
+            if (_state.value.top.isEmpty()) {
+                _state.value = _state.value.copy(topReady = false)
+            }
+            getTopMovies()
+                .onSuccess { movies ->
+                    _state.value = _state.value.copy(top = movies, topReady = true)
+                }
+                .onFailure {
+                    _state.value = _state.value.copy(top = emptyList(), topReady = true)
                 }
         }
     }

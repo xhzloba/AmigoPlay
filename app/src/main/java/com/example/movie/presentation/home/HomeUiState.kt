@@ -10,6 +10,8 @@ data class HomeUiState(
     val movies: List<Movie> = emptyList(),
     val recommendations: List<Movie> = emptyList(),
     val recommendationsReady: Boolean = false,
+    val top: List<Movie> = emptyList(),
+    val topReady: Boolean = false,
     val best: List<Movie> = emptyList(),
     val bestReady: Boolean = false,
     val phase: HomePhase = HomePhase.Loading,
