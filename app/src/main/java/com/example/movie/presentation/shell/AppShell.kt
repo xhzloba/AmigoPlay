@@ -65,8 +65,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.movie.R
+import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.HomeRoute
+import com.example.movie.presentation.home.MoviePeek
 import com.example.movie.presentation.settings.SettingsRoute
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.CinemaMuted
@@ -106,6 +108,10 @@ fun AppShell(onMovieClick: (String) -> Unit) {
         tabName = AppTab.Home.name
     }
     val hazeState = rememberHazeState()
+    var peek by remember { mutableStateOf<Movie?>(null) }
+    LaunchedEffect(tab) {
+        if (tab != AppTab.Home) peek = null
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -117,7 +123,10 @@ fun AppShell(onMovieClick: (String) -> Unit) {
                 .hazeSource(state = hazeState),
         ) {
             when (tab) {
-                AppTab.Home -> HomeRoute(onMovieClick = onMovieClick)
+                AppTab.Home -> HomeRoute(
+                    onMovieClick = onMovieClick,
+                    onMoviePeek = { peek = it },
+                )
                 AppTab.Catalog -> SectionScreen(title = stringResource(R.string.nav_catalog))
                 AppTab.Favorites -> SectionScreen(title = stringResource(R.string.nav_favorites))
                 AppTab.Settings -> SettingsRoute()
@@ -129,6 +138,7 @@ fun AppShell(onMovieClick: (String) -> Unit) {
             hazeState = hazeState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
+        MoviePeek(movie = peek, onDismiss = { peek = null })
     }
 }
 

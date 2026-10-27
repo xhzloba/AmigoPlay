@@ -5,9 +5,13 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.movie.di.LocalAppContainer
+import com.example.movie.domain.model.Movie
 
 @Composable
-fun HomeRoute(onMovieClick: (String) -> Unit) {
+fun HomeRoute(
+    onMovieClick: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
+) {
     val container = LocalAppContainer.current
     val viewModel: HomeViewModel = viewModel {
         HomeViewModel(
@@ -21,6 +25,7 @@ fun HomeRoute(onMovieClick: (String) -> Unit) {
         state = state,
         onSelectShelf = viewModel::select,
         onMovieClick = onMovieClick,
+        onMoviePeek = onMoviePeek,
         onRetry = viewModel::retry,
     )
 }

@@ -93,6 +93,7 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
+import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
 import kotlinx.coroutines.Dispatchers
@@ -193,6 +194,7 @@ private fun wrapRadians(angle: Float): Float {
 fun PosterCarousel(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val loop = movies.size > 1
@@ -367,6 +369,7 @@ fun PosterCarousel(
                             alpha = if (distance <= 1.05f) 1f else lerp(1f, 0f, (distance - 1.05f).coerceIn(0f, 1f))
                         }
                         .clip(CardShape)
+                        .holdToPeek { onMoviePeek(movie) }
                         .clickable(
                             interactionSource = remember(movie.id) { MutableInteractionSource() },
                             indication = null,

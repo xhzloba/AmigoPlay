@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
+import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 
@@ -51,6 +52,7 @@ private val PosterShape = RoundedCornerShape(16.dp)
 internal fun RecommendationRail(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
     title: String? = null,
 ) {
@@ -73,6 +75,7 @@ internal fun RecommendationRail(
             RecommendationPager(
                 movies = movies,
                 onMovieClick = onMovieClick,
+                onMoviePeek = onMoviePeek,
             )
         }
     }
@@ -112,6 +115,7 @@ internal fun RecommendationRailSkeleton(
 private fun RecommendationPager(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -151,6 +155,7 @@ private fun RecommendationPager(
                         .height(posterHeight)
                         .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.08f))
+                        .holdToPeek { onMoviePeek(movie) }
                         .clickable(
                             interactionSource = remember(movie.id) { MutableInteractionSource() },
                             indication = null,
