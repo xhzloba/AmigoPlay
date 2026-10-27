@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -78,7 +79,7 @@ fun CategoryTabs(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    HapticOnChange(Unit) { selectedId }
+    HapticOnChange(listState) { listState.passedTab() }
     LaunchedEffect(selectedId, shelves) {
         val index = shelves.indexOfFirst { it.id == selectedId }
         if (index < 0) return@LaunchedEffect
@@ -111,6 +112,11 @@ fun CategoryTabs(
         }
         }
     }
+}
+
+private fun LazyListState.passedTab(): Int {
+    val head = layoutInfo.visibleItemsInfo.firstOrNull() ?: return firstVisibleItemIndex
+    return if (head.offset + head.size / 2 < 0) head.index + 1 else head.index
 }
 
 @Composable
