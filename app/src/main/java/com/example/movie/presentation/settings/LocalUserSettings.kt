@@ -17,6 +17,8 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setShowLogos(enabled: Boolean) = Unit
 
+    override fun setAutoBackdrop(enabled: Boolean) = Unit
+
     override fun setHaptic(enabled: Boolean) = Unit
 
     override fun setGyro(enabled: Boolean) = Unit

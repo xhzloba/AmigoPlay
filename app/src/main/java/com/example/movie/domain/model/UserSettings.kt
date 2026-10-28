@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 data class UserSettings(
     val extractColors: Boolean = true,
     val showLogos: Boolean = true,
+    val autoBackdrop: Boolean = true,
     val haptic: Boolean = true,
     val gyro: Boolean = true,
 )
@@ -15,6 +16,8 @@ interface UserSettingsRepository {
     fun setExtractColors(enabled: Boolean)
 
     fun setShowLogos(enabled: Boolean)
+
+    fun setAutoBackdrop(enabled: Boolean)
 
     fun setHaptic(enabled: Boolean)
 

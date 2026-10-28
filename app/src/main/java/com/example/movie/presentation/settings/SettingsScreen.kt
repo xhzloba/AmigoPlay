@@ -79,6 +79,7 @@ fun SettingsRoute() {
         settings = settings,
         onExtractColors = repository::setExtractColors,
         onShowLogos = repository::setShowLogos,
+        onAutoBackdrop = repository::setAutoBackdrop,
         onHaptic = repository::setHaptic,
         onGyro = repository::setGyro,
     )
@@ -89,6 +90,7 @@ private fun SettingsScreen(
     settings: UserSettings,
     onExtractColors: (Boolean) -> Unit,
     onShowLogos: (Boolean) -> Unit,
+    onAutoBackdrop: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
     onGyro: (Boolean) -> Unit,
 ) {
@@ -120,6 +122,13 @@ private fun SettingsScreen(
                     hint = stringResource(R.string.settings_logos_hint),
                     checked = settings.showLogos,
                     onChecked = onShowLogos,
+                )
+                SettingsDivider()
+                SettingRow(
+                    title = stringResource(R.string.settings_backdrop_auto),
+                    hint = stringResource(R.string.settings_backdrop_auto_hint),
+                    checked = settings.autoBackdrop,
+                    onChecked = onAutoBackdrop,
                 )
             }
             SettingsSection.Sensors -> {

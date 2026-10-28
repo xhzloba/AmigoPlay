@@ -3,8 +3,10 @@ package com.example.movie.presentation.detail
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -31,6 +34,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -54,6 +59,7 @@ import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaBlack
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -61,11 +67,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
@@ -106,7 +116,9 @@ import com.example.movie.presentation.palette.seat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import java.util.Locale
 
 private val ActionCircle = Color.White.copy(alpha = 0.16f)
@@ -193,21 +205,38 @@ private fun DetailContent(
     val flat = DominantColors(CinemaBlack, CinemaBlack)
     val hidden = DominantColors(Color(0xFF121212), Color(0xFF121212))
     var target by remember(detail.id) { mutableStateOf(if (settings.extractColors) hidden else flat) }
+    var glow by remember(detail.id) { mutableStateOf(hidden) }
+    var paletteReady by remember(detail.id) { mutableStateOf(false) }
     LaunchedEffect(detail.id, detail.posterUrl, settings.extractColors) {
         if (!settings.extractColors) {
             target = flat
+            glow = hidden
+            paletteReady = false
             return@LaunchedEffect
         }
+        paletteReady = false
         val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
+        glow = extracted
         target = extracted.seat()
+        paletteReady = true
     }
     val primary by animateColorAsState(target.primary, tween(durationMillis = 800), label = "washPrimary")
     val secondary by animateColorAsState(target.secondary, tween(durationMillis = 800), label = "washSecondary")
     val colors = DominantColors(primary, secondary)
+    val glowPrimary by animateColorAsState(glow.primary, tween(durationMillis = 800), label = "retouchPrimary")
+    val glowSecondary by animateColorAsState(glow.secondary, tween(durationMillis = 800), label = "retouchSecondary")
+    val backdropTint by animateFloatAsState(
+        targetValue = if (settings.extractColors && paletteReady) 1f else 0f,
+        animationSpec = tween(durationMillis = 800),
+        label = "backdrop-tint",
+    )
     val backdrops = detail.backdrops
+    val manualBackdrop = !settings.autoBackdrop && backdrops.size > 1
+    val pagerState = rememberPagerState { backdrops.size.coerceAtLeast(1) }
+    val scope = rememberCoroutineScope()
     var frame by remember(detail.id, backdrops) { mutableIntStateOf(0) }
-    LaunchedEffect(detail.id, backdrops) {
-        if (backdrops.size < 2) return@LaunchedEffect
+    LaunchedEffect(detail.id, backdrops, settings.autoBackdrop) {
+        if (settings.autoBackdrop.not() || backdrops.size < 2) return@LaunchedEffect
         while (isActive) {
             delay(5_000)
             frame = (frame + 1) % backdrops.size
@@ -222,35 +251,36 @@ private fun DetailContent(
         val contentTop = maxHeight * 0.46f
         val textWidth = maxWidth - DetailInset * 2
         if (backdrops.isNotEmpty()) {
-            Crossfade(
-                targetState = backdrops[frame],
-                animationSpec = tween(durationMillis = 900),
-                label = "backdrop",
-            ) { url ->
-                AsyncImage(
-                    model = url,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = Alignment.TopCenter,
+            if (manualBackdrop) {
+                HorizontalPager(
+                    state = pagerState,
+                    userScrollEnabled = false,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(heroHeight)
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    0f to Color.Black,
-                                    0.40f to Color.Black,
-                                    0.52f to Color.Black.copy(alpha = 0.55f),
-                                    0.62f to Color.Black.copy(alpha = 0.14f),
-                                    0.74f to Color.Transparent,
-                                    1f to Color.Transparent,
-                                ),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        },
-                )
+                        .height(heroHeight),
+                ) { page ->
+                    BackdropStill(
+                        url = backdrops[page],
+                        height = heroHeight,
+                        tint = backdropTint,
+                        primary = glowPrimary,
+                        secondary = glowSecondary,
+                    )
+                }
+            } else {
+                Crossfade(
+                    targetState = backdrops[frame],
+                    animationSpec = tween(durationMillis = 900),
+                    label = "backdrop",
+                ) { url ->
+                    BackdropStill(
+                        url = url,
+                        height = heroHeight,
+                        tint = backdropTint,
+                        primary = glowPrimary,
+                        secondary = glowSecondary,
+                    )
+                }
             }
         }
         val scroll = rememberScrollState()
@@ -260,7 +290,8 @@ private fun DetailContent(
                 .fillMaxSize()
                 .drawBehind {
                     val fade = 320.dp.toPx()
-                    val alpha = (scroll.value / fade).coerceIn(0f, 0.55f)
+                    val progress = (scroll.value / fade).coerceIn(0f, 1f)
+                    val alpha = 0.55f + progress * 0.12f
                     drawRect(Color.Black.copy(alpha = alpha))
                 },
         )
@@ -277,6 +308,16 @@ private fun DetailContent(
                     ),
                 ),
         )
+        if (manualBackdrop) {
+            BackdropDots(
+                count = backdrops.size,
+                index = pagerState.currentPage,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(top = 12.dp),
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -285,7 +326,26 @@ private fun DetailContent(
                 .padding(horizontal = DetailInset),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(contentTop))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(contentTop)
+                    .pointerInput(manualBackdrop, backdrops.size) {
+                        if (!manualBackdrop) return@pointerInput
+                        detectHorizontalDragGestures(
+                            onHorizontalDrag = { change, drag ->
+                                change.consume()
+                                scope.launch { pagerState.scroll { scrollBy(-drag) } }
+                            },
+                            onDragEnd = {
+                                val page = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                                    .roundToInt()
+                                    .coerceIn(0, backdrops.lastIndex)
+                                scope.launch { pagerState.animateScrollToPage(page) }
+                            },
+                        )
+                    },
+            )
             LogoOrTitle(detail)
             Spacer(Modifier.height(16.dp))
             MetaRow(detail)
@@ -664,6 +724,121 @@ private fun Int.asRuntime(): String {
         hours > 0 && minutes > 0 -> "%dч %dм".format(hours, minutes)
         hours > 0 -> "%dч".format(hours)
         else -> "%dм".format(minutes)
+    }
+}
+
+@Composable
+private fun BackdropStill(
+    url: String,
+    height: Dp,
+    tint: Float,
+    primary: Color,
+    secondary: Color,
+) {
+    AsyncImage(
+        model = url,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        alignment = Alignment.TopCenter,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height)
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                val imageAlpha = 1f - 0.18f * tint
+                drawContext.canvas.saveLayer(
+                    Rect(0f, 0f, size.width, size.height),
+                    Paint().apply { alpha = imageAlpha },
+                )
+                drawContent()
+                drawContext.canvas.restore()
+                if (tint > 0.01f) {
+                    fun feather(
+                        center: Offset,
+                        radius: Float,
+                        color: Color,
+                        core: Float,
+                        mid: Float,
+                    ) {
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colorStops = arrayOf(
+                                    0f to color.copy(alpha = core),
+                                    0.55f to color.copy(alpha = mid),
+                                    1f to Color.Transparent,
+                                ),
+                                center = center,
+                                radius = radius,
+                            ),
+                            radius = radius,
+                            center = center,
+                            blendMode = BlendMode.Screen,
+                        )
+                    }
+                    feather(
+                        center = Offset(0f, size.height * 0.3f),
+                        radius = size.width * 0.78f,
+                        color = primary,
+                        core = 0.95f * tint,
+                        mid = 0.55f * tint,
+                    )
+                    feather(
+                        center = Offset(0f, size.height * 0.68f),
+                        radius = size.width * 0.7f,
+                        color = primary,
+                        core = 0.85f * tint,
+                        mid = 0.42f * tint,
+                    )
+                    feather(
+                        center = Offset(size.width, size.height * 0.34f),
+                        radius = size.width * 0.72f,
+                        color = secondary,
+                        core = 0.92f * tint,
+                        mid = 0.5f * tint,
+                    )
+                    feather(
+                        center = Offset(size.width, size.height * 0.72f),
+                        radius = size.width * 0.64f,
+                        color = secondary,
+                        core = 0.8f * tint,
+                        mid = 0.38f * tint,
+                    )
+                }
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        0f to Color.Black,
+                        0.40f to Color.Black,
+                        0.52f to Color.Black.copy(alpha = 0.55f),
+                        0.62f to Color.Black.copy(alpha = 0.14f),
+                        0.74f to Color.Transparent,
+                        1f to Color.Transparent,
+                    ),
+                    blendMode = BlendMode.DstIn,
+                )
+            },
+    )
+}
+
+@Composable
+private fun BackdropDots(count: Int, index: Int, modifier: Modifier = Modifier) {
+    val window = 9
+    val start = if (count <= window) 0 else (index - window / 2).coerceIn(0, count - window)
+    val shown = minOf(window, count)
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(shown) { slot ->
+            val page = start + slot
+            val selected = page == index
+            Box(
+                modifier = Modifier
+                    .size(if (selected) 7.dp else 5.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = if (selected) 0.95f else 0.38f)),
+            )
+        }
     }
 }
 
