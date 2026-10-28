@@ -126,11 +126,20 @@ internal fun Color.forWordmark(): Color {
 
 internal fun DominantColors.seat(): DominantColors = DominantColors(primary.seated(), secondary.seated())
 
+internal fun DominantColors.richer(): DominantColors = DominantColors(primary.richer(), secondary.richer())
+
 internal fun DominantColors.backdropBrush(): Brush {
     return Brush.horizontalGradient(
         0f to primary,
         1f to secondary,
     )
+}
+
+private fun Color.richer(): Color {
+    val hsv = toHsv()
+    if (hsv[1] < 0.05f) return this
+    hsv[1] = (hsv[1] * 1.65f).coerceAtMost(1f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
 private fun Color.seated(): Color {

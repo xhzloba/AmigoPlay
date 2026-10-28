@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.22.1",
+            fixed = listOf(
+                "Чуть прокрутил деталку — backdrop уходит, остаётся заливка цветами постера.",
+                "Цвета ретуши в деталке те же, но насыщеннее. Затемнение не менялось.",
+            ),
+        ),
+        Release(
             version = "1.22.0",
             added = listOf(
                 "В настройках можно выключить автокадры в деталке. Тогда сверху точки, backdrop листается свайпом. Выбор сохраняется.",

@@ -112,6 +112,7 @@ import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.palette.backdropBrush
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
+import com.example.movie.presentation.palette.richer
 import com.example.movie.presentation.palette.seat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -216,8 +217,9 @@ private fun DetailContent(
         }
         paletteReady = false
         val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
-        glow = extracted
-        target = extracted.seat()
+        val vivid = extracted.richer()
+        glow = vivid
+        target = vivid.seat()
         paletteReady = true
     }
     val primary by animateColorAsState(target.primary, tween(durationMillis = 800), label = "washPrimary")
@@ -242,6 +244,9 @@ private fun DetailContent(
             frame = (frame + 1) % backdrops.size
         }
     }
+    val scroll = rememberScrollState()
+    LaunchedEffect(detail.id) { scroll.scrollTo(0) }
+    val density = LocalDensity.current
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
@@ -250,55 +255,62 @@ private fun DetailContent(
         val heroHeight = maxHeight * 0.82f
         val contentTop = maxHeight * 0.46f
         val textWidth = maxWidth - DetailInset * 2
+        val backdropAway = scroll.value > with(density) { 32.dp.toPx() }
+        val backdropAlpha by animateFloatAsState(
+            targetValue = if (backdropAway) 0f else 1f,
+            animationSpec = tween(durationMillis = 240),
+            label = "backdrop-away",
+        )
         if (backdrops.isNotEmpty()) {
-            if (manualBackdrop) {
-                HorizontalPager(
-                    state = pagerState,
-                    userScrollEnabled = false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(heroHeight),
-                ) { page ->
-                    BackdropStill(
-                        url = backdrops[page],
-                        height = heroHeight,
-                        tint = backdropTint,
-                        primary = glowPrimary,
-                        secondary = glowSecondary,
-                    )
-                }
-            } else {
-                Crossfade(
-                    targetState = backdrops[frame],
-                    animationSpec = tween(durationMillis = 900),
-                    label = "backdrop",
-                ) { url ->
-                    BackdropStill(
-                        url = url,
-                        height = heroHeight,
-                        tint = backdropTint,
-                        primary = glowPrimary,
-                        secondary = glowSecondary,
-                    )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(heroHeight)
+                    .graphicsLayer { alpha = backdropAlpha },
+            ) {
+                if (manualBackdrop) {
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = false,
+                        modifier = Modifier.fillMaxSize(),
+                    ) { page ->
+                        BackdropStill(
+                            url = backdrops[page],
+                            height = heroHeight,
+                            tint = backdropTint,
+                            primary = glowPrimary,
+                            secondary = glowSecondary,
+                        )
+                    }
+                } else {
+                    Crossfade(
+                        targetState = backdrops[frame],
+                        animationSpec = tween(durationMillis = 900),
+                        label = "backdrop",
+                    ) { url ->
+                        BackdropStill(
+                            url = url,
+                            height = heroHeight,
+                            tint = backdropTint,
+                            primary = glowPrimary,
+                            secondary = glowSecondary,
+                        )
+                    }
                 }
             }
         }
-        val scroll = rememberScrollState()
-        LaunchedEffect(detail.id) { scroll.scrollTo(0) }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawBehind {
-                    val fade = 320.dp.toPx()
-                    val progress = (scroll.value / fade).coerceIn(0f, 1f)
-                    val alpha = 0.55f + progress * 0.12f
-                    drawRect(Color.Black.copy(alpha = alpha))
+                    drawRect(Color.Black.copy(alpha = 0.55f))
                 },
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(72.dp)
+                .graphicsLayer { alpha = backdropAlpha }
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
@@ -315,7 +327,8 @@ private fun DetailContent(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(top = 12.dp),
+                    .padding(top = 12.dp)
+                    .graphicsLayer { alpha = backdropAlpha },
             )
         }
         Column(
