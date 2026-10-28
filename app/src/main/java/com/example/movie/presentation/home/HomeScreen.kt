@@ -71,6 +71,7 @@ import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
 private val HomeBottomClearance = 82.dp
+private val CatalogGap = 36.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -247,7 +248,7 @@ fun HomeScreen(
                         )
                     }
                     if (!state.catalogPreviewReady || state.catalogPreview.isNotEmpty()) {
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(CatalogGap))
                         CatalogPlaque(
                             movies = state.catalogPreview,
                             onClick = onOpenCatalog,
@@ -255,7 +256,7 @@ fun HomeScreen(
                         )
                     }
                     if (!state.topReady || state.top.isNotEmpty()) {
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(CatalogGap))
                         RecommendationRail(
                             movies = state.top,
                             onMovieClick = onMovieClick,
@@ -323,9 +324,9 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
             onMoviePeek = {},
             title = stringResource(R.string.section_recommendations),
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(CatalogGap))
         CatalogPlaque(movies = emptyList())
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(CatalogGap))
         RecommendationRail(
             movies = emptyList(),
             onMovieClick = {},
