@@ -1,5 +1,6 @@
 package com.example.movie.presentation.home.components
 
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -7,6 +8,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -54,21 +56,31 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.common.ImdbScore
@@ -86,6 +98,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val CardShape = RoundedCornerShape(22.dp)
+private val ReflectionShape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
+private val ReflectionHeight = 112.dp
 private const val CoverWidthFraction = 0.5f
 private const val CoverAspect = 1.46f
 private const val NeighborScale = 0.9f
@@ -164,34 +178,53 @@ private fun TopRankPager(
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val cardWidth = maxWidth * CoverWidthFraction
             val cardHeight = cardWidth * CoverAspect
+            val posterHeight = cardHeight + 20.dp
             val side = ((maxWidth - cardWidth) / 2).coerceAtLeast(0.dp)
-            HorizontalPager(
-                state = pagerState,
-                contentPadding = PaddingValues(horizontal = side),
-                pageSize = PageSize.Fixed(cardWidth),
-                pageSpacing = 0.dp,
-                beyondViewportPageCount = 2,
-                verticalAlignment = Alignment.Top,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(cardHeight + 20.dp),
-                key = { index -> movies[index].id },
-            ) { index ->
-                val item = movies[index]
-                val pageOffset = (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
-                TopRankCard(
-                    movie = item,
-                    pageOffset = pageOffset,
-                    onClick = {
-                        tick?.invoke()
-                        if (pageOffset.absoluteValue < 0.35f) {
-                            onMovieClick(item.id)
-                        } else {
-                            scope.launch { pagerState.animateScrollToPage(index) }
-                        }
-                    },
-                    onPeek = { onMoviePeek(item) },
-                )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(Modifier.fillMaxWidth().height(posterHeight)) {
+                    TopRankReflection(
+                        movie = movie,
+                        width = cardWidth,
+                        cardHeight = posterHeight,
+                        appear = appear,
+                        modifier = Modifier
+                            .zIndex(0f)
+                            .align(Alignment.BottomCenter)
+                            .offset(y = ReflectionHeight),
+                    )
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = side),
+                        pageSize = PageSize.Fixed(cardWidth),
+                        pageSpacing = 0.dp,
+                        beyondViewportPageCount = 2,
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier
+                            .zIndex(1f)
+                            .fillMaxWidth()
+                            .height(posterHeight),
+                        key = { index -> movies[index].id },
+                    ) { index ->
+                        val item = movies[index]
+                        val pageOffset = (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
+                        TopRankCard(
+                            movie = item,
+                            pageOffset = pageOffset,
+                            onClick = {
+                                tick?.invoke()
+                                if (pageOffset.absoluteValue < 0.35f) {
+                                    onMovieClick(item.id)
+                                } else {
+                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                }
+                            },
+                            onPeek = { onMoviePeek(item) },
+                        )
+                    }
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -421,6 +454,73 @@ private fun TopRankCard(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = lerp(0f, 0.58f, clamped))),
             )
+        }
+    }
+}
+
+@Composable
+private fun TopRankReflection(
+    movie: Movie,
+    width: androidx.compose.ui.unit.Dp,
+    cardHeight: androidx.compose.ui.unit.Dp,
+    appear: Float,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    var image by remember(movie.id) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(movie.id, movie.posterUrl, movie.backdropUrl) {
+        val url = movie.posterUrl ?: movie.backdropUrl
+        image = null
+        if (url == null) return@LaunchedEffect
+        val result = context.imageLoader.execute(
+            ImageRequest.Builder(context)
+                .data(url)
+                .allowHardware(false)
+                .size(540, 800)
+                .build(),
+        )
+        val bitmap = ((result as? SuccessResult)?.drawable as? BitmapDrawable)?.bitmap
+        image = bitmap?.asImageBitmap()
+    }
+    val bitmap = image
+    Box(
+        modifier = modifier
+            .width(width)
+            .height(ReflectionHeight)
+            .graphicsLayer {
+                transformOrigin = TransformOrigin(0.5f, 0f)
+                alpha = appear
+                clip = false
+                compositingStrategy = CompositingStrategy.Offscreen
+            }
+            .clip(ReflectionShape),
+    ) {
+        if (bitmap != null && appear > 0.01f) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val srcH = (bitmap.height * (size.height / cardHeight.toPx()))
+                    .roundToInt()
+                    .coerceIn(1, bitmap.height)
+                scale(scaleX = 1f, scaleY = -1f, pivot = Offset(size.width / 2f, 0f)) {
+                    drawImage(
+                        image = bitmap,
+                        srcOffset = IntOffset(0, bitmap.height - srcH),
+                        srcSize = IntSize(bitmap.width, srcH),
+                        dstOffset = IntOffset(0, -size.height.roundToInt()),
+                        dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                    )
+                }
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0f to Color.Black.copy(alpha = 0.38f),
+                            0.22f to Color.Black.copy(alpha = 0.2f),
+                            0.55f to Color.Black.copy(alpha = 0.06f),
+                            1f to Color.Transparent,
+                        ),
+                    ),
+                    blendMode = BlendMode.DstIn,
+                )
+            }
         }
     }
 }
