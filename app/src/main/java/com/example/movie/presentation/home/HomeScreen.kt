@@ -67,6 +67,7 @@ import com.example.movie.presentation.home.components.CoverStackSkeleton
 import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
+import com.example.movie.presentation.home.components.TopRankStage
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
@@ -257,7 +258,7 @@ fun HomeScreen(
                     }
                     if (!state.topReady || state.top.isNotEmpty()) {
                         Spacer(Modifier.height(CatalogGap))
-                        RecommendationRail(
+                        TopRankStage(
                             movies = state.top,
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
@@ -327,7 +328,7 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(CatalogGap))
         CatalogPlaque(movies = emptyList())
         Spacer(Modifier.height(CatalogGap))
-        RecommendationRail(
+        TopRankStage(
             movies = emptyList(),
             onMovieClick = {},
             onMoviePeek = {},

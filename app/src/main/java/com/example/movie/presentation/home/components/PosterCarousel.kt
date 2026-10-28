@@ -82,6 +82,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -566,9 +567,12 @@ private fun MovieCaption(movie: Movie?) {
             contentAlignment = Alignment.Center,
         ) {
             if (movie != null) {
-                LogoOrTitle(
+                MovieLogoOrTitle(
                     movie = movie,
                     modifier = Modifier.offset(y = -LogoNudge),
+                    titleInsetExtra = 12.dp,
+                    titleFontSize = 28.sp,
+                    titleLineHeight = 34.sp,
                     onContentHeight = { targetLift = it },
                 )
             }
@@ -576,7 +580,7 @@ private fun MovieCaption(movie: Movie?) {
         Spacer(Modifier.height(8.dp))
         Box(
             modifier = Modifier
-                .height(22.dp)
+                .height(20.dp)
                 .fillMaxWidth()
                 .offset(y = -(MetaNudge + extraLift)),
             contentAlignment = Alignment.Center,
@@ -597,7 +601,8 @@ private fun MovieCaption(movie: Movie?) {
                         Text(
                             text = year.toString(),
                             color = meta,
-                            fontSize = 16.sp,
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
                         )
@@ -606,7 +611,8 @@ private fun MovieCaption(movie: Movie?) {
                         Text(
                             text = genres.joinToString(", "),
                             color = meta,
-                            fontSize = 16.sp,
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -620,69 +626,106 @@ private fun MovieCaption(movie: Movie?) {
 }
 
 @Composable
-private fun LogoOrTitle(
+internal fun MovieLogoOrTitle(
     movie: Movie,
     modifier: Modifier = Modifier,
-    onContentHeight: (Dp) -> Unit,
+    titleInsetExtra: Dp = 10.dp,
+    titleFontSize: TextUnit = 20.sp,
+    titleLineHeight: TextUnit = 26.sp,
+    onContentHeight: (Dp) -> Unit = {},
+    onUsingLogo: (Boolean) -> Unit = {},
 ) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val density = LocalDensity.current
     var logoFailed by remember(movie.id, movie.logoUrl) {
         mutableStateOf(movie.logoUrl.isNullOrBlank())
     }
-    if (settings.showLogos && !logoFailed) {
-        AsyncImage(
-            model = movie.logoUrl,
-            contentDescription = movie.title,
-            contentScale = ContentScale.Fit,
-            alignment = Alignment.Center,
-            onSuccess = { state ->
-                val raw = (state.result.drawable as? BitmapDrawable)?.bitmap ?: return@AsyncImage
-                val bitmap = if (raw.config == Bitmap.Config.HARDWARE) {
-                    raw.copy(Bitmap.Config.ARGB_8888, false) ?: return@AsyncImage
-                } else {
-                    raw
-                }
-                val width = bitmap.width
-                val height = bitmap.height
-                if (width <= 0 || height <= 0) return@AsyncImage
-                val row = IntArray(width)
-                var bottom = height - 1
-                while (bottom > 0) {
-                    bitmap.getPixels(row, 0, width, 0, bottom, width, 1)
-                    if (row.any { it ushr 24 > 24 }) break
-                    bottom--
-                }
-                val maxW = with(density) { 220.dp.toPx() }
-                val maxH = with(density) { LogoSlot.toPx() }
-                val scale = min(maxW / width, maxH / height)
-                val scaledHeight = height * scale
-                val below = (maxH - scaledHeight) / 2f + (height - 1 - bottom) * scale
-                onContentHeight(with(density) { below.toDp() }.coerceAtLeast(0.dp))
-            },
-            onError = { logoFailed = true },
+    val usingLogo = settings.showLogos && !logoFailed
+    SideEffect { onUsingLogo(usingLogo) }
+    if (usingLogo) {
+        var logoReady by remember(movie.id, movie.logoUrl) { mutableStateOf(false) }
+        Box(
             modifier = modifier
                 .height(LogoSlot)
                 .width(220.dp),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!logoReady) LogoSkeleton()
+            AsyncImage(
+                model = movie.logoUrl,
+                contentDescription = movie.title,
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center,
+                onSuccess = { state ->
+                    logoReady = true
+                    val raw = (state.result.drawable as? BitmapDrawable)?.bitmap ?: return@AsyncImage
+                    val bitmap = if (raw.config == Bitmap.Config.HARDWARE) {
+                        raw.copy(Bitmap.Config.ARGB_8888, false) ?: return@AsyncImage
+                    } else {
+                        raw
+                    }
+                    val width = bitmap.width
+                    val height = bitmap.height
+                    if (width <= 0 || height <= 0) return@AsyncImage
+                    val row = IntArray(width)
+                    var bottom = height - 1
+                    while (bottom > 0) {
+                        bitmap.getPixels(row, 0, width, 0, bottom, width, 1)
+                        if (row.any { it ushr 24 > 24 }) break
+                        bottom--
+                    }
+                    val maxW = with(density) { 220.dp.toPx() }
+                    val maxH = with(density) { LogoSlot.toPx() }
+                    val scale = min(maxW / width, maxH / height)
+                    val scaledHeight = height * scale
+                    val below = (maxH - scaledHeight) / 2f + (height - 1 - bottom) * scale
+                    onContentHeight(with(density) { below.toDp() }.coerceAtLeast(0.dp))
+                },
+                onError = { logoFailed = true },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = if (logoReady) 1f else 0f },
+            )
+        }
     } else {
         Text(
             text = movie.title,
             color = Color.White,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 28.sp,
-            lineHeight = 32.sp,
-            letterSpacing = (-0.4).sp,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = titleFontSize,
+            lineHeight = titleLineHeight,
+            letterSpacing = (-0.3).sp,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             onTextLayout = { layout ->
                 val textHeight = with(density) { layout.size.height.toDp() }
-                onContentHeight(((LogoSlot - textHeight) / 2 + 10.dp).coerceAtLeast(0.dp))
+                onContentHeight(((LogoSlot - textHeight) / 2 + titleInsetExtra).coerceAtLeast(0.dp))
             },
             modifier = modifier,
         )
     }
+}
+
+@Composable
+private fun LogoSkeleton() {
+    val transition = rememberInfiniteTransition(label = "logo-skeleton")
+    val pulse by transition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.16f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "logo-pulse",
+    )
+    Box(
+        modifier = Modifier
+            .width(156.dp)
+            .height(18.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.White.copy(alpha = pulse)),
+    )
 }
 
 @Composable

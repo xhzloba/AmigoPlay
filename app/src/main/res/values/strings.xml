@@ -46,7 +46,7 @@
     <string name="settings_extract_colors">Цвета с обложки</string>
     <string name="settings_extract_colors_hint">Ретушь в деталке берётся из постера. Выключено — заливка цветом фона.</string>
     <string name="settings_logos">Логотипы</string>
-    <string name="settings_logos_hint">На главном слайдере и в деталке. Выключено — показывается название.</string>
+    <string name="settings_logos_hint">На главном слайдере, в «Топ 250» и в деталке. Выключено — показывается название.</string>
     <string name="settings_haptic">Виброотклик</string>
     <string name="settings_haptic_hint">Короткий отклик при листании и открытии фильма.</string>
     <string name="settings_gyro">Гироскоп</string>

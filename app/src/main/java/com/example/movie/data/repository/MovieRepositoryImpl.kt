@@ -86,6 +86,6 @@ internal class MovieRepositoryImpl(
 
     private companion object {
         const val TopMoviesId = "66fa5fc9dd606aae9ea0a9dc"
-        const val TopMoviesLimit = 20
+        const val TopMoviesLimit = 250
     }
 }
