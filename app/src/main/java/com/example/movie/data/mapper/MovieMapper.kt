@@ -38,6 +38,7 @@ internal fun ChannelDto.toDomain(): Movie {
         age = details.age?.takeIf { it > 0 },
         kind = details.toKind(),
         camrip = details.camrip,
+        type = details.type,
     )
 }
 
@@ -101,6 +102,7 @@ internal fun MovieDetailsDto.toDetail(): MovieDetail {
         ratingKp = ratingKp.positiveRating(),
         ratingImdb = ratingImdb.positiveRating(),
         backdrops = backdrops,
+        type = type,
     )
 }
 

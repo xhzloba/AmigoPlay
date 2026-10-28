@@ -35,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -56,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -89,6 +89,9 @@ import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.palette.DominantColors
+import com.example.movie.di.LocalAppContainer
+import com.example.movie.domain.model.toSaved
+import com.example.movie.presentation.common.BookmarkButton
 import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.haptic.HapticOnChange
@@ -103,14 +106,33 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+private val ActionCircle = Color.White.copy(alpha = 0.16f)
+
 private val ActionIcons = listOf(
-    Icons.Filled.FavoriteBorder,
     Icons.Filled.PlayArrow,
     Icons.Filled.CheckCircle,
     Icons.Filled.Share,
     Icons.Filled.List,
     Icons.Filled.MoreVert,
 )
+
+@Composable
+private fun RoundAction(icon: ImageVector) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(ActionCircle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.92f),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
 
 private val DetailInset = 20.dp
 
@@ -158,6 +180,9 @@ private fun DetailContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val favorites = LocalAppContainer.current.favorites
+    val savedIds by favorites.ids.collectAsStateWithLifecycle()
+    val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val flat = DominantColors(CinemaBlack, CinemaBlack)
     val hidden = DominantColors(Color(0xFF121212), Color(0xFF121212))
@@ -292,13 +317,17 @@ private fun DetailContent(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                BookmarkButton(
+                    saved = detail.id in savedIds,
+                    circled = true,
+                    circle = ActionCircle,
+                    onClick = {
+                        tick?.invoke()
+                        favorites.toggle(detail.toSaved())
+                    },
+                )
                 ActionIcons.forEach { icon ->
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.92f),
-                        modifier = Modifier.size(26.dp),
-                    )
+                    RoundAction(icon)
                 }
             }
             if (detail.overview.isNotBlank()) {

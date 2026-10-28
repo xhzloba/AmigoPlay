@@ -58,7 +58,7 @@ internal val CategoryTabLetterSpacing = (-0.2).sp
 
 private val LogoHeight = 36.dp
 private val LogoAspect = 754f / 186f
-private val LogoBleed = LogoHeight * (29f / 186f)
+internal val BrandLogoBleed = LogoHeight * (29f / 186f)
 
 private val TabSkeletonLabels = listOf(
     "В тренде",
@@ -125,7 +125,7 @@ private fun BrandRow(play: Color, onSearch: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 22.dp - LogoBleed, end = 14.dp),
+            .padding(start = 22.dp - BrandLogoBleed, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BrandWordmark(play = play)
@@ -156,7 +156,7 @@ private fun BrandRow(play: Color, onSearch: () -> Unit) {
 private data class SplitLogo(val amigo: ImageBitmap, val play: ImageBitmap)
 
 @Composable
-private fun BrandWordmark(play: Color) {
+internal fun BrandWordmark(play: Color) {
     val context = LocalContext.current
     val logo = remember {
         val options = BitmapFactory.Options().apply { inScaled = false }

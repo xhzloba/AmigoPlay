@@ -10,9 +10,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import com.example.movie.di.LocalAppContainer
@@ -44,11 +47,16 @@ class MainActivity : ComponentActivity() {
                             ),
                         ) { mutableStateListOf<String>() }
                         val openedId = stack.lastOrNull()
+                        var tabName by rememberSaveable { mutableStateOf("Home") }
                         BackHandler(enabled = openedId != null) {
                             stack.removeAt(stack.lastIndex)
                         }
                         if (openedId == null) {
-                            AppShell(onMovieClick = { stack.add(it) })
+                            AppShell(
+                                tabName = tabName,
+                                onTabChange = { tabName = it },
+                                onMovieClick = { stack.add(it) },
+                            )
                         } else {
                             DetailRoute(
                                 movieId = openedId,

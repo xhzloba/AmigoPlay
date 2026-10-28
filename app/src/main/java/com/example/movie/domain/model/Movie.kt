@@ -24,4 +24,5 @@ data class Movie(
     val age: Int?,
     val kind: ContentKind,
     val camrip: Boolean,
+    val type: String = "",
 )

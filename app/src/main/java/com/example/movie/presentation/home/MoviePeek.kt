@@ -1,6 +1,5 @@
 package com.example.movie.presentation.home
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -23,11 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,17 +36,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
+import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
+import com.example.movie.domain.model.toSaved
+import com.example.movie.presentation.common.BookmarkButton
 import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
+import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.CinemaSurface
 
-private val CardShape = RoundedCornerShape(28.dp)
+private val CardShape = RoundedCornerShape(22.dp)
 private val Notes = Color(0xFFD2D2D8)
 
 @Composable
@@ -53,7 +59,6 @@ internal fun MoviePeek(
     movie: Movie?,
     onDismiss: () -> Unit,
 ) {
-    BackHandler(enabled = movie != null, onBack = onDismiss)
     AnimatedVisibility(
         visible = movie != null,
         enter = fadeIn(tween(180)) + scaleIn(
@@ -86,12 +91,24 @@ internal fun MoviePeek(
 
 @Composable
 private fun PeekCard(movie: Movie, modifier: Modifier = Modifier) {
-    val meta = listOfNotNull(
+    val country = movie.country
+        .split(',', '/', '·', '|', ';')
+        .map { it.trim() }
+        .firstOrNull { it.isNotEmpty() }
+    val genres = movie.genres
+        .split(',')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .take(2)
+        .joinToString(", ")
+    val facts = listOfNotNull(
         movie.year?.toString(),
-        movie.genres.takeIf { it.isNotBlank() },
-        movie.country.takeIf { it.isNotBlank() },
-        movie.age?.let { stringResource(R.string.age_badge, it) },
-    ).joinToString("  ·  ")
+        country,
+        genres.takeIf { it.isNotEmpty() },
+    )        .joinToString(" · ")
+    val favorites = LocalAppContainer.current.favorites
+    val savedIds by favorites.ids.collectAsStateWithLifecycle()
+    val tick = rememberHapticTick()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -103,51 +120,83 @@ private fun PeekCard(movie: Movie, modifier: Modifier = Modifier) {
                 indication = null,
                 onClick = {},
             )
-            .padding(horizontal = 22.dp, vertical = 22.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(horizontal = 20.dp, vertical = 18.dp),
     ) {
-        Text(
-            text = movie.title,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            lineHeight = 28.sp,
-            letterSpacing = (-0.4).sp,
-            textAlign = TextAlign.Center,
-        )
-        if (movie.originalTitle.isNotBlank() && movie.originalTitle != movie.title) {
-            Text(
-                text = movie.originalTitle,
-                modifier = Modifier.padding(top = 4.dp),
-                color = CinemaMuted,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                textAlign = TextAlign.Center,
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = movie.title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    lineHeight = 26.sp,
+                    letterSpacing = (-0.4).sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (movie.originalTitle.isNotBlank() && movie.originalTitle != movie.title) {
+                    Text(
+                        text = movie.originalTitle,
+                        modifier = Modifier.padding(top = 2.dp),
+                        color = CinemaMuted,
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            BookmarkButton(
+                saved = movie.id in savedIds,
+                onClick = {
+                    tick?.invoke()
+                    favorites.toggle(movie.toSaved())
+                },
+                size = 24.dp,
             )
         }
-        if (meta.isNotBlank()) {
+        if (facts.isNotBlank()) {
             Text(
-                text = meta,
-                modifier = Modifier.padding(top = 12.dp),
-                color = CinemaMuted,
-                fontSize = 13.sp,
+                text = facts,
+                modifier = Modifier.padding(top = 14.dp),
+                color = Notes,
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
                 lineHeight = 18.sp,
-                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         if (movie.director.isNotBlank()) {
-            Text(
-                text = movie.director,
-                modifier = Modifier.padding(top = 6.dp),
-                color = Notes,
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-                textAlign = TextAlign.Center,
-            )
+            Row(
+                modifier = Modifier.padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.peek_director),
+                    color = CinemaMuted,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    maxLines = 1,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = movie.director,
+                    modifier = Modifier.weight(1f),
+                    color = Notes,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         if (movie.ratingKp != null || movie.ratingImdb != null) {
             Row(
-                modifier = Modifier.padding(top = 16.dp),
+                modifier = Modifier.padding(top = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -155,7 +204,7 @@ private fun PeekCard(movie: Movie, modifier: Modifier = Modifier) {
                     KpScore(
                         score = score,
                         color = Color.White,
-                        iconSize = 18.dp,
+                        iconSize = 16.dp,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -164,7 +213,7 @@ private fun PeekCard(movie: Movie, modifier: Modifier = Modifier) {
                     ImdbScore(
                         score = score,
                         color = Color.White,
-                        iconHeight = 18.dp,
+                        iconHeight = 16.dp,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -173,16 +222,22 @@ private fun PeekCard(movie: Movie, modifier: Modifier = Modifier) {
         }
         if (movie.overview.isNotBlank()) {
             Spacer(Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(Color.White.copy(alpha = 0.10f)),
+            )
             Text(
                 text = movie.overview,
                 modifier = Modifier
+                    .padding(top = 14.dp)
                     .fillMaxWidth()
                     .heightIn(max = 220.dp)
                     .verticalScroll(rememberScrollState()),
                 color = Notes,
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
-                textAlign = TextAlign.Start,
             )
         }
     }

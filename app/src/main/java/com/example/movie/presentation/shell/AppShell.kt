@@ -43,7 +43,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +65,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
+import com.example.movie.presentation.common.BookmarkFilled
+import com.example.movie.presentation.common.BookmarkOutline
+import com.example.movie.presentation.favorites.FavoritesScreen
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.HomeRoute
 import com.example.movie.presentation.home.MoviePeek
@@ -95,22 +97,25 @@ private enum class AppTab(@StringRes val label: Int, val color: Color) {
     fun icon(selected: Boolean): ImageVector = when (this) {
         Home -> if (selected) ShellIcons.homeFilled else ShellIcons.home
         Catalog -> if (selected) ShellIcons.catalogFilled else ShellIcons.catalog
-        Favorites -> if (selected) ShellIcons.favoriteFilled else ShellIcons.favorite
+        Favorites -> if (selected) BookmarkFilled else BookmarkOutline
         Settings -> ShellIcons.settings
     }
 }
 
 @Composable
-fun AppShell(onMovieClick: (String) -> Unit) {
-    var tabName by rememberSaveable { mutableStateOf(AppTab.Home.name) }
+fun AppShell(
+    tabName: String,
+    onTabChange: (String) -> Unit,
+    onMovieClick: (String) -> Unit,
+) {
     val tab = AppTab.valueOf(tabName)
-    BackHandler(enabled = tab != AppTab.Home) {
-        tabName = AppTab.Home.name
-    }
     val hazeState = rememberHazeState()
     var peek by remember { mutableStateOf<Movie?>(null) }
+    BackHandler(enabled = peek != null || tab != AppTab.Home) {
+        if (peek != null) peek = null else onTabChange(AppTab.Home.name)
+    }
     LaunchedEffect(tab) {
-        if (tab != AppTab.Home) peek = null
+        if (tab != AppTab.Home && tab != AppTab.Favorites) peek = null
     }
     Box(
         modifier = Modifier
@@ -126,16 +131,19 @@ fun AppShell(onMovieClick: (String) -> Unit) {
                 AppTab.Home -> HomeRoute(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
-                    onOpenCatalog = { tabName = AppTab.Catalog.name },
+                    onOpenCatalog = { onTabChange(AppTab.Catalog.name) },
                 )
                 AppTab.Catalog -> SectionScreen(title = stringResource(R.string.nav_catalog))
-                AppTab.Favorites -> SectionScreen(title = stringResource(R.string.nav_favorites))
+                AppTab.Favorites -> FavoritesScreen(
+                    onMovieClick = onMovieClick,
+                    onMoviePeek = { peek = it },
+                )
                 AppTab.Settings -> SettingsRoute()
             }
         }
         AppBottomBar(
             selected = tab,
-            onSelect = { tabName = it.name },
+            onSelect = { onTabChange(it.name) },
             hazeState = hazeState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )

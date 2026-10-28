@@ -9,6 +9,7 @@
     <string name="poster_content_description">Постер «%1$s»</string>
     <string name="watch_now">Смотреть</string>
     <string name="age_badge">%1$d+</string>
+    <string name="peek_director">Режиссёр</string>
     <string name="runtime_hours_minutes">%1$dч %2$dм</string>
     <string name="runtime_hours">%1$dч</string>
     <string name="runtime_minutes">%1$dм</string>
@@ -29,6 +30,16 @@
     <string name="nav_home">Главная</string>
     <string name="nav_catalog">Каталог</string>
     <string name="nav_favorites">Избранное</string>
+    <string name="favorites_watched">Просмотрено</string>
+    <string name="favorites_actors">Актеры</string>
+    <string name="favorites_genres">Жанры</string>
+    <string name="favorites_all">Все</string>
+    <string name="favorites_movies">Фильмы</string>
+    <string name="favorites_series">Сериалы</string>
+    <string name="favorites_cartoons">Мультфильмы</string>
+    <string name="favorites_anime">Аниме</string>
+    <string name="bookmark_add">В избранное</string>
+    <string name="bookmark_remove">Убрать из избранного</string>
     <string name="nav_settings">Настройки</string>
     <string name="settings_interface">Интерфейс</string>
     <string name="settings_sensors">Сенсоры</string>

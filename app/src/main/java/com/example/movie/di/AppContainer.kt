@@ -3,6 +3,7 @@ package com.example.movie.di
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.example.movie.BuildConfig
+import com.example.movie.data.favorites.FavoriteStore
 import com.example.movie.data.remote.GithubApi
 import com.example.movie.data.remote.VokinoApi
 import com.example.movie.data.repository.MovieRepositoryImpl
@@ -26,6 +27,7 @@ import java.util.concurrent.TimeUnit
 
 class AppContainer(context: Context) {
     val userSettings: UserSettingsRepository = UserSettingsStore(context)
+    val favorites = FavoriteStore(context)
     private val json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true
