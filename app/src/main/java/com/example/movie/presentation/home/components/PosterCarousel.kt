@@ -199,6 +199,7 @@ fun PosterCarousel(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onPlayColor: (Color, Boolean) -> Unit = { _, _ -> },
+    onSettled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val loop = movies.size > 1
@@ -231,6 +232,7 @@ fun PosterCarousel(
     val tilt = rememberCoverTilt()
     val tick = rememberHapticTick()
     HapticOnChange(pagerState) { pagerState.currentPage }
+    SettleEffect(pagerState, { pagerState.isScrollInProgress }, onSettled)
 
     LaunchedEffect(movies, activeIndex) {
         if (movies.isEmpty()) return@LaunchedEffect

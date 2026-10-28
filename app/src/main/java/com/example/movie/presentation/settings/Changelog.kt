@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.18.0",
+            added = listOf(
+                "На первой «А» в AmigoPlay иногда появляется сомбреро, иногда усы, иногда оба сразу.",
+                "Шляпа и усы выпадают при листании верхнего меню и слайдера на главной. В избранном — при листании меню.",
+            ),
+        ),
+        Release(
             version = "1.17.1",
             fixed = listOf(
                 "В деталке зажатие похожих, сиквелов и приквелов открывает ту же краткую карточку, что на главной.",

@@ -64,6 +64,7 @@ import com.example.movie.presentation.home.components.CatalogPlaque
 import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
 import com.example.movie.presentation.home.components.CoverStackSkeleton
+import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
 import com.example.movie.ui.theme.MovieTheme
@@ -93,6 +94,7 @@ fun HomeScreen(
         else playAnim.animateTo(color, tween(640, easing = FastOutSlowInEasing))
     }
     val play = playAnim.value
+    val logo = remember { LogoMood() }
     BackHandler(enabled = state.searchOpen, onBack = onCloseSearch)
     if (state.searchOpen) {
         SearchPage(
@@ -158,6 +160,9 @@ fun HomeScreen(
                     playColor = play,
                     onSelect = onSelectShelf,
                     onSearch = onOpenSearch,
+                    hat = logo.hat,
+                    mustache = logo.mustache,
+                    onMenuSettled = logo::onSettled,
                 )
                 StatusMessage(
                     message = if (state.phase is HomePhase.Failed) {
@@ -211,6 +216,9 @@ fun HomeScreen(
                         playColor = play,
                         onSelect = onSelectShelf,
                         onSearch = onOpenSearch,
+                        hat = logo.hat,
+                        mustache = logo.mustache,
+                        onMenuSettled = logo::onSettled,
                     )
                     Spacer(Modifier.height(36.dp))
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
@@ -224,6 +232,7 @@ fun HomeScreen(
                                 val next = color to dragging
                                 if (next != playRequest) playRequest = next
                             },
+                            onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

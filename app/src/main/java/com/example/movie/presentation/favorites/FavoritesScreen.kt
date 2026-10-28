@@ -71,6 +71,8 @@ import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandWordmark
+import com.example.movie.presentation.home.components.MenuSombreroEffect
+import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.CategoryTabFontSize
 import com.example.movie.presentation.home.components.CategoryTabLetterSpacing
 import com.example.movie.presentation.home.components.CategoryTabLineHeight
@@ -100,6 +102,7 @@ internal fun FavoritesScreen(
     val items by LocalAppContainer.current.favorites.items.collectAsStateWithLifecycle()
     var tabName by rememberSaveable { mutableStateOf(FavoriteTab.All.name) }
     var genre by rememberSaveable { mutableStateOf<String?>(null) }
+    val logo = remember { LogoMood() }
     val tab = FavoriteTab.valueOf(tabName)
     val inTab = tab.type?.let { type -> items.filter { it.type == type } } ?: items
     val genres = if (tab.hasGenres) inTab.genreLabels() else emptyList()
@@ -116,7 +119,7 @@ internal fun FavoritesScreen(
                 .padding(start = 22.dp - BrandLogoBleed, end = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BrandWordmark(play = FavoritePlay)
+            BrandWordmark(play = FavoritePlay, hat = logo.hat, mustache = logo.mustache)
             Spacer(Modifier.weight(1f))
             LibraryMenu()
         }
@@ -129,6 +132,7 @@ internal fun FavoritesScreen(
                 tabName = it.name
             },
             onGenre = { genre = it },
+            onMenuSettled = logo::onSettled,
             modifier = Modifier.padding(top = 12.dp),
         )
         if (shown.isEmpty()) {
@@ -255,10 +259,12 @@ private fun FavoriteTabs(
     genre: String?,
     onSelect: (FavoriteTab) -> Unit,
     onGenre: (String?) -> Unit,
+    onMenuSettled: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
     var menuOpen by remember { mutableStateOf(false) }
+    MenuSombreroEffect(listState, onMenuSettled)
     HapticOnChange(listState) { listState.passedTab() }
     LazyRow(
         state = listState,
