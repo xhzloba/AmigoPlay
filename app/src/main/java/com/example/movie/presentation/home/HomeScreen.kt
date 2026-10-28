@@ -1,6 +1,8 @@
 package com.example.movie.presentation.home
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -83,10 +85,14 @@ fun HomeScreen(
     onOpenCatalog: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var play by remember { mutableStateOf(PlayBlue) }
-    LaunchedEffect(state.movies.isEmpty(), state.selectedId) {
-        if (state.movies.isEmpty()) play = PlayBlue
+    val playAnim = remember { Animatable(PlayBlue) }
+    var playRequest by remember { mutableStateOf(PlayBlue to false) }
+    LaunchedEffect(playRequest) {
+        val (color, dragging) = playRequest
+        if (dragging) playAnim.snapTo(color)
+        else playAnim.animateTo(color, tween(640, easing = FastOutSlowInEasing))
     }
+    val play = playAnim.value
     BackHandler(enabled = state.searchOpen, onBack = onCloseSearch)
     if (state.searchOpen) {
         SearchPage(
@@ -214,7 +220,10 @@ fun HomeScreen(
                             movies = state.movies,
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
-                            onPlayColor = { play = it },
+                            onPlayColor = { color, dragging ->
+                                val next = color to dragging
+                                if (next != playRequest) playRequest = next
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

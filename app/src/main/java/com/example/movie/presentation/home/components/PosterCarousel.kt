@@ -99,7 +99,6 @@ import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
 import com.example.movie.presentation.palette.forWordmark
-import com.example.movie.ui.theme.PlayBlue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -199,7 +198,7 @@ fun PosterCarousel(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
-    onPlayColor: (Color) -> Unit = {},
+    onPlayColor: (Color, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val loop = movies.size > 1
@@ -217,13 +216,17 @@ fun PosterCarousel(
     val context = LocalContext.current
     val posterColors = remember { mutableStateMapOf<String, PosterPalette>() }
     val activeIndex = if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
+    val playOffset = pagerState.currentPageOffsetFraction
     val play = wordmarkPlay(
         movies = movies,
         activeIndex = activeIndex,
-        offset = pagerState.currentPageOffsetFraction,
+        offset = playOffset,
         colors = posterColors,
     )
-    SideEffect { onPlayColor(play) }
+    SideEffect {
+        val color = play ?: return@SideEffect
+        onPlayColor(color, playOffset.absoluteValue > 0.02f)
+    }
     val active = movies.getOrNull(activeIndex)
     val tilt = rememberCoverTilt()
     val tick = rememberHapticTick()
@@ -891,9 +894,9 @@ private fun wordmarkPlay(
     activeIndex: Int,
     offset: Float,
     colors: Map<String, PosterPalette>,
-): Color {
-    if (movies.isEmpty()) return PlayBlue
-    val current = colors[movies[activeIndex].id]?.primary?.forWordmark() ?: return PlayBlue
+): Color? {
+    if (movies.isEmpty()) return null
+    val current = colors[movies[activeIndex].id]?.primary?.forWordmark() ?: return null
     val direction = if (offset >= 0f) 1 else -1
     val neighbor = colors[movies[(activeIndex + direction).floorMod(movies.size)].id]
         ?.primary

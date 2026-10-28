@@ -5,11 +5,13 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.movie.di.LocalAppContainer
+import com.example.movie.domain.model.Movie
 
 @Composable
 fun DetailRoute(
     movieId: String,
     onOpenMovie: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
 ) {
     val container = LocalAppContainer.current
     val viewModel: DetailViewModel = viewModel(key = movieId) {
@@ -23,5 +25,6 @@ fun DetailRoute(
         state = state,
         onRetry = viewModel::retry,
         onOpenMovie = onOpenMovie,
+        onMoviePeek = onMoviePeek,
     )
 }

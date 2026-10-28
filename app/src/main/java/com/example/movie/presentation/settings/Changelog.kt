@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.17.1",
+            fixed = listOf(
+                "В деталке зажатие похожих, сиквелов и приквелов открывает ту же краткую карточку, что на главной.",
+                "Цвет Play на главной остаётся от прошлой обложки и плавно переходит в цвет новой.",
+            ),
+        ),
+        Release(
             version = "1.17.0",
             added = listOf(
                 "Избранное сохраняет фильмы и сериалы в приложении.",

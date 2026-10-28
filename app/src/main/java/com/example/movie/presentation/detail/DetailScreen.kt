@@ -47,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.presentation.settings.LocalUserSettings
@@ -96,6 +97,8 @@ import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.holdCue
+import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.palette.backdropBrush
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
@@ -150,6 +153,7 @@ fun DetailScreen(
     state: DetailUiState,
     onRetry: () -> Unit,
     onOpenMovie: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val detail = state.detail
@@ -157,6 +161,7 @@ fun DetailScreen(
         detail != null -> DetailContent(
             detail = detail,
             onOpenMovie = onOpenMovie,
+            onMoviePeek = onMoviePeek,
             modifier = modifier,
         )
         state.phase is DetailPhase.Failed -> DetailMessage(
@@ -177,6 +182,7 @@ fun DetailScreen(
 private fun DetailContent(
     detail: MovieDetail,
     onOpenMovie: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -344,13 +350,13 @@ private fun DetailContent(
                 Spacer(Modifier.height(28.dp))
                 SectionTitle(stringResource(R.string.section_similar))
                 Spacer(Modifier.height(12.dp))
-                MovieStrip(detail.similar, onOpenMovie)
+                MovieStrip(detail.similar, onOpenMovie, onMoviePeek)
             }
             if (detail.sequels.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
                 SectionTitle(stringResource(R.string.section_sequels))
                 Spacer(Modifier.height(12.dp))
-                MovieStrip(detail.sequels, onOpenMovie)
+                MovieStrip(detail.sequels, onOpenMovie, onMoviePeek)
             }
             Spacer(Modifier.height(28.dp))
         }
@@ -561,6 +567,7 @@ private fun CastRow(cast: List<CastMember>) {
 private fun MovieStrip(
     movies: List<Movie>,
     onOpenMovie: (String) -> Unit,
+    onMoviePeek: (Movie) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val tick = rememberHapticTick()
@@ -576,18 +583,8 @@ private fun MovieStrip(
     ) {
         items(count = movies.size, key = { it }) { index ->
             val movie = movies[index]
-            Column(
-                modifier = Modifier
-                    .width(108.dp)
-                    .clickable(
-                        interactionSource = remember(movie.id) { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            tick?.invoke()
-                            onOpenMovie(movie.id)
-                        },
-                    ),
-            ) {
+            var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
+            Column(modifier = Modifier.width(108.dp)) {
                 AsyncImage(
                     model = movie.posterUrl,
                     contentDescription = movie.title,
@@ -595,8 +592,26 @@ private fun MovieStrip(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f / 1.46f)
+                        .graphicsLayer {
+                            val scale = 1f - 0.045f * holdProgress
+                            scaleX = scale
+                            scaleY = scale
+                        }
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.12f)),
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .holdToPeek(
+                            onPeek = { onMoviePeek(movie) },
+                            onProgress = { holdProgress = it },
+                        )
+                        .holdCue(holdProgress)
+                        .clickable(
+                            interactionSource = remember(movie.id) { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                tick?.invoke()
+                                onOpenMovie(movie.id)
+                            },
+                        ),
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(

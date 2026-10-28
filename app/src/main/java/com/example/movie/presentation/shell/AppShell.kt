@@ -46,6 +46,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeDefaults
@@ -110,7 +111,11 @@ fun AppShell(
 ) {
     val tab = AppTab.valueOf(tabName)
     val hazeState = rememberHazeState()
+    val keyboard = LocalSoftwareKeyboardController.current
     var peek by remember { mutableStateOf<Movie?>(null) }
+    LaunchedEffect(peek) {
+        if (peek != null) keyboard?.hide()
+    }
     BackHandler(enabled = peek != null || tab != AppTab.Home) {
         if (peek != null) peek = null else onTabChange(AppTab.Home.name)
     }
