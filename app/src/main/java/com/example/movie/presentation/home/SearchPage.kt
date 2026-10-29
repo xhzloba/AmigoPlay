@@ -61,8 +61,8 @@ import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.CinemaSurface
+import com.example.movie.ui.theme.PosterShape
 
-private val PosterShape = RoundedCornerShape(16.dp)
 private val FieldShape = RoundedCornerShape(14.dp)
 
 @Composable

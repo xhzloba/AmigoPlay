@@ -87,8 +87,10 @@ import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.ui.theme.PosterShape
 import kotlin.math.PI
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
@@ -97,8 +99,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val CardShape = RoundedCornerShape(22.dp)
-private val ReflectionShape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
 private val ReflectionHeight = 112.dp
 private const val CoverWidthFraction = 0.5f
 private const val CoverAspect = 1.46f
@@ -376,6 +376,8 @@ private fun TopRankCard(
     val active = distance < 0.12f
     var posterReady by remember(movie.id) { mutableStateOf(false) }
     var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
+    var pressed by remember(movie.id) { mutableStateOf(false) }
+    val pressScale = rememberPressScale(pressed)
     val shine = remember(movie.id) { Animatable(0f) }
     val travel = shine.value
     LaunchedEffect(active, posterReady) {
@@ -391,7 +393,7 @@ private fun TopRankCard(
             .fillMaxSize()
             .zIndex(2f - distance)
             .graphicsLayer {
-                val scale = lerp(1f, NeighborScale, clamped) * (1f - 0.045f * holdProgress)
+                val scale = lerp(1f, NeighborScale, clamped) * pressScale
                 scaleX = scale
                 scaleY = scale
                 val shift = pageOffset.coerceIn(-1f, 1f)
@@ -403,8 +405,12 @@ private fun TopRankCard(
                 translationY = clamped * 18.dp.toPx()
                 alpha = if (distance <= 1f) 1f else lerp(1f, 0f, (distance - 1f).coerceIn(0f, 1f))
             }
-            .clip(CardShape)
-            .holdToPeek(onPeek = onPeek, onProgress = { holdProgress = it })
+            .clip(PosterShape)
+            .holdToPeek(
+                onPeek = onPeek,
+                onProgress = { holdProgress = it },
+                onPressed = { pressed = it },
+            )
             .holdCue(holdProgress)
             .clickable(
                 interactionSource = remember(movie.id) { MutableInteractionSource() },
@@ -417,7 +423,7 @@ private fun TopRankCard(
                     drawRoundRect(
                         color = Color.White.copy(alpha = 0.28f * facing),
                         style = Stroke(width = 1.dp.toPx()),
-                        cornerRadius = CornerRadius(22.dp.toPx(), 22.dp.toPx()),
+                        cornerRadius = CornerRadius(size.minDimension * 0.06f, size.minDimension * 0.06f),
                     )
                 }
                 if (!active || !posterReady || travel <= 0f || travel >= 1f) return@drawWithContent
@@ -493,7 +499,7 @@ private fun TopRankReflection(
                 clip = false
                 compositingStrategy = CompositingStrategy.Offscreen
             }
-            .clip(ReflectionShape),
+            .clip(RoundedCornerShape(topStart = width * 0.06f, topEnd = width * 0.06f)),
     ) {
         if (bitmap != null && appear > 0.01f) {
             Canvas(modifier = Modifier.fillMaxSize()) {
@@ -715,7 +721,7 @@ private fun SkeletonCard(
                 scaleY = scale
                 translationX = shift * size.width
             }
-            .clip(CardShape)
+            .clip(PosterShape)
             .background(Color.White.copy(alpha = pulse)),
     )
 }

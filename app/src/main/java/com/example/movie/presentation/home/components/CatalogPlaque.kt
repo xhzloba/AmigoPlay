@@ -59,6 +59,7 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.CinemaSurface
+import com.example.movie.ui.theme.PosterShape
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -143,6 +144,7 @@ internal fun CatalogPlaque(
                             modifier = Modifier
                                 .width(PosterWidth)
                                 .fillMaxHeight()
+                                .clip(PosterShape)
                                 .background(Color.White.copy(alpha = 0.06f)),
                         )
                     } else {
@@ -152,7 +154,8 @@ internal fun CatalogPlaque(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .width(PosterWidth)
-                                .fillMaxHeight(),
+                                .fillMaxHeight()
+                                .clip(PosterShape),
                         )
                     }
                 }

@@ -97,9 +97,11 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
 import com.example.movie.presentation.palette.forWordmark
+import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -114,7 +116,6 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private val CardShape = RoundedCornerShape(22.dp)
 private const val CoverWidthFraction = 0.5f
 private const val CoverAspect = 1.46f
 private const val NeighborScale = 0.84f
@@ -362,6 +363,8 @@ fun PosterCarousel(
                 val active = page == pagerState.currentPage && distance < 0.12f
                 var posterReady by remember(movie.id) { mutableStateOf(false) }
                 var holdProgress by remember { mutableFloatStateOf(0f) }
+                var pressed by remember { mutableStateOf(false) }
+                val pressScale = rememberPressScale(pressed)
                 val shine = remember(page) { Animatable(0f) }
                 val travel = shine.value
                 val shineTint = posterColors[movie.id]?.primary ?: Color.White
@@ -380,17 +383,18 @@ fun PosterCarousel(
                         .graphicsLayer {
                             val clamped = distance.coerceIn(0f, 1f)
                             val facing = 1f - clamped
-                            val scale = lerp(1f, NeighborScale, clamped) * (1f - 0.045f * holdProgress)
+                            val scale = lerp(1f, NeighborScale, clamped) * pressScale
                             scaleX = scale
                             scaleY = scale
                             translationX = -pageOffset * size.width * NeighborShift +
                                 tilt.side * 10.dp.toPx() * facing
                             alpha = if (distance <= 1.05f) 1f else lerp(1f, 0f, (distance - 1.05f).coerceIn(0f, 1f))
                         }
-                        .clip(CardShape)
+                        .clip(PosterShape)
                         .holdToPeek(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
+                            onPressed = { pressed = it },
                         )
                         .holdCue(holdProgress)
                         .clickable(
@@ -826,7 +830,7 @@ private fun SkeletonCard(
                 scaleY = scale
                 translationX = shift * size.width
             }
-            .clip(CardShape)
+            .clip(PosterShape)
             .background(if (solid) Color(0xFF1A1A1E) else Color.Transparent)
             .background(Color.White.copy(alpha = pulse)),
     )

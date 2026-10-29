@@ -1,5 +1,8 @@
 package com.example.movie.presentation.home
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
@@ -27,26 +30,47 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 internal const val HoldMillis = 800L
 private const val CueAfterNanos = 260_000_000L
+private const val PressMillis = 110L
+
+@Composable
+internal fun rememberPressScale(pressed: Boolean): Float {
+    return animateFloatAsState(
+        targetValue = if (pressed) 0.968f else 1f,
+        animationSpec = tween(
+            durationMillis = if (pressed) 70 else 160,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "press-in",
+    ).value
+}
 
 @Composable
 internal fun Modifier.holdToPeek(
     onPeek: () -> Unit,
     onProgress: (Float) -> Unit,
+    onPressed: (Boolean) -> Unit = {},
 ): Modifier {
     val peek by rememberUpdatedState(onPeek)
     val report by rememberUpdatedState(onProgress)
+    val press by rememberUpdatedState(onPressed)
     val haptic = rememberHoldHaptic()
     val motor = remember { arrayOfNulls<HoldHaptic>(1) }
     val reporter = remember { arrayOf<(Float) -> Unit>({ }) }
+    val presser = remember { arrayOf<(Boolean) -> Unit>({ }) }
     motor[0] = haptic
     reporter[0] = report
+    presser[0] = press
     return pointerInput(Unit) {
         val slop = viewConfiguration.touchSlop
         var epoch = 0
+        var pressEpoch = 0
         coroutineScope {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val origin = down.position
+                val started = System.nanoTime()
+                val pressToken = ++pressEpoch
+                presser[0].invoke(true)
                 val token = ++epoch
                 val frames = launch {
                     val t0 = System.nanoTime()
@@ -67,19 +91,26 @@ internal fun Modifier.holdToPeek(
                         delay(16)
                     }
                 }
+                var releaseDelay = 0L
                 try {
-                    val endedEarly = withTimeoutOrNull(HoldMillis) {
+                    val tapped = withTimeoutOrNull(HoldMillis) {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == down.id }
-                            val left = change == null || !change.pressed ||
+                            val dragged = change != null &&
                                 (change.position - origin).getDistance() > slop
-                            if (left) return@withTimeoutOrNull true
+                            if (dragged || change == null) return@withTimeoutOrNull false
+                            if (!change.pressed) return@withTimeoutOrNull true
                         }
                         @Suppress("UNREACHABLE_CODE")
-                        true
+                        false
                     }
-                    if (endedEarly != null) return@awaitEachGesture
+                    if (tapped == false) return@awaitEachGesture
+                    if (tapped == true) {
+                        val elapsed = (System.nanoTime() - started) / 1_000_000
+                        if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
+                        return@awaitEachGesture
+                    }
                     motor[0]?.stop()
                     peek()
                     while (true) {
@@ -92,6 +123,12 @@ internal fun Modifier.holdToPeek(
                     frames.cancel()
                     motor[0]?.stop()
                     reporter[0].invoke(0f)
+                    val mine = pressToken
+                    val hold = releaseDelay
+                    launch {
+                        if (hold > 0) delay(hold)
+                        if (pressEpoch == mine) presser[0].invoke(false)
+                    }
                 }
             }
         }

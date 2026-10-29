@@ -57,6 +57,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.ui.theme.PosterShape
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -670,7 +671,7 @@ private fun MovieStrip(
                             scaleX = scale
                             scaleY = scale
                         }
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.12f))
                         .holdToPeek(
                             onPeek = { onMoviePeek(movie) },

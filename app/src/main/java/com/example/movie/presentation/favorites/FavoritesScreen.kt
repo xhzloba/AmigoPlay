@@ -80,8 +80,8 @@ import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.CinemaSurface
+import com.example.movie.ui.theme.PosterShape
 
-private val PosterShape = RoundedCornerShape(16.dp)
 private val FavoritePlay = Color(0xFFE23B5A)
 private val CapsuleInk = Color.White.copy(alpha = 0.72f)
 private val MenuShape = RoundedCornerShape(16.dp)

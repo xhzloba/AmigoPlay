@@ -23,11 +23,11 @@ import androidx.compose.foundation.gestures.snapping.snapFlingBehavior
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,14 +44,15 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.ui.theme.PosterShape
 
 private val PosterWidth = 112.dp
 private val PosterAspect = 1.46f
 private val RailStart = 20.dp
 private val PosterGap = 14.dp
-private val PosterShape = RoundedCornerShape(16.dp)
 
 @Composable
 internal fun RecommendationRail(
@@ -152,6 +153,8 @@ private fun RecommendationPager(
         ) {
             itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
                 var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
+                var pressed by remember(movie.id) { mutableStateOf(false) }
+                val pressScale = rememberPressScale(pressed)
                 AsyncImage(
                     model = movie.posterUrl,
                     contentDescription = stringResource(R.string.poster_content_description, movie.title),
@@ -160,15 +163,15 @@ private fun RecommendationPager(
                         .width(PosterWidth)
                         .height(posterHeight)
                         .graphicsLayer {
-                            val scale = 1f - 0.045f * holdProgress
-                            scaleX = scale
-                            scaleY = scale
+                            scaleX = pressScale
+                            scaleY = pressScale
                         }
                         .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.08f))
                         .holdToPeek(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
+                            onPressed = { pressed = it },
                         )
                         .holdCue(holdProgress)
                         .clickable(

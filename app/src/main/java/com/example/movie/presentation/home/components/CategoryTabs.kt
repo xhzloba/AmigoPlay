@@ -29,7 +29,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
@@ -91,6 +90,9 @@ private val MustacheHeight = MustacheWidth * (348f / 892f)
 private const val MustacheX = 443f / 892f
 private const val MustacheY = 207f / 348f
 
+private val TabInk = Color(0xFFC7C7CC)
+private val TabShape = CircleShape
+
 private val TabSkeletonLabels = listOf(
     "В тренде",
     "Сейчас смотрят",
@@ -127,22 +129,13 @@ internal fun CategoryTabs(
         LazyRow(
             state = listState,
             contentPadding = PaddingValues(horizontal = 22.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
         items(shelves, key = { it.id }) { shelf ->
-            val selected = shelf.id == selectedId
-            Text(
-                text = shelf.title,
-                color = if (selected) Color.White else Color(0xFF8A8A90),
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                fontSize = CategoryTabFontSize,
-                lineHeight = CategoryTabLineHeight,
-                letterSpacing = CategoryTabLetterSpacing,
-                modifier = Modifier.clickable(
-                    interactionSource = remember(shelf.id) { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { onSelect(shelf.id) },
-                ),
+            ShelfCapsule(
+                title = shelf.title,
+                selected = shelf.id == selectedId,
+                onClick = { onSelect(shelf.id) },
             )
         }
         }
@@ -152,6 +145,37 @@ internal fun CategoryTabs(
 private fun LazyListState.passedTab(): Int {
     val head = layoutInfo.visibleItemsInfo.firstOrNull() ?: return firstVisibleItemIndex
     return if (head.offset + head.size / 2 < 0) head.index + 1 else head.index
+}
+
+@Composable
+private fun ShelfCapsule(
+    title: String,
+    selected: Boolean,
+    onClick: (() -> Unit)? = null,
+    ghost: Boolean = false,
+) {
+    Text(
+        text = title,
+        color = if (ghost) Color.Transparent else if (selected) Color.White else TabInk,
+        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+        fontSize = CategoryTabFontSize,
+        lineHeight = CategoryTabLineHeight,
+        letterSpacing = CategoryTabLetterSpacing,
+        modifier = Modifier
+            .background(Color.White.copy(alpha = 0.12f), TabShape)
+            .then(
+                if (onClick == null) {
+                    Modifier
+                } else {
+                    Modifier.clickable(
+                        interactionSource = remember(title) { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick,
+                    )
+                },
+            )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
 }
 
 @Composable
@@ -408,20 +432,14 @@ fun CategoryTabsSkeleton(
         Spacer(Modifier.height(12.dp))
         LazyRow(
             contentPadding = PaddingValues(horizontal = 22.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             userScrollEnabled = false,
         ) {
         items(TabSkeletonLabels.size) { index ->
-            Text(
-                text = TabSkeletonLabels[index],
-                color = Color.Transparent,
-                fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
-                fontSize = CategoryTabFontSize,
-                lineHeight = CategoryTabLineHeight,
-                letterSpacing = CategoryTabLetterSpacing,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color.White.copy(alpha = 0.12f)),
+            ShelfCapsule(
+                title = TabSkeletonLabels[index],
+                selected = false,
+                ghost = true,
             )
         }
         }
