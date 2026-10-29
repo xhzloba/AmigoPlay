@@ -16,7 +16,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -44,13 +47,7 @@ internal fun KpScore(
                 .clip(RoundedCornerShape(3.dp)),
         )
         Spacer(Modifier.width(6.dp))
-        Text(
-            text = String.format(Locale.US, "%.1f", score),
-            color = color,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            maxLines = 1,
-        )
+        RatingValue(score, color, fontSize, fontWeight)
     }
 }
 
@@ -76,12 +73,30 @@ internal fun ImdbScore(
                 .clip(RoundedCornerShape(3.dp)),
         )
         Spacer(Modifier.width(6.dp))
-        Text(
-            text = String.format(Locale.US, "%.1f", score),
-            color = color,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            maxLines = 1,
-        )
+        RatingValue(score, color, fontSize, fontWeight)
     }
+}
+
+@Composable
+private fun RatingValue(
+    score: Float,
+    color: Color,
+    fontSize: TextUnit,
+    fontWeight: FontWeight,
+) {
+    Text(
+        text = String.format(Locale.US, "%.1f", score),
+        color = color,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        lineHeight = fontSize,
+        maxLines = 1,
+        style = TextStyle(
+            platformStyle = PlatformTextStyle(includeFontPadding = false),
+            lineHeightStyle = LineHeightStyle(
+                alignment = LineHeightStyle.Alignment.Center,
+                trim = LineHeightStyle.Trim.Both,
+            ),
+        ),
+    )
 }

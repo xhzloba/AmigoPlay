@@ -32,16 +32,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,8 +79,11 @@ private val Ink = Color(0xFF121212)
 private val BodyColor = Color(0xFFE4E0E2)
 private val MetaColor = Color(0xFFC8C4C6)
 private val BackdropHeight = 196.dp
-private val ThumbWidth = 42.dp
-private val ThumbHeight = 62.dp
+private val ThumbWidth = 78.dp
+private val ThumbHeight = 114.dp
+private val PosterHang = 28.dp
+private val PosterStick = 2.dp
+private val RatingRowHeight = 18.dp
 private val CardHeight = 408.dp
 
 @Composable
@@ -129,7 +138,7 @@ private fun WatchingPager(
         key = { movies[it].id },
         modifier = Modifier
             .fillMaxWidth()
-            .height(CardHeight),
+            .height(CardHeight + PosterHang),
     ) { index ->
         val movie = movies[index]
         WatchingCard(
@@ -163,21 +172,13 @@ private fun WatchingCard(
     val genres = movie.genresLine()
     val body = movie.overview.ifBlank { genres }
     val meta = movie.metaLine(if (movie.overview.isNotBlank()) genres else "")
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(CardHeight)
+            .height(CardHeight + PosterHang)
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
-            }
-            .clip(CardShape)
-            .drawBehind {
-                drawRect(Ink)
-                val colors = wash
-                if (colors != null) {
-                    drawPosterWash(colors.base, colors.right, colors.accent, washAlpha)
-                }
             }
             .holdToPeek(
                 onPeek = onPeek,
@@ -190,6 +191,37 @@ private fun WatchingCard(
                 indication = null,
                 onClick = onClick,
             ),
+    ) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(CardHeight)
+            .drawBehind {
+                val spread = 11.dp.toPx()
+                val inset = 18.dp.toPx()
+                val steps = 7
+                for (step in steps downTo 1) {
+                    val t = step / steps.toFloat()
+                    val grow = spread * (1f - t)
+                    drawRoundRect(
+                        color = Color.Black.copy(alpha = 0.16f * t),
+                        topLeft = Offset(inset + grow, size.height + grow * 0.2f),
+                        size = Size(
+                            size.width - (inset + grow) * 2,
+                            4.dp.toPx() + grow,
+                        ),
+                        cornerRadius = CornerRadius(16.dp.toPx(), 8.dp.toPx()),
+                    )
+                }
+            }
+            .clip(CardShape)
+            .drawBehind {
+                drawRect(Ink)
+                val colors = wash
+                if (colors != null) {
+                    drawPosterWash(colors.base, colors.right, colors.accent, washAlpha)
+                }
+            },
     ) {
         if (backdrop == null) {
             Box(
@@ -225,6 +257,7 @@ private fun WatchingCard(
         Column(
             Modifier
                 .fillMaxWidth()
+                .weight(1f)
                 .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 14.dp),
         ) {
             Box(
@@ -254,19 +287,14 @@ private fun WatchingCard(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(
-                    model = movie.posterUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(ThumbWidth)
-                        .height(ThumbHeight)
-                        .clip(PosterShape)
-                        .background(Color.White.copy(alpha = 0.08f)),
-                )
-                Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.weight(1f))
+            Row(
+                modifier = Modifier.padding(
+                    start = ThumbWidth - PosterStick - 4.dp,
+                    top = 14.dp,
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = lead,
@@ -288,35 +316,74 @@ private fun WatchingCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    if (movie.ratingKp != null || movie.ratingImdb != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            movie.ratingKp?.let { score ->
-                                KpScore(
-                                    score = score,
-                                    color = Color.White,
-                                    iconSize = 14.dp,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                            }
-                            movie.ratingImdb?.let { score ->
-                                ImdbScore(
-                                    score = score,
-                                    color = Color.White,
-                                    iconHeight = 13.dp,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                )
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(RatingRowHeight),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (movie.ratingKp != null || movie.ratingImdb != null) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                movie.ratingKp?.let { score ->
+                                    KpScore(
+                                        score = score,
+                                        color = Color.White,
+                                        iconSize = 14.dp,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+                                movie.ratingImdb?.let { score ->
+                                    ImdbScore(
+                                        score = score,
+                                        color = Color.White,
+                                        iconHeight = 14.dp,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+        movie.age?.let { age ->
+            Text(
+                text = "$age+",
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.55f),
+                        offset = Offset(0f, 1f),
+                        blurRadius = 6f,
+                    ),
+                ),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 12.dp, end = 14.dp),
+            )
+        }
+        AsyncImage(
+            model = movie.posterUrl,
+            contentDescription = stringResource(R.string.poster_content_description, movie.title),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = -PosterStick)
+                .width(ThumbWidth)
+                .height(ThumbHeight)
+                .shadow(12.dp, PosterShape)
+                .clip(PosterShape)
+                .background(Color.White.copy(alpha = 0.08f)),
+        )
     }
 }
 
@@ -393,7 +460,7 @@ private fun Movie.genresLine(): String =
     genres.split(',')
         .map { it.trim() }
         .filter { it.isNotEmpty() }
-        .take(2)
+        .take(1)
         .joinToString(", ")
 
 private fun Movie.metaLine(genres: String): String = when {
