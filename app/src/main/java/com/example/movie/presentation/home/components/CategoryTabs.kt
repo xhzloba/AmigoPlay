@@ -112,6 +112,7 @@ internal fun CategoryTabs(
     hat: Boolean = false,
     mustache: Boolean = false,
     onMenuSettled: () -> Unit = {},
+    showBrand: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -124,8 +125,10 @@ internal fun CategoryTabs(
         if (!visible) listState.animateScrollToItem(index)
     }
     Column(modifier = modifier) {
-        BrandRow(play = playColor, onSearch = onSearch, hat = hat, mustache = mustache)
-        Spacer(Modifier.height(12.dp))
+        if (showBrand) {
+            BrandRow(play = playColor, onSearch = onSearch, hat = hat, mustache = mustache)
+            Spacer(Modifier.height(12.dp))
+        }
         LazyRow(
             state = listState,
             contentPadding = PaddingValues(horizontal = 22.dp),
@@ -179,15 +182,16 @@ private fun ShelfCapsule(
 }
 
 @Composable
-private fun BrandRow(
+internal fun BrandRow(
     play: Color,
     onSearch: () -> Unit,
     hat: Boolean = false,
     mustache: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(start = 22.dp - BrandLogoBleed, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,

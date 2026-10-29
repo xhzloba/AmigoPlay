@@ -51,7 +51,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -60,7 +59,6 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -117,6 +115,7 @@ internal fun TopRankStage(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     title: String,
+    onSettled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -137,6 +136,7 @@ internal fun TopRankStage(
                 movies = movies,
                 onMovieClick = onMovieClick,
                 onMoviePeek = onMoviePeek,
+                onSettled = onSettled,
             )
         }
     }
@@ -147,12 +147,14 @@ private fun TopRankPager(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onSettled: () -> Unit,
 ) {
     val pagerState = rememberPagerState { movies.size }
     val scope = rememberCoroutineScope()
     val tick = rememberHapticTick()
     var scrubbing by remember { mutableStateOf(false) }
     var scrubPage by remember { mutableIntStateOf(-1) }
+    SettleEffect(pagerState, { pagerState.isScrollInProgress }, onSettled)
     HapticOnChange(pagerState) { if (scrubbing) Unit else pagerState.currentPage }
     LaunchedEffect(movies.size) {
         snapshotFlow { scrubPage }
@@ -372,7 +374,6 @@ private fun TopRankCard(
 ) {
     val distance = pageOffset.absoluteValue
     val clamped = distance.coerceIn(0f, 1f)
-    val facing = 1f - clamped
     val active = distance < 0.12f
     var posterReady by remember(movie.id) { mutableStateOf(false) }
     var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
@@ -419,13 +420,6 @@ private fun TopRankCard(
             )
             .drawWithContent {
                 drawContent()
-                if (facing > 0.04f) {
-                    drawRoundRect(
-                        color = Color.White.copy(alpha = 0.28f * facing),
-                        style = Stroke(width = 1.dp.toPx()),
-                        cornerRadius = CornerRadius(size.minDimension * 0.06f, size.minDimension * 0.06f),
-                    )
-                }
                 if (!active || !posterReady || travel <= 0f || travel >= 1f) return@drawWithContent
                 val envelope = sin(travel * PI.toFloat())
                 val head = lerp(-0.35f, 1.2f, travel)

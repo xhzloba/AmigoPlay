@@ -61,6 +61,7 @@ internal fun RecommendationRail(
     onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
     title: String? = null,
+    onSettled: () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (title != null) {
@@ -82,6 +83,7 @@ internal fun RecommendationRail(
                 movies = movies,
                 onMovieClick = onMovieClick,
                 onMoviePeek = onMoviePeek,
+                onSettled = onSettled,
             )
         }
     }
@@ -122,10 +124,12 @@ private fun RecommendationPager(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onSettled: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
     val tick = rememberHapticTick()
+    SettleEffect(listState, { listState.isScrollInProgress }, onSettled)
     HapticOnChange(listState) { listState.firstVisibleItemIndex }
     val decay = rememberSplineBasedDecay<Float>()
     val snapping = remember(listState) { SnapLayoutInfoProvider(listState, SnapPosition.Start) }

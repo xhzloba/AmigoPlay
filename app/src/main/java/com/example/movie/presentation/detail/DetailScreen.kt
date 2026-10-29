@@ -108,6 +108,7 @@ import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.components.MovieLogoShadow
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.palette.backdropBrush
@@ -444,16 +445,28 @@ private fun LogoOrTitle(detail: MovieDetail) {
         mutableStateOf(detail.logoUrl.isNullOrBlank())
     }
     if (settings.showLogos && !failed) {
-        AsyncImage(
-            model = detail.logoUrl,
-            contentDescription = stringResource(R.string.logo_content_description, detail.title),
-            contentScale = ContentScale.Fit,
-            alignment = Alignment.Center,
-            onError = { failed = true },
+        var ready by remember(detail.id, detail.logoUrl) { mutableStateOf(false) }
+        Box(
             modifier = Modifier
                 .height(84.dp)
                 .width(300.dp),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            MovieLogoShadow(
+                model = detail.logoUrl,
+                visible = ready,
+                modifier = Modifier.fillMaxSize(),
+            )
+            AsyncImage(
+                model = detail.logoUrl,
+                contentDescription = stringResource(R.string.logo_content_description, detail.title),
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center,
+                onSuccess = { ready = true },
+                onError = { failed = true },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     } else {
         Text(
             text = detail.title,

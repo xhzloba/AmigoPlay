@@ -64,10 +64,13 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.scale
@@ -655,6 +658,11 @@ internal fun MovieLogoOrTitle(
             contentAlignment = Alignment.Center,
         ) {
             if (!logoReady) LogoSkeleton()
+            MovieLogoShadow(
+                model = movie.logoUrl,
+                visible = logoReady,
+                modifier = Modifier.fillMaxSize(),
+            )
             AsyncImage(
                 model = movie.logoUrl,
                 contentDescription = movie.title,
@@ -709,6 +717,27 @@ internal fun MovieLogoOrTitle(
             modifier = modifier,
         )
     }
+}
+
+@Composable
+internal fun MovieLogoShadow(
+    model: Any?,
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    AsyncImage(
+        model = model,
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        alignment = Alignment.Center,
+        colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+        modifier = modifier.graphicsLayer {
+            val blur = 9.dp.toPx()
+            renderEffect = BlurEffect(blur, blur, TileMode.Decal)
+            translationY = 5.dp.toPx()
+            alpha = if (visible) 0.78f else 0f
+        },
+    )
 }
 
 @Composable

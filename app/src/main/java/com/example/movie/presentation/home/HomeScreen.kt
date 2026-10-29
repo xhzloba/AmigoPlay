@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
@@ -44,10 +45,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,6 +67,8 @@ import com.example.movie.domain.model.ContentKind
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
+import com.example.movie.presentation.home.components.BrandLogoBleed
+import com.example.movie.presentation.home.components.BrandRow
 import com.example.movie.presentation.home.components.CatalogPlaque
 import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
@@ -187,10 +196,27 @@ fun HomeScreen(
                 scroll = next
                 -used
             }
+            val density = LocalDensity.current
+            var brandHeight by remember { mutableIntStateOf(0) }
+            val scrim = (scroll / with(density) { 28.dp.toPx() }).coerceIn(0f, 1f)
+            val parked = scroll < with(density) { 12.dp.toPx() }
+            val playBlend = remember { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(parked) {
+                playBlend.animateTo(
+                    if (parked) 0f else 1f,
+                    tween(520, easing = FastOutSlowInEasing),
+                )
+            }
+            val pinnedPlay = lerp(play, PlayBlue, playBlend.value)
+            val brandReserve = if (brandHeight == 0) 40.dp else with(density) { brandHeight.toDp() }
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
+            ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
                     .scrollable(
                         state = pageScroll,
                         orientation = Orientation.Vertical,
@@ -198,7 +224,7 @@ fun HomeScreen(
                         flingBehavior = ScrollableDefaults.flingBehavior(),
                         bringIntoViewSpec = NoBringIntoView,
                     )
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .clipToBounds()
                     .onSizeChanged {
                         viewport = it.height
                         maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
@@ -210,8 +236,10 @@ fun HomeScreen(
                             contentHeight = full
                             maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
                         }
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                         .padding(top = 32.dp),
                 ) {
+                    Spacer(Modifier.height(brandReserve + 12.dp))
                     CategoryTabs(
                         shelves = state.shelves,
                         selectedId = state.selectedId,
@@ -221,6 +249,7 @@ fun HomeScreen(
                         hat = logo.hat,
                         mustache = logo.mustache,
                         onMenuSettled = logo::onSettled,
+                        showBrand = false,
                     )
                     Spacer(Modifier.height(36.dp))
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
@@ -245,6 +274,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_recommendations),
+                            onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -263,6 +293,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_top),
+                            onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -273,11 +304,25 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_best),
+                            onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     Spacer(Modifier.height(HomeBottomClearance))
                 }
+            }
+            BrandScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
+            BrandRow(
+                play = pinnedPlay,
+                onSearch = onOpenSearch,
+                hat = logo.hat,
+                mustache = logo.mustache,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .padding(top = 32.dp)
+                    .onSizeChanged { brandHeight = it.height },
+            )
             }
         }
     }
@@ -286,6 +331,50 @@ fun HomeScreen(
 @OptIn(ExperimentalFoundationApi::class)
 private object NoBringIntoView : BringIntoViewSpec {
     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
+}
+
+@Composable
+private fun BrandScrim(progress: Float, modifier: Modifier = Modifier) {
+    val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(top + 32.dp + 40.dp + 96.dp)
+            .graphicsLayer { alpha = progress }
+            .drawBehind {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = 0.84f),
+                        0.44f to Color.Black.copy(alpha = 0.74f),
+                        0.64f to Color.Black.copy(alpha = 0.42f),
+                        0.86f to Color.Transparent,
+                        1f to Color.Transparent,
+                    ),
+                )
+                val y = top.toPx() + 32.dp.toPx() + 20.dp.toPx()
+                val radius = 140.dp.toPx()
+                val logoWidth = 36.dp.toPx() * (754f / 186f)
+                val logoX = (22.dp - BrandLogoBleed).toPx() + logoWidth / 2f
+                val searchX = size.width - 34.dp.toPx()
+                fun pool(center: Offset) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colorStops = arrayOf(
+                                0f to Color.Black.copy(alpha = 0.58f),
+                                0.45f to Color.Black.copy(alpha = 0.26f),
+                                1f to Color.Transparent,
+                            ),
+                            center = center,
+                            radius = radius,
+                        ),
+                        radius = radius,
+                        center = center,
+                    )
+                }
+                pool(Offset(logoX, y))
+                pool(Offset(searchX, y))
+            },
+    )
 }
 
 private fun Modifier.scrollContent(scroll: Float, onHeight: (Int) -> Unit): Modifier =
