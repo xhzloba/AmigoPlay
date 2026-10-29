@@ -2,7 +2,7 @@ package com.example.movie.presentation.detail
 
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -71,7 +71,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -205,17 +207,19 @@ private fun DetailContent(
     val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack)
     val hidden = PosterWash(Color(0xFF121212), Color(0xFF121212), Color(0xFF121212))
     var target by remember(detail.id) { mutableStateOf(if (settings.extractColors) hidden else flat) }
+    val reveal = remember(detail.id) { Animatable(if (settings.extractColors) 0f else 1f) }
     LaunchedEffect(detail.id, detail.posterUrl, settings.extractColors) {
         if (!settings.extractColors) {
             target = flat
+            reveal.snapTo(1f)
             return@LaunchedEffect
         }
+        reveal.snapTo(0f)
         val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
         target = extracted
+        reveal.animateTo(1f, tween(durationMillis = 320))
     }
-    val base by animateColorAsState(target.base, tween(durationMillis = 800), label = "washBase")
-    val right by animateColorAsState(target.right, tween(durationMillis = 800), label = "washRight")
-    val accent by animateColorAsState(target.accent, tween(durationMillis = 800), label = "washAccent")
+    val washAlpha = reveal.value
     val backdrops = detail.backdrops
     val manualBackdrop = !settings.autoBackdrop && backdrops.size > 1
     val pagerState = rememberPagerState { backdrops.size.coerceAtLeast(1) }
@@ -245,7 +249,10 @@ private fun DetailContent(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .drawBehind { drawPosterWash(base, right, accent) },
+            .drawBehind {
+                drawRect(Color(0xFF121212))
+                drawPosterWash(target.base, target.right, target.accent, washAlpha)
+            },
     ) {
         val heroHeight = maxHeight * 0.72f
         val contentTop = maxHeight * 0.44f
@@ -704,7 +711,15 @@ private fun DataError.message(): String = when (this) {
     is DataError.Unknown -> stringResource(R.string.popular_load_error)
 }
 
-private fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color) {
+private fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color, alpha: Float) {
+    if (alpha <= 0f) return
+    val layer = alpha < 0.99f
+    if (layer) {
+        drawContext.canvas.saveLayer(
+            Rect(0f, 0f, size.width, size.height),
+            Paint().apply { this.alpha = alpha },
+        )
+    }
     val split = base.differsInHue(right)
     val third = split && accent.differsInHue(base) && accent.differsInHue(right)
     drawRect(base)
@@ -766,6 +781,7 @@ private fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color) {
         radius = rightRadius,
         center = rightCenter,
     )
+    if (layer) drawContext.canvas.restore()
 }
 
 private fun Int.asRuntime(): String {
