@@ -164,14 +164,27 @@ internal data class PosterWash(
 
 internal fun android.graphics.Bitmap.posterWash(): PosterWash? {
     val ranked = washClusters() ?: return null
-    val chromatic = ranked.filter { it.saturation() >= 0.14f }
-    val pool = chromatic.ifEmpty { ranked }
+    val chromatic = ranked.filter { it.saturation() >= GraySat }
+    val dominant = ranked.first()
+    val pool = when {
+        chromatic.isEmpty() -> ranked
+        dominant.saturation() < GraySat -> listOf(dominant) + chromatic
+        else -> chromatic
+    }
     val picks = ArrayList<HueCluster>(3)
     for (cluster in pool) {
         if (picks.size == 3) break
         if (picks.isNotEmpty() && cluster.count < picks[0].count * 0.05f) continue
-        val hue = cluster.hue()
-        if (picks.any { hueDistance(hue, it.hue()) < 0.07f }) continue
+        val gray = cluster.saturation() < GraySat
+        val distinct = picks.all { other ->
+            val otherGray = other.saturation() < GraySat
+            when {
+                gray && otherGray -> false
+                gray || otherGray -> true
+                else -> hueDistance(cluster.hue(), other.hue()) >= 0.07f
+            }
+        }
+        if (!distinct) continue
         picks.add(cluster)
     }
     if (picks.isEmpty()) return null
@@ -193,7 +206,10 @@ internal fun android.graphics.Bitmap.posterWash(): PosterWash? {
 internal fun Color.differsInHue(other: Color): Boolean {
     val a = toHsv()
     val b = other.toHsv()
-    if (a[1] < 0.07f || b[1] < 0.07f) return false
+    val aGray = a[1] < 0.07f
+    val bGray = b[1] < 0.07f
+    if (aGray && bGray) return false
+    if (aGray || bGray) return true
     return hueDistance(a[0] / 360f, b[0] / 360f) >= 0.07f
 }
 
@@ -283,9 +299,11 @@ internal fun DominantColors.backdropBrush(): Brush {
     )
 }
 
+private const val GraySat = 0.28f
+
 private fun Color.posterInk(): Color {
     val hsv = toHsv()
-    if (hsv[1] < 0.07f) {
+    if (hsv[1] < GraySat) {
         hsv[1] = 0f
         hsv[2] = 0.16f
         return Color(android.graphics.Color.HSVToColor(hsv))

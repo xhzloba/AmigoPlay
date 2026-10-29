@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.25.2",
+            fixed = listOf(
+                "Серый цвет обложки остаётся серым. Синий остаётся синим, голубой — голубым.",
+            ),
+        ),
+        Release(
             version = "1.25.1",
             fixed = listOf(
                 "В деталке нижний угол больше не мигает, пока встают цвета обложки.",
