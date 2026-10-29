@@ -69,12 +69,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -100,7 +98,9 @@ import com.example.movie.domain.model.CastMember
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
-import com.example.movie.presentation.palette.DominantColors
+import com.example.movie.presentation.palette.PosterWash
+import com.example.movie.presentation.palette.differsInHue
+import com.example.movie.presentation.palette.posterWash
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
@@ -111,11 +111,7 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.MovieLogoShadow
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
-import com.example.movie.presentation.palette.backdropBrush
-import com.example.movie.presentation.palette.dominantColors
-import com.example.movie.presentation.palette.forGlow
-import com.example.movie.presentation.palette.richer
-import com.example.movie.presentation.palette.seat
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -153,6 +149,7 @@ private fun RoundAction(icon: ImageVector) {
 }
 
 private val DetailInset = 20.dp
+private const val BackdropPeek = 0.26f
 
 private fun Modifier.edgeToEdge(inset: Dp): Modifier = layout { measurable, constraints ->
     val extra = inset.roundToPx()
@@ -205,35 +202,20 @@ private fun DetailContent(
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val flat = DominantColors(CinemaBlack, CinemaBlack)
-    val hidden = DominantColors(Color(0xFF121212), Color(0xFF121212))
+    val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack)
+    val hidden = PosterWash(Color(0xFF121212), Color(0xFF121212), Color(0xFF121212))
     var target by remember(detail.id) { mutableStateOf(if (settings.extractColors) hidden else flat) }
-    var glow by remember(detail.id) { mutableStateOf(hidden) }
-    var paletteReady by remember(detail.id) { mutableStateOf(false) }
     LaunchedEffect(detail.id, detail.posterUrl, settings.extractColors) {
         if (!settings.extractColors) {
             target = flat
-            glow = hidden
-            paletteReady = false
             return@LaunchedEffect
         }
-        paletteReady = false
         val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
-        val vivid = extracted.richer()
-        glow = vivid
-        target = vivid.seat()
-        paletteReady = true
+        target = extracted
     }
-    val primary by animateColorAsState(target.primary, tween(durationMillis = 800), label = "washPrimary")
-    val secondary by animateColorAsState(target.secondary, tween(durationMillis = 800), label = "washSecondary")
-    val colors = DominantColors(primary, secondary)
-    val glowPrimary by animateColorAsState(glow.primary, tween(durationMillis = 800), label = "retouchPrimary")
-    val glowSecondary by animateColorAsState(glow.secondary, tween(durationMillis = 800), label = "retouchSecondary")
-    val backdropTint by animateFloatAsState(
-        targetValue = if (settings.extractColors && paletteReady) 1f else 0f,
-        animationSpec = tween(durationMillis = 800),
-        label = "backdrop-tint",
-    )
+    val base by animateColorAsState(target.base, tween(durationMillis = 800), label = "washBase")
+    val right by animateColorAsState(target.right, tween(durationMillis = 800), label = "washRight")
+    val accent by animateColorAsState(target.accent, tween(durationMillis = 800), label = "washAccent")
     val backdrops = detail.backdrops
     val manualBackdrop = !settings.autoBackdrop && backdrops.size > 1
     val pagerState = rememberPagerState { backdrops.size.coerceAtLeast(1) }
@@ -249,20 +231,25 @@ private fun DetailContent(
     val scroll = rememberScrollState()
     LaunchedEffect(detail.id) { scroll.scrollTo(0) }
     val density = LocalDensity.current
+    val backdropAway = scroll.value > with(density) { 32.dp.toPx() }
+    val backdropAlpha by animateFloatAsState(
+        targetValue = if (backdropAway) BackdropPeek else 1f,
+        animationSpec = tween(durationMillis = 280),
+        label = "backdrop-away",
+    )
+    val dotsAlpha by animateFloatAsState(
+        targetValue = if (backdropAway) 0f else 1f,
+        animationSpec = tween(durationMillis = 280),
+        label = "backdrop-dots",
+    )
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(colors.backdropBrush()),
+            .drawBehind { drawPosterWash(base, right, accent) },
     ) {
-        val heroHeight = maxHeight * 0.82f
-        val contentTop = maxHeight * 0.46f
+        val heroHeight = maxHeight * 0.72f
+        val contentTop = maxHeight * 0.44f
         val textWidth = maxWidth - DetailInset * 2
-        val backdropAway = scroll.value > with(density) { 32.dp.toPx() }
-        val backdropAlpha by animateFloatAsState(
-            targetValue = if (backdropAway) 0f else 1f,
-            animationSpec = tween(durationMillis = 240),
-            label = "backdrop-away",
-        )
         if (backdrops.isNotEmpty()) {
             Box(
                 modifier = Modifier
@@ -279,9 +266,6 @@ private fun DetailContent(
                         BackdropStill(
                             url = backdrops[page],
                             height = heroHeight,
-                            tint = backdropTint,
-                            primary = glowPrimary,
-                            secondary = glowSecondary,
                         )
                     }
                 } else {
@@ -293,35 +277,11 @@ private fun DetailContent(
                         BackdropStill(
                             url = url,
                             height = heroHeight,
-                            tint = backdropTint,
-                            primary = glowPrimary,
-                            secondary = glowSecondary,
                         )
                     }
                 }
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawRect(Color.Black.copy(alpha = 0.55f))
-                },
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .graphicsLayer { alpha = backdropAlpha }
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.38f),
-                            Color.Transparent,
-                        ),
-                    ),
-                ),
-        )
         if (manualBackdrop) {
             BackdropDots(
                 count = backdrops.size,
@@ -330,7 +290,7 @@ private fun DetailContent(
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(top = 12.dp)
-                    .graphicsLayer { alpha = backdropAlpha },
+                    .graphicsLayer { alpha = dotsAlpha },
             )
         }
         Column(
@@ -744,6 +704,70 @@ private fun DataError.message(): String = when (this) {
     is DataError.Unknown -> stringResource(R.string.popular_load_error)
 }
 
+private fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color) {
+    val split = base.differsInHue(right)
+    val third = split && accent.differsInHue(base) && accent.differsInHue(right)
+    drawRect(base)
+    if (!split || third) {
+        val accentRadius = if (third) size.width * 1.35f else size.width * 0.95f
+        val accentCenter = if (third) Offset(0f, size.height) else Offset(size.width * 0.06f, size.height)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colorStops = if (third) {
+                    arrayOf(
+                        0f to accent,
+                        0.22f to accent.copy(alpha = 0.82f),
+                        0.48f to accent.copy(alpha = 0.46f),
+                        0.72f to accent.copy(alpha = 0.16f),
+                        1f to Color.Transparent,
+                    )
+                } else {
+                    arrayOf(
+                        0f to accent,
+                        0.4f to accent.copy(alpha = 0.5f),
+                        1f to Color.Transparent,
+                    )
+                },
+                center = accentCenter,
+                radius = accentRadius,
+            ),
+            radius = accentRadius,
+            center = accentCenter,
+        )
+    }
+    val rightRadius = if (split) size.width * 1.55f else size.maxDimension * 0.92f
+    val rightCenter = if (split) {
+        Offset(size.width * 1.42f, size.height * 0.48f)
+    } else {
+        Offset(size.width * 1.04f, size.height * 0.62f)
+    }
+    drawCircle(
+        brush = Brush.radialGradient(
+            colorStops = if (split) {
+                arrayOf(
+                    0f to right,
+                    0.18f to right.copy(alpha = 0.9f),
+                    0.4f to right.copy(alpha = 0.62f),
+                    0.62f to right.copy(alpha = 0.28f),
+                    0.82f to right.copy(alpha = 0.08f),
+                    1f to Color.Transparent,
+                )
+            } else {
+                arrayOf(
+                    0f to right,
+                    0.32f to right.copy(alpha = 0.78f),
+                    0.68f to right.copy(alpha = 0.3f),
+                    1f to Color.Transparent,
+                )
+            },
+            center = rightCenter,
+            radius = rightRadius,
+        ),
+        radius = rightRadius,
+        center = rightCenter,
+    )
+}
+
 private fun Int.asRuntime(): String {
     val hours = this / 60
     val minutes = this % 60
@@ -758,9 +782,6 @@ private fun Int.asRuntime(): String {
 private fun BackdropStill(
     url: String,
     height: Dp,
-    tint: Float,
-    primary: Color,
-    secondary: Color,
 ) {
     AsyncImage(
         model = url,
@@ -772,72 +793,13 @@ private fun BackdropStill(
             .height(height)
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
-                val imageAlpha = 1f - 0.18f * tint
-                drawContext.canvas.saveLayer(
-                    Rect(0f, 0f, size.width, size.height),
-                    Paint().apply { alpha = imageAlpha },
-                )
                 drawContent()
-                drawContext.canvas.restore()
-                if (tint > 0.01f) {
-                    fun feather(
-                        center: Offset,
-                        radius: Float,
-                        color: Color,
-                        core: Float,
-                        mid: Float,
-                    ) {
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colorStops = arrayOf(
-                                    0f to color.copy(alpha = core),
-                                    0.55f to color.copy(alpha = mid),
-                                    1f to Color.Transparent,
-                                ),
-                                center = center,
-                                radius = radius,
-                            ),
-                            radius = radius,
-                            center = center,
-                            blendMode = BlendMode.Screen,
-                        )
-                    }
-                    feather(
-                        center = Offset(0f, size.height * 0.3f),
-                        radius = size.width * 0.78f,
-                        color = primary,
-                        core = 0.95f * tint,
-                        mid = 0.55f * tint,
-                    )
-                    feather(
-                        center = Offset(0f, size.height * 0.68f),
-                        radius = size.width * 0.7f,
-                        color = primary,
-                        core = 0.85f * tint,
-                        mid = 0.42f * tint,
-                    )
-                    feather(
-                        center = Offset(size.width, size.height * 0.34f),
-                        radius = size.width * 0.72f,
-                        color = secondary,
-                        core = 0.92f * tint,
-                        mid = 0.5f * tint,
-                    )
-                    feather(
-                        center = Offset(size.width, size.height * 0.72f),
-                        radius = size.width * 0.64f,
-                        color = secondary,
-                        core = 0.8f * tint,
-                        mid = 0.38f * tint,
-                    )
-                }
                 drawRect(
                     brush = Brush.verticalGradient(
                         0f to Color.Black,
-                        0.40f to Color.Black,
-                        0.52f to Color.Black.copy(alpha = 0.55f),
-                        0.62f to Color.Black.copy(alpha = 0.14f),
-                        0.74f to Color.Transparent,
+                        0.58f to Color.Black,
+                        0.74f to Color.Black.copy(alpha = 0.4f),
+                        0.9f to Color.Transparent,
                         1f to Color.Transparent,
                     ),
                     blendMode = BlendMode.DstIn,
@@ -869,7 +831,7 @@ private fun BackdropDots(count: Int, index: Int, modifier: Modifier = Modifier) 
     }
 }
 
-private suspend fun android.content.Context.extractBackdrop(url: String): DominantColors? {
+private suspend fun android.content.Context.extractBackdrop(url: String): PosterWash? {
     val result = imageLoader.execute(
         ImageRequest.Builder(this)
             .data(url)
@@ -883,7 +845,7 @@ private suspend fun android.content.Context.extractBackdrop(url: String): Domina
     } else {
         source
     }
-    val colors = withContext(Dispatchers.Default) { bitmap.dominantColors { it.forGlow() } }
+    val colors = withContext(Dispatchers.Default) { bitmap.posterWash() }
     if (bitmap !== source) bitmap.recycle()
     return colors
 }
