@@ -20,8 +20,10 @@
     <string name="section_similar">Похожие</string>
     <string name="section_sequels">Сиквелы и приквелы</string>
     <string name="section_recommendations">Возможно, вам понравится</string>
-    <string name="catalog_plaque_title">Каталог</string>
-    <string name="catalog_plaque_hint">Каталог фильмов и сериалов</string>
+    <string name="section_watching">Сейчас смотрят</string>
+    <string name="kind_movie">Фильм</string>
+    <string name="kind_series">Сериал</string>
+    <string name="kind_anime">Аниме</string>
     <string name="section_top">Топ 250 фильмов</string>
     <string name="section_best">Лучшее</string>
     <string name="search">Поиск</string>

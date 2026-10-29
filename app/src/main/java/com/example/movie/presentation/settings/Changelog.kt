@@ -11,6 +11,14 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.26.0",
+            added = listOf(
+                "На главной вместо плашки каталога слайдер «Сейчас смотрят».",
+                "В карточке кадр backdrop. Ретушь из его цветов. Логотип по центру, чуть на кадре. Нет логотипа — название как на главном слайдере.",
+                "Внизу маленький постер, режиссёр, до двух жанров и оценки Кинопоиска и IMDb.",
+            ),
+        ),
+        Release(
             version = "1.25.2",
             fixed = listOf(
                 "Серый цвет обложки остаётся серым. Синий остаётся синим, голубой — голубым.",

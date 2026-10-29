@@ -69,7 +69,6 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandRow
-import com.example.movie.presentation.home.components.CatalogPlaque
 import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
 import com.example.movie.presentation.home.components.CoverStackSkeleton
@@ -77,6 +76,7 @@ import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
 import com.example.movie.presentation.home.components.TopRankStage
+import com.example.movie.presentation.home.components.WatchingRail
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
@@ -94,7 +94,6 @@ fun HomeScreen(
     onOpenSearch: () -> Unit,
     onSearchQuery: (String) -> Unit,
     onCloseSearch: () -> Unit,
-    onOpenCatalog: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val playAnim = remember { Animatable(PlayBlue) }
@@ -278,11 +277,14 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    if (!state.catalogPreviewReady || state.catalogPreview.isNotEmpty()) {
+                    if (!state.watchingReady || state.watching.isNotEmpty()) {
                         Spacer(Modifier.height(CatalogGap))
-                        CatalogPlaque(
-                            movies = state.catalogPreview,
-                            onClick = onOpenCatalog,
+                        WatchingRail(
+                            movies = state.watching,
+                            onMovieClick = onMovieClick,
+                            onMoviePeek = onMoviePeek,
+                            title = stringResource(R.string.section_watching),
+                            onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -415,7 +417,12 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
             title = stringResource(R.string.section_recommendations),
         )
         Spacer(Modifier.height(CatalogGap))
-        CatalogPlaque(movies = emptyList())
+        WatchingRail(
+            movies = emptyList(),
+            onMovieClick = {},
+            onMoviePeek = {},
+            title = stringResource(R.string.section_watching),
+        )
         Spacer(Modifier.height(CatalogGap))
         TopRankStage(
             movies = emptyList(),
@@ -496,7 +503,6 @@ private fun HomeScreenPreview() {
             onOpenSearch = {},
             onSearchQuery = {},
             onCloseSearch = {},
-            onOpenCatalog = {},
         )
     }
 }

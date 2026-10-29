@@ -711,7 +711,7 @@ private fun DataError.message(): String = when (this) {
     is DataError.Unknown -> stringResource(R.string.popular_load_error)
 }
 
-private fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color, alpha: Float) {
+internal fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color, alpha: Float) {
     if (alpha <= 0f) return
     val layer = alpha < 0.99f
     if (layer) {

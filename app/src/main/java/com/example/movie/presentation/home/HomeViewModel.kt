@@ -33,7 +33,7 @@ class HomeViewModel(
     init {
         loadShelves()
         loadRecommendations()
-        loadCatalogPreview()
+        loadWatching()
         loadTop()
         loadBest()
     }
@@ -97,8 +97,8 @@ class HomeViewModel(
         if (!_state.value.recommendationsReady || _state.value.recommendations.isEmpty()) {
             loadRecommendations()
         }
-        if (!_state.value.catalogPreviewReady || _state.value.catalogPreview.isEmpty()) {
-            loadCatalogPreview()
+        if (!_state.value.watchingReady || _state.value.watching.isEmpty()) {
+            loadWatching()
         }
         if (!_state.value.topReady || _state.value.top.isEmpty()) {
             loadTop()
@@ -136,22 +136,22 @@ class HomeViewModel(
         }
     }
 
-    private fun loadCatalogPreview() {
+    private fun loadWatching() {
         viewModelScope.launch {
-            if (_state.value.catalogPreview.isEmpty()) {
-                _state.value = _state.value.copy(catalogPreviewReady = false)
+            if (_state.value.watching.isEmpty()) {
+                _state.value = _state.value.copy(watchingReady = false)
             }
-            getShelfMovies(CatalogQuery(sort = "popular"))
+            getShelfMovies(CatalogQuery(sort = "watching"))
                 .onSuccess { movies ->
                     _state.value = _state.value.copy(
-                        catalogPreview = movies.take(3),
-                        catalogPreviewReady = true,
+                        watching = movies.take(12),
+                        watchingReady = true,
                     )
                 }
                 .onFailure {
                     _state.value = _state.value.copy(
-                        catalogPreview = emptyList(),
-                        catalogPreviewReady = true,
+                        watching = emptyList(),
+                        watchingReady = true,
                     )
                 }
         }

@@ -639,6 +639,8 @@ internal fun MovieLogoOrTitle(
     titleInsetExtra: Dp = 10.dp,
     titleFontSize: TextUnit = 20.sp,
     titleLineHeight: TextUnit = 26.sp,
+    titleAlign: TextAlign = TextAlign.Center,
+    logoAlignment: Alignment = Alignment.Center,
     onContentHeight: (Dp) -> Unit = {},
     onUsingLogo: (Boolean) -> Unit = {},
 ) {
@@ -655,19 +657,20 @@ internal fun MovieLogoOrTitle(
             modifier = modifier
                 .height(LogoSlot)
                 .width(220.dp),
-            contentAlignment = Alignment.Center,
+            contentAlignment = logoAlignment,
         ) {
             if (!logoReady) LogoSkeleton()
             MovieLogoShadow(
                 model = movie.logoUrl,
                 visible = logoReady,
+                alignment = logoAlignment,
                 modifier = Modifier.fillMaxSize(),
             )
             AsyncImage(
                 model = movie.logoUrl,
                 contentDescription = movie.title,
                 contentScale = ContentScale.Fit,
-                alignment = Alignment.Center,
+                alignment = logoAlignment,
                 onSuccess = { state ->
                     logoReady = true
                     val raw = (state.result.drawable as? BitmapDrawable)?.bitmap ?: return@AsyncImage
@@ -707,14 +710,14 @@ internal fun MovieLogoOrTitle(
             fontSize = titleFontSize,
             lineHeight = titleLineHeight,
             letterSpacing = (-0.3).sp,
-            textAlign = TextAlign.Center,
+            textAlign = titleAlign,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             onTextLayout = { layout ->
                 val textHeight = with(density) { layout.size.height.toDp() }
                 onContentHeight(((LogoSlot - textHeight) / 2 + titleInsetExtra).coerceAtLeast(0.dp))
             },
-            modifier = modifier,
+            modifier = modifier.fillMaxWidth(),
         )
     }
 }
@@ -724,12 +727,13 @@ internal fun MovieLogoShadow(
     model: Any?,
     visible: Boolean,
     modifier: Modifier = Modifier,
+    alignment: Alignment = Alignment.Center,
 ) {
     AsyncImage(
         model = model,
         contentDescription = null,
         contentScale = ContentScale.Fit,
-        alignment = Alignment.Center,
+        alignment = alignment,
         colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
         modifier = modifier.graphicsLayer {
             val blur = 9.dp.toPx()
