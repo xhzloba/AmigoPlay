@@ -408,6 +408,10 @@ private fun FavoritePoster(
                 onPeek = { onMoviePeek(item.toMovie()) },
                 onProgress = { holdProgress = it },
                 onPressed = { pressed = it },
+                onClick = {
+                    tick?.invoke()
+                    onMovieClick(item.id)
+                },
                 wave = wave,
             )
             .holdCue(holdProgress)

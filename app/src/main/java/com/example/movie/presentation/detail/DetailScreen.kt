@@ -663,6 +663,10 @@ private fun MovieStrip(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
                             onPressed = { pressed = it },
+                            onClick = {
+                                tick?.invoke()
+                                onOpenMovie(movie.id)
+                            },
                             wave = wave,
                         )
                         .holdCue(holdProgress)

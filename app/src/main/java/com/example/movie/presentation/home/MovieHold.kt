@@ -22,7 +22,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -130,37 +133,49 @@ internal fun Modifier.holdToPeek(
     onPeek: () -> Unit,
     onProgress: (Float) -> Unit,
     onPressed: (Boolean) -> Unit = {},
+    onClick: () -> Unit = {},
     wave: PosterWave? = null,
 ): Modifier {
     val peek by rememberUpdatedState(onPeek)
     val press by rememberUpdatedState(onPressed)
+    val click by rememberUpdatedState(onClick)
     val waveState by rememberUpdatedState(wave)
     val peeks = remember { arrayOf<() -> Unit>({ }) }
     val presser = remember { arrayOf<(Boolean) -> Unit>({ }) }
+    val clicks = remember { arrayOf<() -> Unit>({ }) }
     val waves = remember { arrayOfNulls<PosterWave>(1) }
+    val window = remember { floatArrayOf(Float.NaN, Float.NaN) }
     peeks[0] = peek
     presser[0] = press
+    clicks[0] = click
     waves[0] = waveState
-    return pointerInput(Unit) {
+    return onGloballyPositioned { coordinates ->
+        val at = coordinates.positionInWindow()
+        window[0] = at.x
+        window[1] = at.y
+    }.pointerInput(Unit) {
         val slop = viewConfiguration.touchSlop
         var pressEpoch = 0
         coroutineScope {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val origin = down.position
+                val originFinger = fingerOnScreen(window, down)
+                val scrollTookDown = down.isConsumed
                 val started = System.nanoTime()
                 val pressToken = ++pressEpoch
                 waves[0]?.press(origin)
                 presser[0].invoke(true)
                 var draggedAway = false
                 var releaseDelay = 0L
+                var armClick = false
                 try {
                     val tapped = withTimeoutOrNull(HoldMillis) {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
                             val change = event.changes.firstOrNull { it.id == down.id }
                             val dragged = change != null &&
-                                (change.position - origin).getDistance() > slop
+                                (fingerOnScreen(window, change) - originFinger).getDistance() > slop
                             if (dragged || change == null) return@withTimeoutOrNull false
                             if (!change.pressed) return@withTimeoutOrNull true
                         }
@@ -169,18 +184,17 @@ internal fun Modifier.holdToPeek(
                     }
                     if (tapped == false) {
                         draggedAway = true
-                        return@awaitEachGesture
-                    }
-                    if (tapped == true) {
+                    } else if (tapped == true) {
                         val elapsed = (System.nanoTime() - started) / 1_000_000
                         if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
-                        return@awaitEachGesture
-                    }
-                    peeks[0].invoke()
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        event.changes.forEach { it.consume() }
-                        if (event.changes.none { it.pressed }) break
+                        armClick = scrollTookDown
+                    } else {
+                        peeks[0].invoke()
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            event.changes.forEach { it.consume() }
+                            if (event.changes.none { it.pressed }) break
+                        }
                     }
                 } finally {
                     val mine = pressToken
@@ -191,9 +205,17 @@ internal fun Modifier.holdToPeek(
                     }
                     if (draggedAway) waves[0]?.kill() else waves[0]?.release()
                 }
+                if (armClick) clicks[0].invoke()
             }
         }
     }
+}
+
+private fun fingerOnScreen(window: FloatArray, change: PointerInputChange): Offset {
+    val x = window[0]
+    val y = window[1]
+    val local = change.position
+    return if (x.isNaN() || y.isNaN()) local else Offset(x + local.x, y + local.y)
 }
 
 internal fun Modifier.holdCue(progress: Float): Modifier = drawWithContent {

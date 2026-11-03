@@ -221,6 +221,10 @@ private fun SearchResults(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
                             onPressed = { pressed = it },
+                            onClick = {
+                                tick?.invoke()
+                                onMovieClick(movie.id)
+                            },
                             wave = wave,
                         )
                         .holdCue(holdProgress)

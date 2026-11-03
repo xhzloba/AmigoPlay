@@ -187,6 +187,7 @@ private fun WatchingCard(
                 onPeek = onPeek,
                 onProgress = { holdProgress = it },
                 onPressed = { pressed = it },
+                onClick = onClick,
                 wave = wave,
             )
             .holdCue(holdProgress)
