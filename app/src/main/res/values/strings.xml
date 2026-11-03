@@ -19,6 +19,7 @@
     <string name="section_cast">Актёры</string>
     <string name="section_similar">Похожие</string>
     <string name="section_sequels">Сиквелы и приквелы</string>
+    <string name="section_back">Назад</string>
     <string name="section_recommendations">Возможно, вам понравится</string>
     <string name="section_watching">Сейчас смотрят</string>
     <string name="kind_movie">Фильм</string>

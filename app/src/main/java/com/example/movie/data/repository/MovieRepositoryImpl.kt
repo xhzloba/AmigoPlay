@@ -23,7 +23,7 @@ internal class MovieRepositoryImpl(
         api.main(token).toShelves()
     }
 
-    override suspend fun getMovies(query: CatalogQuery, page: Int): Result<List<Movie>> = runApi {
+    override suspend fun getMovies(query: CatalogQuery, page: Int, limit: Int?): Result<List<Movie>> = runApi {
         api.list(
             sort = query.sort,
             type = query.type,
@@ -36,7 +36,8 @@ internal class MovieRepositoryImpl(
             .map { it.toDomain() }
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
             .let { movies ->
-                if (query.sort == "watching" || query.uhd || query.dolbyVision) movies.take(15) else movies
+                val cap = limit ?: if (query.uhd || query.dolbyVision) 15 else null
+                if (cap != null) movies.take(cap) else movies
             }
     }
 

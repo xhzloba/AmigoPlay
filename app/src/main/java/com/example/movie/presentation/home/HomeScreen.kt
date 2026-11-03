@@ -104,6 +104,7 @@ fun HomeScreen(
     onOpenSearch: () -> Unit,
     onSearchQuery: (String) -> Unit,
     onCloseSearch: () -> Unit,
+    onOpenSection: (HomeSection) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val playAnim = remember { Animatable(PlayBlue) }
@@ -291,6 +292,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_recommendations),
+                            onOpen = { onOpenSection(HomeSection.Recommendations) },
                             onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -302,6 +304,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_watching),
+                            onOpen = { onOpenSection(HomeSection.Watching) },
                             onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -313,6 +316,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_top),
+                            onOpen = { onOpenSection(HomeSection.Top) },
                             onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -324,6 +328,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_best),
+                            onOpen = { onOpenSection(HomeSection.Best) },
                             onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
                         )

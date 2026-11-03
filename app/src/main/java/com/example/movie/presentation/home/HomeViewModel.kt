@@ -141,7 +141,7 @@ class HomeViewModel(
             if (_state.value.watching.isEmpty()) {
                 _state.value = _state.value.copy(watchingReady = false)
             }
-            getShelfMovies(CatalogQuery(sort = "watching"))
+            getShelfMovies(CatalogQuery(sort = "watching"), limit = 15)
                 .onSuccess { movies ->
                     _state.value = _state.value.copy(
                         watching = movies,

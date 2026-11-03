@@ -117,19 +117,12 @@ internal fun TopRankStage(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     title: String,
+    onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = title,
-            color = Color(0xFFB4B4B8),
-            fontWeight = FontWeight.Normal,
-            fontSize = CategoryTabFontSize,
-            lineHeight = CategoryTabLineHeight,
-            letterSpacing = CategoryTabLetterSpacing,
-            modifier = Modifier.padding(horizontal = 20.dp),
-        )
+        RailTitle(title = title, onClick = onOpen)
         Spacer(Modifier.height(14.dp))
         if (movies.isEmpty()) {
             TopRankSkeleton()

@@ -11,6 +11,7 @@ import com.example.movie.domain.model.Movie
 fun HomeRoute(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onOpenSection: (HomeSection) -> Unit,
 ) {
     val container = LocalAppContainer.current
     val viewModel: HomeViewModel = viewModel {
@@ -32,5 +33,6 @@ fun HomeRoute(
         onOpenSearch = viewModel::openSearch,
         onSearchQuery = viewModel::search,
         onCloseSearch = viewModel::closeSearch,
+        onOpenSection = onOpenSection,
     )
 }

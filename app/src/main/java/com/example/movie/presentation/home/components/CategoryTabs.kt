@@ -175,14 +175,18 @@ private fun ShelfCapsule(
         letterSpacing = CategoryTabLetterSpacing,
         modifier = Modifier
             .drawBehind {
-                val stroke = (if (selected && !ghost) 2.dp else 1.dp).toPx()
+                if (ghost) {
+                    val radius = size.minDimension / 2f
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.12f),
+                        cornerRadius = CornerRadius(radius, radius),
+                    )
+                    return@drawBehind
+                }
+                val stroke = (if (selected) 2.dp else 1.dp).toPx()
                 val inset = stroke / 2f
                 drawRoundRect(
-                    color = when {
-                        ghost -> Color.White.copy(alpha = 0.16f)
-                        selected -> border
-                        else -> CapsuleIdleStroke
-                    },
+                    color = if (selected) border else CapsuleIdleStroke,
                     topLeft = Offset(inset, inset),
                     size = Size(size.width - stroke, size.height - stroke),
                     cornerRadius = CornerRadius((size.minDimension - stroke) / 2f, (size.minDimension - stroke) / 2f),

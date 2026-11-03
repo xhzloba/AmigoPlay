@@ -16,6 +16,8 @@ internal object ShellIcons {
     val settings: ImageVector = sliders()
     val media: ImageVector = icon(filled = false) { media() }
     val search: ImageVector = icon(filled = false) { magnifier() }
+    val chevron: ImageVector = chevron(forward = true)
+    val back: ImageVector = chevron(forward = false)
 }
 
 private fun icon(filled: Boolean, body: PathBuilder.() -> Unit): ImageVector =
@@ -79,6 +81,31 @@ private fun PathBuilder.media() {
     lineTo(10.1f, 15.4f)
     close()
 }
+
+private fun chevron(forward: Boolean): ImageVector = ImageVector.Builder(
+    name = if (forward) "chevron" else "back",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.7f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    ) {
+        if (forward) {
+            moveTo(9f, 5.2f)
+            lineTo(15.6f, 12f)
+            lineTo(9f, 18.8f)
+        } else {
+            moveTo(15f, 5.2f)
+            lineTo(8.4f, 12f)
+            lineTo(15f, 18.8f)
+        }
+    }
+}.build()
 
 private fun PathBuilder.magnifier() {
     moveTo(16.6f, 10.4f)

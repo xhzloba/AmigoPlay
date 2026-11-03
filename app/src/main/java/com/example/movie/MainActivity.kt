@@ -10,6 +10,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -64,23 +66,33 @@ class MainActivity : ComponentActivity() {
                         var tabName by rememberSaveable { mutableStateOf("Home") }
                         var detailPeek by remember { mutableStateOf<Movie?>(null) }
                         LaunchedEffect(openedId) { detailPeek = null }
+                        AppShell(
+                            tabName = tabName,
+                            onTabChange = { tabName = it },
+                            onMovieClick = { id -> if (stack.lastOrNull() != id) stack.add(id) },
+                            handleBack = openedId == null,
+                        )
                         BackHandler(enabled = openedId != null) {
                             if (detailPeek != null) detailPeek = null
                             else stack.removeAt(stack.lastIndex)
                         }
-                        if (openedId == null) {
-                            AppShell(
-                                tabName = tabName,
-                                onTabChange = { tabName = it },
-                                onMovieClick = { stack.add(it) },
-                            )
-                        } else {
-                            DetailRoute(
-                                movieId = openedId,
-                                onOpenMovie = { id -> if (stack.lastOrNull() != id) stack.add(id) },
-                                onMoviePeek = { detailPeek = it },
-                            )
-                            MoviePeek(movie = detailPeek, onDismiss = { detailPeek = null })
+                        if (openedId != null) {
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = {},
+                                    ),
+                            ) {
+                                DetailRoute(
+                                    movieId = openedId,
+                                    onOpenMovie = { id -> if (stack.lastOrNull() != id) stack.add(id) },
+                                    onMoviePeek = { detailPeek = it },
+                                )
+                                MoviePeek(movie = detailPeek, onDismiss = { detailPeek = null })
+                            }
                         }
                         AppUpdateHost()
                     }

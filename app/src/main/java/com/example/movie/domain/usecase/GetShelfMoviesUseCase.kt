@@ -7,6 +7,6 @@ import com.example.movie.domain.repository.MovieRepository
 class GetShelfMoviesUseCase(
     private val repository: MovieRepository,
 ) {
-    suspend operator fun invoke(query: CatalogQuery, page: Int = 1): Result<List<Movie>> =
-        repository.getMovies(query, page)
+    suspend operator fun invoke(query: CatalogQuery, page: Int = 1, limit: Int? = null): Result<List<Movie>> =
+        repository.getMovies(query, page, limit)
 }

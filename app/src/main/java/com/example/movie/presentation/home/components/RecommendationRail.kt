@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
@@ -23,6 +24,7 @@ import androidx.compose.foundation.gestures.snapping.snapFlingBehavior
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,6 +51,7 @@ import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.PosterShape
 
 private val PosterWidth = 112.dp
@@ -57,25 +60,64 @@ private val RailStart = 20.dp
 private val PosterGap = 14.dp
 
 @Composable
+internal fun RailTitle(
+    title: String,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val tick = rememberHapticTick()
+    Row(
+        modifier = modifier
+            .padding(horizontal = 20.dp)
+            .then(
+                if (onClick == null) {
+                    Modifier
+                } else {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            tick?.invoke()
+                            onClick()
+                        },
+                    )
+                },
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            color = Color(0xFFB4B4B8),
+            fontWeight = FontWeight.Normal,
+            fontSize = CategoryTabFontSize,
+            lineHeight = CategoryTabLineHeight,
+            letterSpacing = CategoryTabLetterSpacing,
+        )
+        if (onClick != null) {
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                imageVector = ShellIcons.chevron,
+                contentDescription = null,
+                tint = Color(0xFFB4B4B8),
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@Composable
 internal fun RecommendationRail(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
     title: String? = null,
+    onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit = {},
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (title != null) {
-            Text(
-                text = title,
-                color = Color(0xFFB4B4B8),
-                fontWeight = FontWeight.Normal,
-                fontSize = CategoryTabFontSize,
-                lineHeight = CategoryTabLineHeight,
-                letterSpacing = CategoryTabLetterSpacing,
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
+            RailTitle(title = title, onClick = onOpen)
             Spacer(Modifier.height(10.dp))
         }
         if (movies.isEmpty()) {
