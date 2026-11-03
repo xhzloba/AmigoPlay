@@ -29,7 +29,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,20 +56,28 @@ import com.example.movie.ui.theme.CinemaSurface
 private val CardShape = RoundedCornerShape(22.dp)
 private val Notes = Color(0xFFD2D2D8)
 
+internal val PeekEnter =
+    fadeIn(tween(180)) + scaleIn(
+        animationSpec = spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow),
+        initialScale = 0.96f,
+    )
+
+internal val PeekExit =
+    fadeOut(tween(140)) + scaleOut(animationSpec = tween(140), targetScale = 0.98f)
+
 @Composable
 internal fun MoviePeek(
     movie: Movie?,
     onDismiss: () -> Unit,
 ) {
+    var held by remember { mutableStateOf(movie) }
+    if (movie != null) held = movie
     AnimatedVisibility(
         visible = movie != null,
-        enter = fadeIn(tween(180)) + scaleIn(
-            animationSpec = spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow),
-            initialScale = 0.96f,
-        ),
-        exit = fadeOut(tween(140)) + scaleOut(animationSpec = tween(140), targetScale = 0.98f),
+        enter = PeekEnter,
+        exit = PeekExit,
     ) {
-        val shown = movie ?: return@AnimatedVisibility
+        val shown = held ?: return@AnimatedVisibility
         Box(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier

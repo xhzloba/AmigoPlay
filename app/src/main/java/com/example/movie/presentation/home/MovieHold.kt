@@ -39,7 +39,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private const val HoldMillis = 450L
 private const val PressMillis = 110L
-private const val BuzzMillis = 120L
+private const val BuzzMillis = 280L
 
 internal class PosterWave {
     var origin by mutableStateOf(Offset.Zero)

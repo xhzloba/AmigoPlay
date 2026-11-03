@@ -21,14 +21,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.detail.DetailRoute
@@ -54,8 +52,7 @@ class MainActivity : ComponentActivity() {
                 LocalUserSettings provides container.userSettings,
             ) {
                 MovieTheme {
-                    val settings by container.userSettings.settings.collectAsStateWithLifecycle()
-                    NavigationGesture(settings.navGesture)
+                    NavigationGesture()
                     Box(Modifier.fillMaxSize()) {
                         val stack = rememberSaveable(
                             saver = listSaver(
@@ -94,44 +91,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        val enabled = (application as MovieApplication).container.userSettings.settings.value.navGesture
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            if (enabled) {
-                show(WindowInsetsCompat.Type.navigationBars())
-            } else {
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                hide(WindowInsetsCompat.Type.navigationBars())
-            }
-        }
+        WindowInsetsControllerCompat(window, window.decorView)
+            .show(WindowInsetsCompat.Type.navigationBars())
     }
 }
 
 @Composable
-private fun NavigationGesture(enabled: Boolean) {
+private fun NavigationGesture() {
     val view = LocalView.current
-    val enabledState by rememberUpdatedState(enabled)
     fun apply() {
         val window = (view.context as android.app.Activity).window
-        WindowInsetsControllerCompat(window, view).apply {
-            if (enabledState) {
-                show(WindowInsetsCompat.Type.navigationBars())
-            } else {
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                hide(WindowInsetsCompat.Type.navigationBars())
-            }
-        }
+        WindowInsetsControllerCompat(window, view).show(WindowInsetsCompat.Type.navigationBars())
     }
-    SideEffect {
-        val window = (view.context as android.app.Activity).window
-        WindowInsetsControllerCompat(window, view).apply {
-            if (enabled) {
-                show(WindowInsetsCompat.Type.navigationBars())
-            } else {
-                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                hide(WindowInsetsCompat.Type.navigationBars())
-            }
-        }
-    }
+    SideEffect { apply() }
     DisposableEffect(view) {
         val listener = android.view.ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
             if (hasFocus) apply()

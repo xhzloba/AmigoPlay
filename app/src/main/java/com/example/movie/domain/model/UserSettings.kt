@@ -8,7 +8,6 @@ data class UserSettings(
     val autoBackdrop: Boolean = true,
     val haptic: Boolean = true,
     val gyro: Boolean = true,
-    val navGesture: Boolean = true,
 )
 
 interface UserSettingsRepository {
@@ -23,6 +22,4 @@ interface UserSettingsRepository {
     fun setHaptic(enabled: Boolean)
 
     fun setGyro(enabled: Boolean)
-
-    fun setNavGesture(enabled: Boolean)
 }

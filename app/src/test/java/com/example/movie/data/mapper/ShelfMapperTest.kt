@@ -31,7 +31,7 @@ class ShelfMapperTest {
 
         assertEquals(
             listOf(
-                "Популярные",
+                "Популярное",
                 "Сейчас смотрят",
                 "4K",
                 "Dolby Vision",

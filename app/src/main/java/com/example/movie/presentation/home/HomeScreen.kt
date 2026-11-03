@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -80,7 +81,6 @@ import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
 import com.example.movie.presentation.home.components.TopRankStage
-import com.example.movie.presentation.home.components.WatchingRail
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
@@ -194,7 +194,7 @@ fun HomeScreen(
                     shelves = state.shelves,
                     selectedId = state.selectedId,
                     play = playAnim,
-                    capsule = capsuleAnim,
+                    border = capsuleAnim.value,
                     onSelect = onSelectShelf,
                     onSearch = onOpenSearch,
                     hat = logo.hat,
@@ -256,7 +256,8 @@ fun HomeScreen(
                         maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
                     },
             ) {
-                Column(
+                var tabsHeight by remember { mutableStateOf(48.dp) }
+                Box(
                     modifier = Modifier
                         .scrollContent(scroll) { full ->
                             contentHeight = full
@@ -265,19 +266,8 @@ fun HomeScreen(
                         .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                         .padding(top = 32.dp),
                 ) {
-                    Spacer(Modifier.height(brandReserve + 12.dp))
-                    CategoryTabs(
-                        shelves = state.shelves,
-                        selectedId = state.selectedId,
-                        play = playAnim,
-                        capsule = capsuleAnim,
-                        onSelect = onSelectShelf,
-                        onSearch = onOpenSearch,
-                        hat = logo.hat,
-                        mustache = logo.mustache,
-                        onMenuSettled = logo::onSettled,
-                        showBrand = false,
-                    )
+                Column(Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.height(brandReserve + 12.dp + tabsHeight))
                     Spacer(Modifier.height(36.dp))
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
                         PosterSkeleton(Modifier.fillMaxWidth())
@@ -307,7 +297,7 @@ fun HomeScreen(
                     }
                     if (!state.watchingReady || state.watching.isNotEmpty()) {
                         Spacer(Modifier.height(CatalogGap))
-                        WatchingRail(
+                        RecommendationRail(
                             movies = state.watching,
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
@@ -339,6 +329,24 @@ fun HomeScreen(
                         )
                     }
                     Spacer(Modifier.height(HomeBottomClearance))
+                }
+                CategoryTabs(
+                    shelves = state.shelves,
+                    selectedId = state.selectedId,
+                    play = playAnim,
+                    border = capsuleAnim.value,
+                    onSelect = onSelectShelf,
+                    onSearch = onOpenSearch,
+                    hat = logo.hat,
+                    mustache = logo.mustache,
+                    onMenuSettled = logo::onSettled,
+                    showBrand = false,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .zIndex(1f)
+                        .padding(top = brandReserve + 12.dp)
+                        .onSizeChanged { tabsHeight = with(density) { it.height.toDp() } },
+                )
                 }
             }
             BrandScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
@@ -445,7 +453,7 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
             title = stringResource(R.string.section_recommendations),
         )
         Spacer(Modifier.height(CatalogGap))
-        WatchingRail(
+        RecommendationRail(
             movies = emptyList(),
             onMovieClick = {},
             onMoviePeek = {},
@@ -512,7 +520,7 @@ private fun HomeScreenPreview() {
         HomeScreen(
             state = HomeUiState(
                 shelves = listOf(
-                    Shelf("popular:", "Популярные", CatalogQuery("popular")),
+                    Shelf("popular:", "Популярное", CatalogQuery("popular")),
                     Shelf("updatings:", "Обновления", CatalogQuery("updatings")),
                     Shelf("popular:movie", "Фильмы", CatalogQuery("popular", "movie")),
                 ),

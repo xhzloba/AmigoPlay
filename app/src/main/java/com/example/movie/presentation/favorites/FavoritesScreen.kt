@@ -2,10 +2,9 @@ package com.example.movie.presentation.favorites
 
 import android.graphics.drawable.ColorDrawable
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -86,6 +85,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import com.example.movie.presentation.home.PeekEnter
+import com.example.movie.presentation.home.PeekExit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.movie.R
@@ -273,8 +274,8 @@ internal fun FavoritesScreen(
                     .onSizeChanged { brandHeight = it.height },
             )
         }
-        if (filtersOpen && tab.hasGenres) {
-            LibraryFilterDialog(
+        LibraryFilterDialog(
+                open = filtersOpen && tab.hasGenres,
                 title = stringResource(tab.label),
                 genres = genres,
                 genre = genre,
@@ -288,7 +289,6 @@ internal fun FavoritesScreen(
                 },
                 onDismiss = { filtersOpen = false },
             )
-        }
     }
 }
 
@@ -513,6 +513,7 @@ private fun FavoriteTabs(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LibraryFilterDialog(
+    open: Boolean,
     title: String,
     genres: List<String>,
     genre: String?,
@@ -521,37 +522,32 @@ private fun LibraryFilterDialog(
     onSort: (LibrarySort) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val appear = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        appear.animateTo(
-            1f,
-            spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow),
-        )
-    }
+    val visible = remember { MutableTransitionState(false) }
+    LaunchedEffect(open) { visible.targetState = open }
+    if (!visible.currentState && !visible.targetState) return
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
+            dismissOnClickOutside = false,
         ),
     ) {
         val view = LocalView.current
         SideEffect {
             (view.parent as? DialogWindowProvider)?.window?.apply {
+                setWindowAnimations(0)
                 setDimAmount(0f)
                 setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
             }
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    alpha = appear.value
-                    val scale = 0.96f + 0.04f * appear.value
-                    scaleX = scale
-                    scaleY = scale
-                },
+        AnimatedVisibility(
+            visibleState = visible,
+            enter = PeekEnter,
+            exit = PeekExit,
+            modifier = Modifier.fillMaxSize(),
         ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -647,6 +643,7 @@ private fun LibraryFilterDialog(
                     }
                 }
             }
+        }
         }
     }
 

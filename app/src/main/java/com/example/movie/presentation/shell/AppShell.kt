@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,8 +32,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -39,12 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
-import com.example.movie.presentation.common.BookmarkFilled
-import com.example.movie.presentation.common.BookmarkOutline
 import com.example.movie.presentation.favorites.FavoritesScreen
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.HomeRoute
@@ -60,12 +60,13 @@ private enum class AppTab(@StringRes val label: Int, val color: Color) {
     Settings(R.string.nav_settings, Color(0xFFD4920A)),
     ;
 
-    fun icon(selected: Boolean): ImageVector = when (this) {
-        Home -> if (selected) ShellIcons.homeFilled else ShellIcons.home
-        Catalog -> if (selected) ShellIcons.catalogFilled else ShellIcons.catalog
-        Favorites -> if (selected) BookmarkFilled else BookmarkOutline
-        Settings -> ShellIcons.settings
-    }
+    val icon: ImageVector
+        get() = when (this) {
+            Home -> ShellIcons.home
+            Catalog -> ShellIcons.catalog
+            Favorites -> ShellIcons.media
+            Settings -> ShellIcons.settings
+        }
 }
 
 @Composable
@@ -156,29 +157,35 @@ private fun AppBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
-    val gestureOn = LocalUserSettings.current.settings.collectAsStateWithLifecycle().value.navGesture
-    val belowGesture = if (gestureOn) {
-        val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        (nav - 2.dp).coerceAtLeast(16.dp)
-    } else {
-        16.dp
-    }
+    val press = ripple(color = Color(0xFF8E8E93))
+    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val belowGesture = (nav + 4.dp).coerceAtLeast(22.dp)
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(CinemaBlack)
+            .drawBehind {
+                val stroke = 0.6.dp.toPx()
+                drawLine(
+                    color = Color.White.copy(alpha = 0.28f),
+                    start = Offset(0f, stroke / 2f),
+                    end = Offset(size.width, stroke / 2f),
+                    strokeWidth = stroke,
+                )
+            }
             .padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = belowGesture),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppTab.entries.forEach { tab ->
             val lit = tab == selected
-            val ink = if (lit) tab.color else IdleInk
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .padding(horizontal = 6.dp)
+                    .clip(RoundedCornerShape(22.dp))
                     .clickable(
                         interactionSource = remember(tab) { MutableInteractionSource() },
-                        indication = null,
+                        indication = press,
                         onClick = {
                             if (tab != selected) {
                                 tick?.invoke()
@@ -190,22 +197,15 @@ private fun AppBottomBar(
                 verticalArrangement = Arrangement.Center,
             ) {
                 Icon(
-                    imageVector = tab.icon(lit),
+                    imageVector = tab.icon,
                     contentDescription = stringResource(tab.label),
-                    tint = ink,
-                    modifier = Modifier
-                        .size(24.dp)
-                        .graphicsLayer {
-                            if (lit && tab != AppTab.Settings && tab != AppTab.Favorites) {
-                                scaleX = 1.1f
-                                scaleY = 1.1f
-                            }
-                        },
+                    tint = if (lit) tab.color else IdleInk,
+                    modifier = Modifier.size(24.dp),
                 )
                 Text(
                     text = stringResource(tab.label),
                     modifier = Modifier.padding(top = 5.dp),
-                    color = ink,
+                    color = if (lit) tab.color else IdleInk,
                     fontWeight = FontWeight.Normal,
                     fontSize = 11.sp,
                     lineHeight = 13.sp,

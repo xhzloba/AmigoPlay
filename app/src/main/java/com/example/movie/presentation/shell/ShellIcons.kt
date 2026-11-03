@@ -12,10 +12,9 @@ import androidx.compose.ui.unit.dp
 
 internal object ShellIcons {
     val home: ImageVector = icon(filled = false) { house() }
-    val homeFilled: ImageVector = icon(filled = true) { house() }
     val catalog: ImageVector = icon(filled = false) { grid() }
-    val catalogFilled: ImageVector = icon(filled = true) { grid() }
     val settings: ImageVector = sliders()
+    val media: ImageVector = icon(filled = false) { media() }
     val search: ImageVector = icon(filled = false) { magnifier() }
 }
 
@@ -57,6 +56,28 @@ private fun PathBuilder.grid() {
     roundRect(13.4f, 3.2f, 7.4f, 1.6f)
     roundRect(3.2f, 13.4f, 7.4f, 1.6f)
     roundRect(13.4f, 13.4f, 7.4f, 1.6f)
+}
+
+private fun PathBuilder.media() {
+    val left = 3.4f
+    val top = 3.4f
+    val right = 20.6f
+    val bottom = 20.6f
+    val radius = 3.2f
+    moveTo(left + radius, top)
+    lineTo(right - radius, top)
+    quadTo(right, top, right, top + radius)
+    lineTo(right, bottom - radius)
+    quadTo(right, bottom, right - radius, bottom)
+    lineTo(left + radius, bottom)
+    quadTo(left, bottom, left, bottom - radius)
+    lineTo(left, top + radius)
+    quadTo(left, top, left + radius, top)
+    close()
+    moveTo(10.1f, 8.6f)
+    lineTo(15.8f, 12f)
+    lineTo(10.1f, 15.4f)
+    close()
 }
 
 private fun PathBuilder.magnifier() {

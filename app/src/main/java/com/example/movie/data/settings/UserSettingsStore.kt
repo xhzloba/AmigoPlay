@@ -23,8 +23,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setGyro(enabled: Boolean) = write { it.copy(gyro = enabled) }
 
-    override fun setNavGesture(enabled: Boolean) = write { it.copy(navGesture = enabled) }
-
     private fun write(transform: (UserSettings) -> UserSettings) {
         val next = transform(state.value)
         prefs.edit()
@@ -33,7 +31,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_BACKDROP, next.autoBackdrop)
             .putBoolean(KEY_HAPTIC, next.haptic)
             .putBoolean(KEY_GYRO, next.gyro)
-            .putBoolean(KEY_NAV_GESTURE, next.navGesture)
             .commit()
         state.value = next
     }
@@ -44,7 +41,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
         haptic = prefs.getBoolean(KEY_HAPTIC, true),
         gyro = prefs.getBoolean(KEY_GYRO, true),
-        navGesture = prefs.getBoolean(KEY_NAV_GESTURE, true),
     )
 
     private companion object {
@@ -54,6 +50,5 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_BACKDROP = "auto_backdrop"
         const val KEY_HAPTIC = "haptic"
         const val KEY_GYRO = "gyro"
-        const val KEY_NAV_GESTURE = "nav_gesture"
     }
 }

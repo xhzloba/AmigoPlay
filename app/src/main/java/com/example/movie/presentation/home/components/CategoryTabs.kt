@@ -44,22 +44,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -81,6 +80,7 @@ internal val CategoryTabLetterSpacing = (-0.2).sp
 
 private val LogoHeight = 36.dp
 private val LogoAspect = 754f / 186f
+internal val HomeContentInset = 22.dp
 internal val BrandLogoBleed = LogoHeight * (29f / 186f)
 private val LetterACenter = LogoHeight * (75f / 186f)
 private val LetterATop = LogoHeight * (42f / 186f)
@@ -95,10 +95,12 @@ private val MustacheHeight = MustacheWidth * (348f / 892f)
 private const val MustacheX = 443f / 892f
 private const val MustacheY = 207f / 348f
 
-private val TabInk = Color(0xFFC7C7CC)
+private val CapsuleInk = Color.White
+private val CapsuleIdleInk = Color(0xFFC7C7CC)
+private val CapsuleIdleStroke = Color(0xFF484848)
 
 private val TabSkeletonLabels = listOf(
-    "Популярные",
+    "Популярное",
     "Сейчас смотрят",
     "4K",
     "Dolby Vision",
@@ -111,7 +113,7 @@ internal fun CategoryTabs(
     shelves: List<Shelf>,
     selectedId: String?,
     play: Animatable<Color, AnimationVector4D>,
-    capsule: Animatable<Color, AnimationVector4D> = play,
+    border: Color = Color.White.copy(alpha = 0.22f),
     onSelect: (String) -> Unit,
     onSearch: () -> Unit,
     hat: Boolean = false,
@@ -136,14 +138,14 @@ internal fun CategoryTabs(
         }
         LazyRow(
             state = listState,
-            contentPadding = PaddingValues(horizontal = 22.dp),
+            contentPadding = PaddingValues(start = HomeContentInset, end = HomeContentInset),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
         items(shelves, key = { it.id }) { shelf ->
             ShelfCapsule(
                 title = shelf.title,
                 selected = shelf.id == selectedId,
-                tint = capsule,
+                border = border,
                 onClick = { onSelect(shelf.id) },
             )
         }
@@ -159,51 +161,33 @@ private fun LazyListState.passedTab(): Int {
 @Composable
 private fun ShelfCapsule(
     title: String,
-    selected: Boolean,
+    selected: Boolean = false,
+    border: Color = Color.White.copy(alpha = 0.22f),
     onClick: (() -> Unit)? = null,
     ghost: Boolean = false,
-    tint: Animatable<Color, AnimationVector4D>? = null,
 ) {
-    val label = when {
-        ghost -> Color.Transparent
-        selected && tint != null -> {
-            if (tint.value.luminance() > 0.62f) Color(0xFF141416) else Color.White
-        }
-        selected -> Color.White
-        else -> TabInk
-    }
     Text(
         text = title,
-        color = label,
-        fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-        style = if (selected && !ghost) {
-            TextStyle(
-                shadow = Shadow(
-                    color = if (label.luminance() > 0.5f) {
-                        Color.Black.copy(alpha = 0.55f)
-                    } else {
-                        Color.White.copy(alpha = 0.72f)
-                    },
-                    offset = Offset(0f, 1f),
-                    blurRadius = 8f,
-                ),
-            )
-        } else {
-            TextStyle.Default
-        },
+        color = if (ghost) Color.Transparent else if (selected) CapsuleInk else CapsuleIdleInk,
+        fontWeight = FontWeight.Normal,
         fontSize = CategoryTabFontSize,
         lineHeight = CategoryTabLineHeight,
         letterSpacing = CategoryTabLetterSpacing,
         modifier = Modifier
             .drawBehind {
-                val radius = size.minDimension / 2f
-                val corner = CornerRadius(radius, radius)
-                if (!ghost && selected && tint != null) {
-                    drawRoundRect(color = tint.value, cornerRadius = corner)
-                } else {
-                    val fill = if (ghost) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.26f)
-                    drawRoundRect(color = fill, cornerRadius = corner)
-                }
+                val stroke = (if (selected && !ghost) 2.dp else 1.dp).toPx()
+                val inset = stroke / 2f
+                drawRoundRect(
+                    color = when {
+                        ghost -> Color.White.copy(alpha = 0.16f)
+                        selected -> border
+                        else -> CapsuleIdleStroke
+                    },
+                    topLeft = Offset(inset, inset),
+                    size = Size(size.width - stroke, size.height - stroke),
+                    cornerRadius = CornerRadius((size.minDimension - stroke) / 2f, (size.minDimension - stroke) / 2f),
+                    style = Stroke(width = stroke),
+                )
             }
             .then(
                 if (onClick == null) {
@@ -216,7 +200,7 @@ private fun ShelfCapsule(
                     )
                 },
             )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
     )
 }
 
@@ -232,7 +216,7 @@ internal fun BrandRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 22.dp - BrandLogoBleed, end = 14.dp),
+            .padding(start = HomeContentInset - BrandLogoBleed, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BrandWordmark(play = play, hat = hat, mustache = mustache)
@@ -474,14 +458,13 @@ fun CategoryTabsSkeleton(
         BrandRow(play = PlayBlue, onSearch = onSearch)
         Spacer(Modifier.height(12.dp))
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 22.dp),
+            contentPadding = PaddingValues(start = HomeContentInset, end = HomeContentInset),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             userScrollEnabled = false,
         ) {
         items(TabSkeletonLabels.size) { index ->
             ShelfCapsule(
                 title = TabSkeletonLabels[index],
-                selected = false,
                 ghost = true,
             )
         }

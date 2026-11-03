@@ -13,6 +13,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.presentation.settings.LocalUserSettings
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 
@@ -69,6 +71,9 @@ internal fun HapticOnChange(key: Any, read: () -> Any?) {
         snapshotFlow(read)
             .distinctUntilChanged()
             .drop(1)
-            .collect { perform() }
+            .collectLatest {
+                delay(120)
+                perform()
+            }
     }
 }
