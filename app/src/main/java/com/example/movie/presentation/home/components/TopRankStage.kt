@@ -98,11 +98,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val ReflectionHeight = 112.dp
-private const val CoverWidthFraction = 0.5f
+private const val CoverWidthFraction = 0.4f
 private const val CoverAspect = 1.46f
-private const val NeighborScale = 0.9f
+private const val NeighborScale = 0.8f
 private const val NeighborPull = 0.3f
-private const val NeighborTurn = 46f
+private const val NeighborTurn = 14f
 private val MetaSlot = 20.dp
 private val ScoreSlot = 20.dp
 private val OverviewSlot = 40.dp
@@ -149,7 +149,9 @@ private fun TopRankPager(
     onMoviePeek: (Movie) -> Unit,
     onSettled: () -> Unit,
 ) {
-    val pagerState = rememberPagerState { movies.size }
+    val pagerState = rememberPagerState(
+        initialPage = 1.coerceAtMost(movies.lastIndex.coerceAtLeast(0)),
+    ) { movies.size }
     val scope = rememberCoroutineScope()
     val tick = rememberHapticTick()
     var scrubbing by remember { mutableStateOf(false) }
@@ -180,17 +182,16 @@ private fun TopRankPager(
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val cardWidth = maxWidth * CoverWidthFraction
             val cardHeight = cardWidth * CoverAspect
-            val posterHeight = cardHeight + 20.dp
             val side = ((maxWidth - cardWidth) / 2).coerceAtLeast(0.dp)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(Modifier.fillMaxWidth().height(posterHeight)) {
+                Box(Modifier.fillMaxWidth().height(cardHeight)) {
                     TopRankReflection(
                         movie = movie,
                         width = cardWidth,
-                        cardHeight = posterHeight,
+                        cardHeight = cardHeight,
                         appear = appear,
                         modifier = Modifier
                             .zIndex(0f)
@@ -203,11 +204,11 @@ private fun TopRankPager(
                         pageSize = PageSize.Fixed(cardWidth),
                         pageSpacing = 0.dp,
                         beyondViewportPageCount = 2,
-                        verticalAlignment = Alignment.Top,
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .zIndex(1f)
                             .fillMaxWidth()
-                            .height(posterHeight),
+                            .height(cardHeight),
                         key = { index -> movies[index].id },
                     ) { index ->
                         val item = movies[index]
@@ -399,11 +400,9 @@ private fun TopRankCard(
                 scaleY = scale
                 val shift = pageOffset.coerceIn(-1f, 1f)
                 rotationY = shift * NeighborTurn
-                rotationZ = shift * -4f
-                cameraDistance = 8.5f * density
-                transformOrigin = TransformOrigin(0.5f, 0.62f)
+                cameraDistance = 16f * density
+                transformOrigin = TransformOrigin.Center
                 translationX = -shift * size.width * NeighborPull
-                translationY = clamped * 18.dp.toPx()
                 alpha = if (distance <= 1f) 1f else lerp(1f, 0f, (distance - 1f).coerceIn(0f, 1f))
             }
             .clip(PosterShape)
