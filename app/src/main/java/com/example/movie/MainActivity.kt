@@ -91,6 +91,19 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        val enabled = (application as MovieApplication).container.userSettings.settings.value.navGesture
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            if (enabled) {
+                show(WindowInsetsCompat.Type.navigationBars())
+            } else {
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsetsCompat.Type.navigationBars())
+            }
+        }
+    }
 }
 
 @Composable

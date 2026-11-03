@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -38,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.common.BookmarkFilled
@@ -153,12 +156,18 @@ private fun AppBottomBar(
     modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
-    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val gestureOn = LocalUserSettings.current.settings.collectAsStateWithLifecycle().value.navGesture
+    val belowGesture = if (gestureOn) {
+        val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        (nav - 2.dp).coerceAtLeast(16.dp)
+    } else {
+        16.dp
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(CinemaBlack)
-            .padding(top = 14.dp, bottom = (nav - 4.dp).coerceAtLeast(12.dp)),
+            .padding(start = 18.dp, end = 18.dp, top = 16.dp, bottom = belowGesture),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppTab.entries.forEach { tab ->
@@ -184,15 +193,22 @@ private fun AppBottomBar(
                     imageVector = tab.icon(lit),
                     contentDescription = stringResource(tab.label),
                     tint = ink,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier
+                        .size(24.dp)
+                        .graphicsLayer {
+                            if (lit && tab != AppTab.Settings && tab != AppTab.Favorites) {
+                                scaleX = 1.1f
+                                scaleY = 1.1f
+                            }
+                        },
                 )
                 Text(
                     text = stringResource(tab.label),
-                    modifier = Modifier.padding(top = 2.dp),
+                    modifier = Modifier.padding(top = 5.dp),
                     color = ink,
                     fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp,
-                    lineHeight = 12.sp,
+                    fontSize = 11.sp,
+                    lineHeight = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
