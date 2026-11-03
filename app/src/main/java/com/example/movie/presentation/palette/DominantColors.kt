@@ -139,6 +139,18 @@ internal fun Color.forGlow(): Color {
     return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
+internal fun Color.forCapsule(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    if (hsv[1] < 0.1f) {
+        hsv[2] = hsv[2].coerceIn(0.82f, 0.94f)
+        return Color(android.graphics.Color.HSVToColor(hsv))
+    }
+    hsv[1] = (hsv[1] + 0.28f).coerceIn(0.86f, 1f)
+    hsv[2] = (hsv[2] + 0.06f).coerceIn(0.64f, 0.82f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
 internal fun Color.forWordmark(): Color {
     val hsv = FloatArray(3)
     android.graphics.Color.colorToHSV(toArgb(), hsv)

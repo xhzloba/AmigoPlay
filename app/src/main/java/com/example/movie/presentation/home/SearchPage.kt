@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -198,6 +199,9 @@ private fun SearchResults(
     ) {
         items(movies, key = { it.id }) { movie ->
             var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
+            var pressed by remember(movie.id) { mutableStateOf(false) }
+            val pressScale = rememberPressScale(pressed)
+            val wave = remember(movie.id) { PosterWave() }
             Column {
                 AsyncImage(
                     model = movie.posterUrl ?: movie.backdropUrl,
@@ -207,15 +211,17 @@ private fun SearchResults(
                         .fillMaxWidth()
                         .aspectRatio(1f / 1.46f)
                         .graphicsLayer {
-                            val scale = 1f - 0.045f * holdProgress
-                            scaleX = scale
-                            scaleY = scale
+                            scaleX = pressScale
+                            scaleY = pressScale
                         }
                         .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.08f))
+                        .posterWave(wave)
                         .holdToPeek(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
+                            onPressed = { pressed = it },
+                            wave = wave,
                         )
                         .holdCue(holdProgress)
                         .clickable(

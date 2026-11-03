@@ -100,9 +100,12 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.PosterWave
+import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
+import com.example.movie.presentation.palette.forCapsule
 import com.example.movie.presentation.palette.forWordmark
 import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.Dispatchers
@@ -203,7 +206,7 @@ fun PosterCarousel(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
-    onPlayColor: (Color, Boolean) -> Unit = { _, _ -> },
+    onPlayColor: (Color, Color, Boolean) -> Unit = { _, _, _ -> },
     onSettled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -229,9 +232,15 @@ fun PosterCarousel(
         offset = playOffset,
         colors = posterColors,
     )
+    val capsule = capsuleTint(
+        movies = movies,
+        activeIndex = activeIndex,
+        offset = playOffset,
+        colors = posterColors,
+    )
     SideEffect {
         val color = play ?: return@SideEffect
-        onPlayColor(color, playOffset.absoluteValue > 0.02f)
+        onPlayColor(color, capsule ?: color, playOffset.absoluteValue > 0.02f)
     }
     val active = movies.getOrNull(activeIndex)
     val tilt = rememberCoverTilt()
@@ -239,19 +248,25 @@ fun PosterCarousel(
     HapticOnChange(pagerState) { pagerState.currentPage }
     SettleEffect(pagerState, { pagerState.isScrollInProgress }, onSettled)
 
-    LaunchedEffect(movies, activeIndex) {
+    LaunchedEffect(movies) {
         if (movies.isEmpty()) return@LaunchedEffect
-        listOf(activeIndex - 1, activeIndex, activeIndex + 1)
-            .map { it.floorMod(movies.size) }
-            .distinct()
-            .forEach { index ->
-                val movie = movies[index]
-                if (posterColors.containsKey(movie.id)) return@forEach
-                launch {
-                    val palette = movie.extractPosterPalette(context) ?: return@launch
-                    posterColors[movie.id] = palette
+        val started = HashSet<String>()
+        snapshotFlow {
+            if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
+        }.collect { center ->
+            val size = movies.size
+            for (delta in 0..4) {
+                val movie = movies[(center + delta).floorMod(size)]
+                val behind = movies[(center - delta).floorMod(size)]
+                listOf(movie, behind).forEach { item ->
+                    if (!started.add(item.id)) return@forEach
+                    launch {
+                        val palette = item.extractPosterPalette(context) ?: return@launch
+                        posterColors[item.id] = palette
+                    }
                 }
             }
+        }
     }
 
     Column(
@@ -368,6 +383,7 @@ fun PosterCarousel(
                 var holdProgress by remember { mutableFloatStateOf(0f) }
                 var pressed by remember { mutableStateOf(false) }
                 val pressScale = rememberPressScale(pressed)
+                val wave = remember(movie.id) { PosterWave() }
                 val shine = remember(page) { Animatable(0f) }
                 val travel = shine.value
                 val shineTint = posterColors[movie.id]?.primary ?: Color.White
@@ -394,10 +410,12 @@ fun PosterCarousel(
                             alpha = if (distance <= 1.05f) 1f else lerp(1f, 0f, (distance - 1.05f).coerceIn(0f, 1f))
                         }
                         .clip(PosterShape)
+                        .posterWave(wave)
                         .holdToPeek(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
                             onPressed = { pressed = it },
+                            wave = wave,
                         )
                         .holdCue(holdProgress)
                         .clickable(
@@ -969,6 +987,22 @@ private fun PosterPage(
         modifier = modifier.background(Color(0xFF2A2A2E)),
         onSuccess = { onReady() },
     )
+}
+
+private fun capsuleTint(
+    movies: List<Movie>,
+    activeIndex: Int,
+    offset: Float,
+    colors: Map<String, PosterPalette>,
+): Color? {
+    if (movies.isEmpty()) return null
+    val current = colors[movies[activeIndex].id]?.primary?.forCapsule() ?: return null
+    val direction = if (offset >= 0f) 1 else -1
+    val neighbor = colors[movies[(activeIndex + direction).floorMod(movies.size)].id]
+        ?.primary
+        ?.forCapsule()
+        ?: current
+    return lerp(current, neighbor, offset.absoluteValue.coerceIn(0f, 1f))
 }
 
 private fun wordmarkPlay(

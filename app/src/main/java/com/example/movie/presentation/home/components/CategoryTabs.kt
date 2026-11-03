@@ -3,13 +3,13 @@ package com.example.movie.presentation.home.components
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector4D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +29,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
@@ -91,7 +92,6 @@ private const val MustacheX = 443f / 892f
 private const val MustacheY = 207f / 348f
 
 private val TabInk = Color(0xFFC7C7CC)
-private val TabShape = CircleShape
 
 private val TabSkeletonLabels = listOf(
     "В тренде",
@@ -106,7 +106,8 @@ private val TabSkeletonLabels = listOf(
 internal fun CategoryTabs(
     shelves: List<Shelf>,
     selectedId: String?,
-    playColor: Color,
+    play: Animatable<Color, AnimationVector4D>,
+    capsule: Animatable<Color, AnimationVector4D> = play,
     onSelect: (String) -> Unit,
     onSearch: () -> Unit,
     hat: Boolean = false,
@@ -126,7 +127,7 @@ internal fun CategoryTabs(
     }
     Column(modifier = modifier) {
         if (showBrand) {
-            BrandRow(play = playColor, onSearch = onSearch, hat = hat, mustache = mustache)
+            BrandRow(play = play.value, onSearch = onSearch, hat = hat, mustache = mustache)
             Spacer(Modifier.height(12.dp))
         }
         LazyRow(
@@ -138,6 +139,7 @@ internal fun CategoryTabs(
             ShelfCapsule(
                 title = shelf.title,
                 selected = shelf.id == selectedId,
+                tint = capsule,
                 onClick = { onSelect(shelf.id) },
             )
         }
@@ -156,6 +158,7 @@ private fun ShelfCapsule(
     selected: Boolean,
     onClick: (() -> Unit)? = null,
     ghost: Boolean = false,
+    tint: Animatable<Color, AnimationVector4D>? = null,
 ) {
     Text(
         text = title,
@@ -165,7 +168,15 @@ private fun ShelfCapsule(
         lineHeight = CategoryTabLineHeight,
         letterSpacing = CategoryTabLetterSpacing,
         modifier = Modifier
-            .background(Color.White.copy(alpha = 0.12f), TabShape)
+            .drawBehind {
+                val fill = when {
+                    ghost -> Color.White.copy(alpha = 0.12f)
+                    selected && tint != null -> tint.value.copy(alpha = 0.82f)
+                    else -> Color.White.copy(alpha = 0.26f)
+                }
+                val radius = size.minDimension / 2f
+                drawRoundRect(color = fill, cornerRadius = CornerRadius(radius, radius))
+            }
             .then(
                 if (onClick == null) {
                     Modifier

@@ -78,6 +78,9 @@ import com.example.movie.presentation.home.components.CategoryTabLetterSpacing
 import com.example.movie.presentation.home.components.CategoryTabLineHeight
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.PosterWave
+import com.example.movie.presentation.home.posterWave
+import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.CinemaSurface
 import com.example.movie.ui.theme.PosterShape
@@ -384,6 +387,9 @@ private fun FavoritePoster(
 ) {
     val tick = rememberHapticTick()
     var holdProgress by remember(item.id) { mutableFloatStateOf(0f) }
+    var pressed by remember(item.id) { mutableStateOf(false) }
+    val pressScale = rememberPressScale(pressed)
+    val wave = remember(item.id) { PosterWave() }
     AsyncImage(
         model = item.posterUrl,
         contentDescription = stringResource(R.string.poster_content_description, item.title),
@@ -392,15 +398,17 @@ private fun FavoritePoster(
             .fillMaxWidth()
             .aspectRatio(1f / 1.46f)
             .graphicsLayer {
-                val scale = 1f - 0.045f * holdProgress
-                scaleX = scale
-                scaleY = scale
+                scaleX = pressScale
+                scaleY = pressScale
             }
             .clip(PosterShape)
             .background(Color.White.copy(alpha = 0.06f))
+            .posterWave(wave)
             .holdToPeek(
                 onPeek = { onMoviePeek(item.toMovie()) },
                 onProgress = { holdProgress = it },
+                onPressed = { pressed = it },
+                wave = wave,
             )
             .holdCue(holdProgress)
             .clickable(

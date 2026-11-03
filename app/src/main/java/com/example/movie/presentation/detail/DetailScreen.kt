@@ -113,6 +113,9 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.MovieLogoShadow
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.PosterWave
+import com.example.movie.presentation.home.posterWave
+import com.example.movie.presentation.home.rememberPressScale
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -638,6 +641,9 @@ private fun MovieStrip(
         items(count = movies.size, key = { it }) { index ->
             val movie = movies[index]
             var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
+            var pressed by remember(movie.id) { mutableStateOf(false) }
+            val pressScale = rememberPressScale(pressed)
+            val wave = remember(movie.id) { PosterWave() }
             Column(modifier = Modifier.width(108.dp)) {
                 AsyncImage(
                     model = movie.posterUrl,
@@ -647,15 +653,17 @@ private fun MovieStrip(
                         .fillMaxWidth()
                         .aspectRatio(1f / 1.46f)
                         .graphicsLayer {
-                            val scale = 1f - 0.045f * holdProgress
-                            scaleX = scale
-                            scaleY = scale
+                            scaleX = pressScale
+                            scaleY = pressScale
                         }
                         .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.12f))
+                        .posterWave(wave)
                         .holdToPeek(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
+                            onPressed = { pressed = it },
+                            wave = wave,
                         )
                         .holdCue(holdProgress)
                         .clickable(

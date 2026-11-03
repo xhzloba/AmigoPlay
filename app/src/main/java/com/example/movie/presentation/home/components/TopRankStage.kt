@@ -85,6 +85,8 @@ import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.PosterWave
+import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -380,6 +382,7 @@ private fun TopRankCard(
     var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
     var pressed by remember(movie.id) { mutableStateOf(false) }
     val pressScale = rememberPressScale(pressed)
+    val wave = remember(movie.id) { PosterWave() }
     val shine = remember(movie.id) { Animatable(0f) }
     val travel = shine.value
     LaunchedEffect(active, posterReady) {
@@ -406,10 +409,12 @@ private fun TopRankCard(
                 alpha = if (distance <= 1f) 1f else lerp(1f, 0f, (distance - 1f).coerceIn(0f, 1f))
             }
             .clip(PosterShape)
+            .posterWave(wave)
             .holdToPeek(
                 onPeek = onPeek,
                 onProgress = { holdProgress = it },
                 onPressed = { pressed = it },
+                wave = wave,
             )
             .holdCue(holdProgress)
             .clickable(

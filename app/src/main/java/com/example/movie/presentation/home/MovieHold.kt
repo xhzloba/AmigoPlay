@@ -1,14 +1,19 @@
 package com.example.movie.presentation.home
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
@@ -18,19 +23,95 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import com.example.movie.presentation.haptic.HoldHaptic
-import com.example.movie.presentation.haptic.rememberHoldHaptic
 import kotlin.math.PI
+import kotlin.math.hypot
 import kotlin.math.sin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-internal const val HoldMillis = 800L
-private const val CueAfterNanos = 260_000_000L
+private const val HoldMillis = 450L
 private const val PressMillis = 110L
+
+internal class PosterWave {
+    var origin by mutableStateOf(Offset.Zero)
+        private set
+    var token by mutableStateOf(0)
+        private set
+    var released by mutableStateOf(false)
+        private set
+    var killed by mutableStateOf(false)
+        private set
+
+    fun press(at: Offset) {
+        origin = at
+        released = false
+        killed = false
+        token += 1
+    }
+
+    fun release() {
+        released = true
+    }
+
+    fun kill() {
+        killed = true
+    }
+}
+
+@Composable
+internal fun Modifier.posterWave(wave: PosterWave): Modifier {
+    val radius = remember { Animatable(0f) }
+    val ink = remember { Animatable(0f) }
+    LaunchedEffect(wave.token) {
+        if (wave.token == 0) return@LaunchedEffect
+        radius.snapTo(0.18f)
+        ink.snapTo(1f)
+        val grow = launch {
+            radius.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+        }
+        snapshotFlow { wave.killed to wave.released }.first { it.first || it.second }
+        if (wave.killed) {
+            grow.cancel()
+            radius.snapTo(0f)
+            ink.snapTo(0f)
+        } else {
+            grow.join()
+            ink.animateTo(0f, tween(150, easing = FastOutSlowInEasing))
+            radius.snapTo(0f)
+        }
+    }
+    return drawWithContent {
+        drawContent()
+        val spread = radius.value
+        val alpha = ink.value
+        if (spread <= 0.01f || alpha <= 0.01f) return@drawWithContent
+        val origin = wave.origin
+        val reach = maxOf(
+            hypot(origin.x, origin.y),
+            hypot(size.width - origin.x, origin.y),
+            hypot(origin.x, size.height - origin.y),
+            hypot(size.width - origin.x, size.height - origin.y),
+        )
+        val r = lerp(size.minDimension * 0.12f, reach, spread)
+        drawRect(Color.Black.copy(alpha = 0.08f * alpha))
+        drawCircle(
+            brush = Brush.radialGradient(
+                colorStops = arrayOf(
+                    0f to Color.Black.copy(alpha = 0.36f * alpha),
+                    0.62f to Color.Black.copy(alpha = 0.16f * alpha),
+                    1f to Color.Transparent,
+                ),
+                center = origin,
+                radius = r,
+            ),
+            radius = r,
+            center = origin,
+        )
+    }
+}
 
 @Composable
 internal fun rememberPressScale(pressed: Boolean): Float {
@@ -49,20 +130,19 @@ internal fun Modifier.holdToPeek(
     onPeek: () -> Unit,
     onProgress: (Float) -> Unit,
     onPressed: (Boolean) -> Unit = {},
+    wave: PosterWave? = null,
 ): Modifier {
     val peek by rememberUpdatedState(onPeek)
-    val report by rememberUpdatedState(onProgress)
     val press by rememberUpdatedState(onPressed)
-    val haptic = rememberHoldHaptic()
-    val motor = remember { arrayOfNulls<HoldHaptic>(1) }
-    val reporter = remember { arrayOf<(Float) -> Unit>({ }) }
+    val waveState by rememberUpdatedState(wave)
+    val peeks = remember { arrayOf<() -> Unit>({ }) }
     val presser = remember { arrayOf<(Boolean) -> Unit>({ }) }
-    motor[0] = haptic
-    reporter[0] = report
+    val waves = remember { arrayOfNulls<PosterWave>(1) }
+    peeks[0] = peek
     presser[0] = press
+    waves[0] = waveState
     return pointerInput(Unit) {
         val slop = viewConfiguration.touchSlop
-        var epoch = 0
         var pressEpoch = 0
         coroutineScope {
             awaitEachGesture {
@@ -70,27 +150,9 @@ internal fun Modifier.holdToPeek(
                 val origin = down.position
                 val started = System.nanoTime()
                 val pressToken = ++pressEpoch
+                waves[0]?.press(origin)
                 presser[0].invoke(true)
-                val token = ++epoch
-                val frames = launch {
-                    val t0 = System.nanoTime()
-                    var buzzing = false
-                    while (isActive && epoch == token) {
-                        val elapsed = System.nanoTime() - t0
-                        if (epoch != token) return@launch
-                        if (elapsed >= CueAfterNanos) {
-                            if (!buzzing) {
-                                buzzing = true
-                                motor[0]?.start()
-                            }
-                            val span = (HoldMillis * 1_000_000L - CueAfterNanos).toFloat()
-                            val progress = ((elapsed - CueAfterNanos).toFloat() / span).coerceIn(0f, 1f)
-                            reporter[0].invoke(progress)
-                        }
-                        if (elapsed >= HoldMillis * 1_000_000L) break
-                        delay(16)
-                    }
-                }
+                var draggedAway = false
                 var releaseDelay = 0L
                 try {
                     val tapped = withTimeoutOrNull(HoldMillis) {
@@ -105,30 +167,29 @@ internal fun Modifier.holdToPeek(
                         @Suppress("UNREACHABLE_CODE")
                         false
                     }
-                    if (tapped == false) return@awaitEachGesture
+                    if (tapped == false) {
+                        draggedAway = true
+                        return@awaitEachGesture
+                    }
                     if (tapped == true) {
                         val elapsed = (System.nanoTime() - started) / 1_000_000
                         if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
                         return@awaitEachGesture
                     }
-                    motor[0]?.stop()
-                    peek()
+                    peeks[0].invoke()
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         event.changes.forEach { it.consume() }
                         if (event.changes.none { it.pressed }) break
                     }
                 } finally {
-                    epoch++
-                    frames.cancel()
-                    motor[0]?.stop()
-                    reporter[0].invoke(0f)
                     val mine = pressToken
                     val hold = releaseDelay
                     launch {
                         if (hold > 0) delay(hold)
                         if (pressEpoch == mine) presser[0].invoke(false)
                     }
+                    if (draggedAway) waves[0]?.kill() else waves[0]?.release()
                 }
             }
         }
@@ -161,11 +222,11 @@ private fun DrawScope.drawVignette(center: Offset, amount: Float) {
         brush = Brush.radialGradient(
             colorStops = arrayOf(
                 0f to Color.Transparent,
-                0.42f to Color.Transparent,
-                1f to Color.Black.copy(alpha = 0.5f * amount),
+                0.5f to Color.Transparent,
+                1f to Color.Black.copy(alpha = 0.36f * amount),
             ),
             center = center,
-            radius = size.maxDimension * 0.78f,
+            radius = size.maxDimension * 0.72f,
         ),
     )
 }
@@ -173,18 +234,18 @@ private fun DrawScope.drawVignette(center: Offset, amount: Float) {
 private fun DrawScope.drawFocusRing(center: Offset, amount: Float) {
     val envelope = sin(amount * PI.toFloat())
     if (envelope < 0.02f) return
-    val band = lerp(size.minDimension * 0.22f, size.minDimension * 0.09f, amount)
+    val band = lerp(size.minDimension * 0.26f, size.minDimension * 0.12f, amount)
     drawSoftRing(
         center = center,
-        radius = lerp(size.maxDimension * 0.58f, size.minDimension * 0.16f, amount),
+        radius = lerp(size.minDimension * 0.36f, size.minDimension * 0.18f, amount),
         band = band,
-        color = Color.White.copy(alpha = 0.55f * envelope),
+        color = Color.White.copy(alpha = 0.38f * envelope),
     )
     drawSoftRing(
         center = center,
-        radius = lerp(size.maxDimension * 0.74f, size.minDimension * 0.30f, amount),
-        band = band * 1.35f,
-        color = Color(0xFFD6E4FF).copy(alpha = 0.22f * envelope),
+        radius = lerp(size.minDimension * 0.44f, size.minDimension * 0.28f, amount),
+        band = band * 1.5f,
+        color = Color(0xFFD6E4FF).copy(alpha = 0.15f * envelope),
     )
 }
 
@@ -198,9 +259,9 @@ private fun DrawScope.drawFlare(amount: Float) {
             colorStops = arrayOf(
                 0f to Color.Transparent,
                 (y - half * 2.4f) to Color.Transparent,
-                (y - half) to Color.White.copy(alpha = 0.10f * peak),
-                y to Color.White.copy(alpha = 0.34f * peak),
-                (y + half) to Color.White.copy(alpha = 0.10f * peak),
+                (y - half) to Color.White.copy(alpha = 0.07f * peak),
+                y to Color.White.copy(alpha = 0.24f * peak),
+                (y + half) to Color.White.copy(alpha = 0.07f * peak),
                 (y + half * 2.4f) to Color.Transparent,
                 1f to Color.Transparent,
             ),
@@ -216,8 +277,8 @@ private fun DrawScope.drawCore(center: Offset, amount: Float) {
     drawCircle(
         brush = Brush.radialGradient(
             colorStops = arrayOf(
-                0f to Color.White.copy(alpha = 0.40f * gather),
-                0.4f to Color(0xFFD6E4FF).copy(alpha = 0.14f * gather),
+                0f to Color.White.copy(alpha = 0.30f * gather),
+                0.4f to Color(0xFFD6E4FF).copy(alpha = 0.10f * gather),
                 1f to Color.Transparent,
             ),
             center = center,

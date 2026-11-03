@@ -44,6 +44,8 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.PosterWave
+import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -159,6 +161,7 @@ private fun RecommendationPager(
                 var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
                 var pressed by remember(movie.id) { mutableStateOf(false) }
                 val pressScale = rememberPressScale(pressed)
+                val wave = remember(movie.id) { PosterWave() }
                 AsyncImage(
                     model = movie.posterUrl,
                     contentDescription = stringResource(R.string.poster_content_description, movie.title),
@@ -172,10 +175,12 @@ private fun RecommendationPager(
                         }
                         .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.08f))
+                        .posterWave(wave)
                         .holdToPeek(
                             onPeek = { onMoviePeek(movie) },
                             onProgress = { holdProgress = it },
                             onPressed = { pressed = it },
+                            wave = wave,
                         )
                         .holdCue(holdProgress)
                         .clickable(

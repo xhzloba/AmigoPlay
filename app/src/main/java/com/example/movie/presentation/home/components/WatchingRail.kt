@@ -67,6 +67,8 @@ import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.PosterWave
+import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.palette.PosterWash
 import com.example.movie.presentation.palette.posterWash
@@ -161,6 +163,7 @@ private fun WatchingCard(
     var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
     var pressed by remember(movie.id) { mutableStateOf(false) }
     val pressScale = rememberPressScale(pressed)
+    val wave = remember(movie.id) { PosterWave() }
     val backdrop = movie.backdropUrl ?: movie.posterUrl
     val wash = rememberWash(backdrop)
     val reveal = remember(movie.id) { Animatable(0f) }
@@ -184,6 +187,7 @@ private fun WatchingCard(
                 onPeek = onPeek,
                 onProgress = { holdProgress = it },
                 onPressed = { pressed = it },
+                wave = wave,
             )
             .holdCue(holdProgress)
             .clickable(
@@ -215,6 +219,7 @@ private fun WatchingCard(
                 }
             }
             .clip(CardShape)
+            .posterWave(wave)
             .drawBehind {
                 drawRect(Ink)
                 val colors = wash

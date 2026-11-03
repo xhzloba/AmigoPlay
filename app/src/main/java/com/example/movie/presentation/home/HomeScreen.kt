@@ -43,6 +43,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -61,6 +62,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import com.example.movie.R
 import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.ContentKind
@@ -80,7 +84,7 @@ import com.example.movie.presentation.home.components.WatchingRail
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
-private val HomeBottomClearance = 82.dp
+private val HomeBottomClearance = 96.dp
 private val CatalogGap = 36.dp
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -97,11 +101,27 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     val playAnim = remember { Animatable(PlayBlue) }
-    var playRequest by remember { mutableStateOf(PlayBlue to false) }
-    LaunchedEffect(playRequest) {
-        val (color, dragging) = playRequest
-        if (dragging) playAnim.snapTo(color)
-        else playAnim.animateTo(color, tween(640, easing = FastOutSlowInEasing))
+    val capsuleAnim = remember { Animatable(PlayBlue) }
+    var playRequest by remember { mutableStateOf(Triple(PlayBlue, PlayBlue, false)) }
+    LaunchedEffect(Unit) {
+        var settle: Job? = null
+        val glide = tween<Color>(640, easing = FastOutSlowInEasing)
+        snapshotFlow { playRequest }.collect { (mark, chip, dragging) ->
+            if (dragging) {
+                settle?.cancel()
+                settle = null
+                playAnim.snapTo(mark)
+                capsuleAnim.snapTo(chip)
+            } else {
+                settle?.cancel()
+                settle = launch {
+                    coroutineScope {
+                        launch { playAnim.animateTo(mark, glide) }
+                        launch { capsuleAnim.animateTo(chip, glide) }
+                    }
+                }
+            }
+        }
     }
     val play = playAnim.value
     val logo = remember { LogoMood() }
@@ -153,7 +173,7 @@ fun HomeScreen(
             .fillMaxSize()
             .background(background)
             .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
             ),
     ) {
         if (blocked) {
@@ -167,7 +187,8 @@ fun HomeScreen(
                 CategoryTabs(
                     shelves = state.shelves,
                     selectedId = state.selectedId,
-                    playColor = play,
+                    play = playAnim,
+                    capsule = capsuleAnim,
                     onSelect = onSelectShelf,
                     onSearch = onOpenSearch,
                     hat = logo.hat,
@@ -242,7 +263,8 @@ fun HomeScreen(
                     CategoryTabs(
                         shelves = state.shelves,
                         selectedId = state.selectedId,
-                        playColor = play,
+                        play = playAnim,
+                        capsule = capsuleAnim,
                         onSelect = onSelectShelf,
                         onSearch = onOpenSearch,
                         hat = logo.hat,
@@ -258,8 +280,8 @@ fun HomeScreen(
                             movies = state.movies,
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
-                            onPlayColor = { color, dragging ->
-                                val next = color to dragging
+                            onPlayColor = { mark, chip, dragging ->
+                                val next = Triple(mark, chip, dragging)
                                 if (next != playRequest) playRequest = next
                             },
                             onSettled = logo::onSettled,
