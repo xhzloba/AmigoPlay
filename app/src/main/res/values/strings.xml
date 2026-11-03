@@ -35,6 +35,10 @@
     <string name="favorites_watched">Просмотрено</string>
     <string name="favorites_actors">Актеры</string>
     <string name="favorites_genres">Жанры</string>
+    <string name="favorites_sort">Сортировка</string>
+    <string name="favorites_sort_genre">По жанру</string>
+    <string name="favorites_sort_year">По году</string>
+    <string name="favorites_sort_title">По названию</string>
     <string name="favorites_all">Все</string>
     <string name="favorites_movies">Фильмы</string>
     <string name="favorites_series">Сериалы</string>
@@ -51,6 +55,8 @@
     <string name="settings_logos_hint">На главном слайдере, в «Топ 250» и в деталке. Выключено — показывается название.</string>
     <string name="settings_backdrop_auto">Автокадры</string>
     <string name="settings_backdrop_auto_hint">В деталке backdrop сам листается. Выключено — точки сверху, кадры свайпом.</string>
+    <string name="settings_nav_gesture">Свайп-жест</string>
+    <string name="settings_nav_gesture_hint">Индикатор снизу в меню. Выключено — полоска скрыта, свайп снизу всё ещё сворачивает.</string>
     <string name="settings_haptic">Виброотклик</string>
     <string name="settings_haptic_hint">Короткий отклик при листании и открытии фильма.</string>
     <string name="settings_gyro">Гироскоп</string>

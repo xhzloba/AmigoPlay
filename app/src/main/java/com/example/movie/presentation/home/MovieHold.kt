@@ -26,6 +26,8 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
+import com.example.movie.presentation.haptic.HoldHaptic
+import com.example.movie.presentation.haptic.rememberHoldHaptic
 import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -37,6 +39,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private const val HoldMillis = 450L
 private const val PressMillis = 110L
+private const val BuzzMillis = 120L
 
 internal class PosterWave {
     var origin by mutableStateOf(Offset.Zero)
@@ -144,11 +147,14 @@ internal fun Modifier.holdToPeek(
     val presser = remember { arrayOf<(Boolean) -> Unit>({ }) }
     val clicks = remember { arrayOf<() -> Unit>({ }) }
     val waves = remember { arrayOfNulls<PosterWave>(1) }
+    val motor = remember { arrayOfNulls<HoldHaptic>(1) }
     val window = remember { floatArrayOf(Float.NaN, Float.NaN) }
+    val haptic = rememberHoldHaptic()
     peeks[0] = peek
     presser[0] = press
     clicks[0] = click
     waves[0] = waveState
+    motor[0] = haptic
     return onGloballyPositioned { coordinates ->
         val at = coordinates.positionInWindow()
         window[0] = at.x
@@ -166,6 +172,10 @@ internal fun Modifier.holdToPeek(
                 val pressToken = ++pressEpoch
                 waves[0]?.press(origin)
                 presser[0].invoke(true)
+                val buzz = launch {
+                    delay(BuzzMillis)
+                    motor[0]?.start()
+                }
                 var draggedAway = false
                 var releaseDelay = 0L
                 var armClick = false
@@ -189,6 +199,8 @@ internal fun Modifier.holdToPeek(
                         if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
                         armClick = scrollTookDown
                     } else {
+                        buzz.cancel()
+                        motor[0]?.stop()
                         peeks[0].invoke()
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -197,6 +209,8 @@ internal fun Modifier.holdToPeek(
                         }
                     }
                 } finally {
+                    buzz.cancel()
+                    motor[0]?.stop()
                     val mine = pressToken
                     val hold = releaseDelay
                     launch {

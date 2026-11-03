@@ -82,6 +82,7 @@ fun SettingsRoute() {
         onAutoBackdrop = repository::setAutoBackdrop,
         onHaptic = repository::setHaptic,
         onGyro = repository::setGyro,
+        onNavGesture = repository::setNavGesture,
     )
 }
 
@@ -93,6 +94,7 @@ private fun SettingsScreen(
     onAutoBackdrop: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
     onGyro: (Boolean) -> Unit,
+    onNavGesture: (Boolean) -> Unit,
 ) {
     var sectionName by rememberSaveable { mutableStateOf(SettingsSection.Interface.name) }
     val section = SettingsSection.valueOf(sectionName)
@@ -129,6 +131,13 @@ private fun SettingsScreen(
                     hint = stringResource(R.string.settings_backdrop_auto_hint),
                     checked = settings.autoBackdrop,
                     onChecked = onAutoBackdrop,
+                )
+                SettingsDivider()
+                SettingRow(
+                    title = stringResource(R.string.settings_nav_gesture),
+                    hint = stringResource(R.string.settings_nav_gesture_hint),
+                    checked = settings.navGesture,
+                    onChecked = onNavGesture,
                 )
             }
             SettingsSection.Sensors -> {
