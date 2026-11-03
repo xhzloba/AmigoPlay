@@ -140,14 +140,9 @@ internal fun Color.forGlow(): Color {
 }
 
 internal fun Color.forCapsule(): Color {
-    val hsv = FloatArray(3)
-    android.graphics.Color.colorToHSV(toArgb(), hsv)
-    if (hsv[1] < 0.1f) {
-        hsv[2] = hsv[2].coerceIn(0.82f, 0.94f)
-        return Color(android.graphics.Color.HSVToColor(hsv))
-    }
-    hsv[1] = (hsv[1] + 0.28f).coerceIn(0.86f, 1f)
-    hsv[2] = (hsv[2] + 0.06f).coerceIn(0.64f, 0.82f)
+    val hsv = toHsv()
+    if (hsv[1] in 0.08f..0.38f) hsv[1] = (hsv[1] + 0.1f).coerceAtMost(0.4f)
+    hsv[2] = hsv[2].coerceIn(0.52f, 0.64f)
     return Color(android.graphics.Color.HSVToColor(hsv))
 }
 

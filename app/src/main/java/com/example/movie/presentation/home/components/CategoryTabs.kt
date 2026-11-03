@@ -43,19 +43,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -94,7 +98,7 @@ private const val MustacheY = 207f / 348f
 private val TabInk = Color(0xFFC7C7CC)
 
 private val TabSkeletonLabels = listOf(
-    "В тренде",
+    "Популярные",
     "Сейчас смотрят",
     "4K",
     "Dolby Vision",
@@ -160,22 +164,46 @@ private fun ShelfCapsule(
     ghost: Boolean = false,
     tint: Animatable<Color, AnimationVector4D>? = null,
 ) {
+    val label = when {
+        ghost -> Color.Transparent
+        selected && tint != null -> {
+            if (tint.value.luminance() > 0.62f) Color(0xFF141416) else Color.White
+        }
+        selected -> Color.White
+        else -> TabInk
+    }
     Text(
         text = title,
-        color = if (ghost) Color.Transparent else if (selected) Color.White else TabInk,
+        color = label,
         fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+        style = if (selected && !ghost) {
+            TextStyle(
+                shadow = Shadow(
+                    color = if (label.luminance() > 0.5f) {
+                        Color.Black.copy(alpha = 0.55f)
+                    } else {
+                        Color.White.copy(alpha = 0.72f)
+                    },
+                    offset = Offset(0f, 1f),
+                    blurRadius = 8f,
+                ),
+            )
+        } else {
+            TextStyle.Default
+        },
         fontSize = CategoryTabFontSize,
         lineHeight = CategoryTabLineHeight,
         letterSpacing = CategoryTabLetterSpacing,
         modifier = Modifier
             .drawBehind {
-                val fill = when {
-                    ghost -> Color.White.copy(alpha = 0.12f)
-                    selected && tint != null -> tint.value.copy(alpha = 0.82f)
-                    else -> Color.White.copy(alpha = 0.26f)
-                }
                 val radius = size.minDimension / 2f
-                drawRoundRect(color = fill, cornerRadius = CornerRadius(radius, radius))
+                val corner = CornerRadius(radius, radius)
+                if (!ghost && selected && tint != null) {
+                    drawRoundRect(color = tint.value, cornerRadius = corner)
+                } else {
+                    val fill = if (ghost) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.26f)
+                    drawRoundRect(color = fill, cornerRadius = corner)
+                }
             }
             .then(
                 if (onClick == null) {

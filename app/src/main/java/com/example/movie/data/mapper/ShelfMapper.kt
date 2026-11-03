@@ -19,7 +19,7 @@ internal fun MainResponseDto.toShelves(): List<Shelf> {
         }
     }
     return listOf(
-        shelf(listTitles["popular:"] ?: "В тренде", "popular", null),
+        shelf("Популярные", "popular", null),
         shelf("Сейчас смотрят", "watching", null),
         shelf("4K", "new", null, uhd = true),
         shelf("Dolby Vision", "new", null, dolbyVision = true),

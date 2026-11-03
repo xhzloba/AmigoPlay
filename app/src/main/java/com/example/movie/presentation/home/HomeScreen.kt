@@ -85,6 +85,12 @@ import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
 private val HomeBottomClearance = 96.dp
+
+private data class ShelfTint(
+    val play: Color,
+    val chip: Color,
+    val dragging: Boolean,
+)
 private val CatalogGap = 36.dp
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -102,22 +108,22 @@ fun HomeScreen(
 ) {
     val playAnim = remember { Animatable(PlayBlue) }
     val capsuleAnim = remember { Animatable(PlayBlue) }
-    var playRequest by remember { mutableStateOf(Triple(PlayBlue, PlayBlue, false)) }
+    var playRequest by remember { mutableStateOf(ShelfTint(PlayBlue, PlayBlue, false)) }
     LaunchedEffect(Unit) {
         var settle: Job? = null
         val glide = tween<Color>(640, easing = FastOutSlowInEasing)
-        snapshotFlow { playRequest }.collect { (mark, chip, dragging) ->
-            if (dragging) {
+        snapshotFlow { playRequest }.collect { tint ->
+            if (tint.dragging) {
                 settle?.cancel()
                 settle = null
-                playAnim.snapTo(mark)
-                capsuleAnim.snapTo(chip)
+                playAnim.snapTo(tint.play)
+                capsuleAnim.snapTo(tint.chip)
             } else {
                 settle?.cancel()
                 settle = launch {
                     coroutineScope {
-                        launch { playAnim.animateTo(mark, glide) }
-                        launch { capsuleAnim.animateTo(chip, glide) }
+                        launch { playAnim.animateTo(tint.play, glide) }
+                        launch { capsuleAnim.animateTo(tint.chip, glide) }
                     }
                 }
             }
@@ -281,7 +287,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             onPlayColor = { mark, chip, dragging ->
-                                val next = Triple(mark, chip, dragging)
+                                val next = ShelfTint(mark, chip, dragging)
                                 if (next != playRequest) playRequest = next
                             },
                             onSettled = logo::onSettled,
@@ -506,7 +512,7 @@ private fun HomeScreenPreview() {
         HomeScreen(
             state = HomeUiState(
                 shelves = listOf(
-                    Shelf("popular:", "В тренде", CatalogQuery("popular")),
+                    Shelf("popular:", "Популярные", CatalogQuery("popular")),
                     Shelf("updatings:", "Обновления", CatalogQuery("updatings")),
                     Shelf("popular:movie", "Фильмы", CatalogQuery("popular", "movie")),
                 ),
