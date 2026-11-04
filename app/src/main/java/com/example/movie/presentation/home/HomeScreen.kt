@@ -75,6 +75,7 @@ import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandRow
 import com.example.movie.presentation.home.components.BrandTopInset
+import com.example.movie.presentation.home.components.HomeContentInset
 import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
 import com.example.movie.presentation.home.components.CoverStackSkeleton
@@ -398,8 +399,8 @@ private fun BrandScrim(progress: Float, modifier: Modifier = Modifier) {
                 val y = top.toPx() + BrandTopInset.toPx() + 20.dp.toPx()
                 val radius = 140.dp.toPx()
                 val logoWidth = 36.dp.toPx() * (754f / 186f)
-                val logoX = (22.dp - BrandLogoBleed).toPx() + logoWidth / 2f
-                val searchX = size.width - 34.dp.toPx()
+                val logoX = (HomeContentInset - BrandLogoBleed).toPx() + logoWidth / 2f
+                val searchX = size.width - (HomeContentInset + 11.dp).toPx()
                 fun pool(center: Offset) {
                     drawCircle(
                         brush = Brush.radialGradient(

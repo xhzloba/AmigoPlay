@@ -98,6 +98,7 @@ import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
+import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.components.BrandWordmark
@@ -238,8 +239,8 @@ internal fun FavoritesScreen(
                 columns = GridCells.Fixed(3),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = 22.dp,
-                    end = 22.dp,
+                    start = PosterGridInset,
+                    end = PosterGridInset,
                     top = topInset + BrandTopInset + brandReserve + 12.dp,
                     bottom = 96.dp,
                 ),
@@ -258,7 +259,7 @@ internal fun FavoritesScreen(
                         modifier = Modifier
                             .padding(bottom = 6.dp)
                             .layout { measurable, constraints ->
-                                val bleed = 22.dp.roundToPx()
+                                val bleed = PosterGridInset.roundToPx()
                                 val placeable = measurable.measure(
                                     constraints.copy(maxWidth = constraints.maxWidth + bleed * 2),
                                 )
@@ -321,7 +322,7 @@ private fun LibraryBrand(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 22.dp - BrandLogoBleed, end = 14.dp),
+            .padding(start = PosterGridInset - BrandLogoBleed, end = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BrandWordmark(play = FavoritePlay, hat = hat, mustache = mustache)
@@ -351,7 +352,7 @@ private fun LibraryScrim(progress: Float, modifier: Modifier = Modifier) {
                 val y = top.toPx() + BrandTopInset.toPx() + 20.dp.toPx()
                 val radius = 140.dp.toPx()
                 val logoWidth = 36.dp.toPx() * (754f / 186f)
-                val logoX = (22.dp - BrandLogoBleed).toPx() + logoWidth / 2f
+                val logoX = (PosterGridInset - BrandLogoBleed).toPx() + logoWidth / 2f
                 val menuX = size.width - 80.dp.toPx()
                 fun pool(center: Offset) {
                     drawCircle(
@@ -491,7 +492,7 @@ private fun FavoriteTabs(
     LazyRow(
         state = listState,
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 22.dp),
+        contentPadding = PaddingValues(horizontal = PosterGridInset),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         items(FavoriteTab.entries, key = { it.name }) { tab ->

@@ -87,7 +87,8 @@ internal val CategoryTabLetterSpacing = (-0.2).sp
 
 private val LogoHeight = 36.dp
 private val LogoAspect = 754f / 186f
-internal val HomeContentInset = 22.dp
+internal val PosterGridInset = 16.dp
+internal val HomeContentInset = PosterGridInset
 internal val BrandTopInset = 16.dp
 internal val BrandLogoBleed = LogoHeight * (29f / 186f)
 private val LetterACenter = LogoHeight * (75f / 186f)
@@ -284,7 +285,7 @@ internal fun BrandRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = HomeContentInset - BrandLogoBleed, end = 14.dp),
+            .padding(start = HomeContentInset - BrandLogoBleed, end = HomeContentInset - 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BrandWordmark(play = play, hat = hat, mustache = mustache)

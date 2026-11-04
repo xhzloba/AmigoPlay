@@ -57,7 +57,7 @@ import com.example.movie.ui.theme.PosterShape
 
 private val PosterWidth = 112.dp
 private val PosterAspect = 1.46f
-private val RailStart = 20.dp
+private val RailStart = PosterGridInset
 private val PosterGap = 14.dp
 
 @Composable
@@ -69,7 +69,7 @@ internal fun RailTitle(
     val tick = rememberHapticTick()
     Row(
         modifier = modifier
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = PosterGridInset)
             .then(
                 if (onClick == null) {
                     Modifier

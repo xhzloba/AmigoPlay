@@ -57,7 +57,9 @@ import com.example.movie.BuildConfig
 import com.example.movie.R
 import com.example.movie.domain.model.UserSettings
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
+import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.update.LocalAppUpdate
 import com.example.movie.presentation.update.UpdateAlert
 import com.example.movie.presentation.update.UpdateBadge
@@ -187,7 +189,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
             painter = painterResource(R.drawable.amigoplay_logo),
             contentDescription = "AmigoPlay",
             modifier = Modifier
-                .padding(horizontal = 22.dp)
+                .padding(start = PosterGridInset - BrandLogoBleed, end = PosterGridInset)
                 .height(36.dp)
                 .aspectRatio(754f / 186f, matchHeightConstraintsFirst = true),
             alignment = Alignment.CenterStart,
@@ -196,7 +198,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.settings_version),
-            modifier = Modifier.padding(horizontal = 22.dp),
+            modifier = Modifier.padding(horizontal = PosterGridInset),
             color = CinemaMuted,
             fontSize = 13.sp,
             lineHeight = 18.sp,
@@ -206,7 +208,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
         val context = LocalContext.current
         val tick = rememberHapticTick()
         Row(
-            modifier = Modifier.padding(horizontal = 22.dp),
+            modifier = Modifier.padding(horizontal = PosterGridInset),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -247,7 +249,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                 stringResource(R.string.update_check)
             },
             modifier = Modifier
-                .padding(start = 22.dp, end = 22.dp, top = if (offer != null) 14.dp else 18.dp)
+                .padding(start = PosterGridInset, end = PosterGridInset, top = if (offer != null) 14.dp else 18.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -284,7 +286,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
             }
             Text(
                 text = release.version,
-                modifier = Modifier.padding(horizontal = 22.dp),
+                modifier = Modifier.padding(horizontal = PosterGridInset),
                 color = VersionBlue,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 17.sp,
@@ -320,7 +322,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
 private fun NoticeLine(text: String, color: Color) {
     Text(
         text = text,
-        modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 8.dp),
+        modifier = Modifier.padding(start = PosterGridInset, end = PosterGridInset, top = 8.dp),
         color = color,
         fontSize = 13.sp,
         lineHeight = 18.sp,
@@ -342,7 +344,7 @@ private fun UpdateBanner(
     val shape = RoundedCornerShape(18.dp)
     Column(
         modifier = Modifier
-            .padding(horizontal = 22.dp)
+            .padding(horizontal = PosterGridInset)
             .fillMaxWidth()
             .clip(shape)
             .background(CinemaSurface)
@@ -419,7 +421,7 @@ private fun ReleaseAction(text: String, onClick: () -> Unit) {
     Text(
         text = text,
         modifier = Modifier
-            .padding(start = 22.dp, end = 22.dp, top = 4.dp)
+            .padding(start = PosterGridInset, end = PosterGridInset, top = 4.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -439,7 +441,7 @@ private val ChangeText = Color(0xFFD2D2D8)
 private fun ChangeLabel(text: String) {
     Text(
         text = text,
-        modifier = Modifier.padding(horizontal = 22.dp),
+        modifier = Modifier.padding(horizontal = PosterGridInset),
         color = CinemaMuted,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
@@ -451,7 +453,7 @@ private fun ChangeLabel(text: String) {
 @Composable
 private fun ChangeLine(text: String) {
     Row(
-        modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 8.dp),
+        modifier = Modifier.padding(start = PosterGridInset, end = PosterGridInset, top = 8.dp),
     ) {
         Text(
             text = "—",
@@ -475,7 +477,7 @@ private fun SettingsTabs(
     onSelect: (SettingsSection) -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 22.dp),
+        contentPadding = PaddingValues(horizontal = PosterGridInset),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         items(SettingsSection.entries, key = { it.name }) { section ->
@@ -509,7 +511,7 @@ private fun SettingsTabs(
 private fun SettingsDivider() {
     Box(
         modifier = Modifier
-            .padding(horizontal = 22.dp)
+            .padding(horizontal = PosterGridInset)
             .fillMaxWidth()
             .height(0.5.dp)
             .background(Color.White.copy(alpha = 0.08f)),
@@ -531,7 +533,7 @@ private fun SettingRow(
                 indication = null,
                 onClick = { onChecked(!checked) },
             )
-            .padding(horizontal = 22.dp, vertical = 18.dp),
+            .padding(horizontal = PosterGridInset, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(

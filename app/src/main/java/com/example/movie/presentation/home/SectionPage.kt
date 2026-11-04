@@ -63,7 +63,7 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandTopInset
-import com.example.movie.presentation.home.components.HomeContentInset
+import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionSkeleton
 import com.example.movie.presentation.home.components.posterTitlesOn
@@ -175,12 +175,12 @@ private fun SectionBar(title: String, onBack: () -> Unit, modifier: Modifier = M
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
             .padding(top = BrandTopInset)
             .height(36.dp)
-            .padding(end = HomeContentInset),
+            .padding(end = PosterGridInset),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .padding(start = HomeContentInset - 7.dp)
+                .padding(start = PosterGridInset - 7.dp)
                 .size(36.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -237,7 +237,7 @@ private fun PosterGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = state,
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = topPadding, bottom = PageBottom),
+        contentPadding = PaddingValues(start = PosterGridInset, end = PosterGridInset, top = topPadding, bottom = PageBottom),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
@@ -273,7 +273,7 @@ private fun SectionScrim(progress: Float, modifier: Modifier = Modifier) {
                 )
                 val y = top.toPx() + BrandTopInset.toPx() + 18.dp.toPx()
                 val radius = 140.dp.toPx()
-                val backX = HomeContentInset.toPx() + 4.dp.toPx()
+                val backX = PosterGridInset.toPx() + 4.dp.toPx()
                 fun pool(center: Offset) {
                     drawCircle(
                         brush = Brush.radialGradient(
@@ -342,7 +342,7 @@ private fun PosterCell(
 private fun SectionSkeleton(modifier: Modifier = Modifier) {
     val showTitles = posterTitlesOn()
     Column(
-        modifier = modifier.padding(start = 12.dp, end = 12.dp),
+        modifier = modifier.padding(horizontal = PosterGridInset),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         repeat(4) {
