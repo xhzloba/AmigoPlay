@@ -182,7 +182,7 @@ private fun UpdateSheet(
                         notes.added.forEach { NoteLine(it) }
                     }
                     if (notes.fixed.isNotEmpty()) {
-                        if (notes.added.isNotEmpty()) Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
                         NoteLabel(stringResource(R.string.changelog_fixed))
                         notes.fixed.forEach { NoteLine(it) }
                     }

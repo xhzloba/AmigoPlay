@@ -25,6 +25,13 @@ class DownloadStatusTest {
     }
 
     @Test
+    fun dashedHeadersAreLabelsNotLines() {
+        val notes = releaseNotes("— Добавлено\n— Логотип выше\n— Исправлено\n— Тап")
+        assertEquals(listOf("Логотип выше"), notes.added)
+        assertEquals(listOf("Тап"), notes.fixed)
+    }
+
+    @Test
     fun sectionHeadersSplitAddedAndFixed() {
         val notes = releaseNotes(
             """

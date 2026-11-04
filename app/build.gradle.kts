@@ -22,8 +22,8 @@ android {
         applicationId = "com.example.movie"
         minSdk = 36
         targetSdk = 36
-        versionCode = 13300
-        versionName = "1.33.0"
+        versionCode = 13301
+        versionName = "1.33.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

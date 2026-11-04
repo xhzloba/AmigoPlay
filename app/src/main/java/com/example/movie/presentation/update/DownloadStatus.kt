@@ -32,7 +32,7 @@ internal fun releaseNotes(body: String): ReleaseNotes {
 private enum class NoteSection { Added, Fixed }
 
 private fun String.sectionHeader(): NoteSection? {
-    val name = trim().trim('#', '*', '_', ' ').removeSuffix(":").lowercase()
+    val name = itemText().trim('#', '*', '_', ' ').removeSuffix(":").lowercase()
     return when (name) {
         "добавлено", "added" -> NoteSection.Added
         "исправлено", "fixed" -> NoteSection.Fixed
