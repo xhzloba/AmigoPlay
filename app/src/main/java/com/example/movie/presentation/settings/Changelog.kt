@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.34.0",
+            added = listOf(
+                "В «Интерфейсе» пункт «Названия под обложками», выключен. Название и год под постером: название не белое, год серее, длинное обрезается. Скелетон повторяет эти две строки.",
+            ),
+        ),
+        Release(
             version = "1.33.3",
             fixed = listOf(
                 "В полном списке полки боковые отступы сетки меньше.",

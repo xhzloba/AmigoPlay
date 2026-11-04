@@ -142,23 +142,28 @@ internal fun RecommendationRailSkeleton(
     Column(modifier = modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val posterHeight = PosterWidth * PosterAspect
+            val showTitles = posterTitlesOn()
+            val rowHeight = posterHeight + if (showTitles) PosterCaptionBlock else 0.dp
             val count = ((maxWidth - RailStart) / (PosterWidth + PosterGap)).toInt().coerceIn(2, 4)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(posterHeight)
+                    .height(rowHeight)
                     .padding(start = RailStart),
                 horizontalArrangement = Arrangement.spacedBy(PosterGap),
-                verticalAlignment = Alignment.Bottom,
+                verticalAlignment = Alignment.Top,
             ) {
                 repeat(count) {
-                    Box(
-                        modifier = Modifier
-                            .width(PosterWidth)
-                            .height(posterHeight)
-                            .clip(PosterShape)
-                            .background(Color.White.copy(alpha = 0.08f)),
-                    )
+                    Column(Modifier.width(PosterWidth)) {
+                        Box(
+                            modifier = Modifier
+                                .width(PosterWidth)
+                                .height(posterHeight)
+                                .clip(PosterShape)
+                                .background(Color.White.copy(alpha = 0.08f)),
+                        )
+                        if (showTitles) PosterCaptionSkeleton()
+                    }
                 }
             }
         }
@@ -190,6 +195,8 @@ private fun RecommendationPager(
         )
     }
     val posterHeight = PosterWidth * PosterAspect
+    val showTitles = posterTitlesOn()
+    val rowHeight = posterHeight + if (showTitles) PosterCaptionBlock else 0.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val end = (maxWidth - PosterWidth - RailStart).coerceAtLeast(RailStart)
         LazyRow(
@@ -199,39 +206,42 @@ private fun RecommendationPager(
             flingBehavior = flingBehavior,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(posterHeight),
+                .height(rowHeight),
         ) {
             itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
                 var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
                 var pressed by remember(movie.id) { mutableStateOf(false) }
                 val pressScale = rememberPressScale(pressed)
                 val wave = remember(movie.id) { PosterWave() }
-                AsyncImage(
-                    model = movie.posterUrl,
-                    contentDescription = stringResource(R.string.poster_content_description, movie.title),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(PosterWidth)
-                        .height(posterHeight)
-                        .graphicsLayer {
-                            scaleX = pressScale
-                            scaleY = pressScale
-                        }
-                        .clip(PosterShape)
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .posterWave(wave)
-                        .holdToPeek(
-                            onPeek = { onMoviePeek(movie) },
-                            onProgress = { holdProgress = it },
-                            onPressed = { pressed = it },
-                            onClick = {
-                                tick?.invoke()
-                                onMovieClick(movie.id)
-                            },
-                            wave = wave,
-                        )
-                        .holdCue(holdProgress),
-                )
+                Column(Modifier.width(PosterWidth)) {
+                    AsyncImage(
+                        model = movie.posterUrl,
+                        contentDescription = stringResource(R.string.poster_content_description, movie.title),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .width(PosterWidth)
+                            .height(posterHeight)
+                            .graphicsLayer {
+                                scaleX = pressScale
+                                scaleY = pressScale
+                            }
+                            .clip(PosterShape)
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .posterWave(wave)
+                            .holdToPeek(
+                                onPeek = { onMoviePeek(movie) },
+                                onProgress = { holdProgress = it },
+                                onPressed = { pressed = it },
+                                onClick = {
+                                    tick?.invoke()
+                                    onMovieClick(movie.id)
+                                },
+                                wave = wave,
+                            )
+                            .holdCue(holdProgress),
+                    )
+                    if (showTitles) PosterCaption(movie.title, movie.year)
+                }
             }
         }
     }

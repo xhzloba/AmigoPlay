@@ -64,6 +64,9 @@ import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.HomeContentInset
+import com.example.movie.presentation.home.components.PosterCaption
+import com.example.movie.presentation.home.components.PosterCaptionSkeleton
+import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
@@ -303,36 +306,41 @@ private fun PosterCell(
     var pressed by remember(movie.id) { mutableStateOf(false) }
     val pressScale = rememberPressScale(pressed)
     val wave = remember(movie.id) { PosterWave() }
-    AsyncImage(
-        model = movie.posterUrl,
-        contentDescription = stringResource(R.string.poster_content_description, movie.title),
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f / PosterAspect)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-            .clip(PosterShape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .posterWave(wave)
-            .holdToPeek(
-                onPeek = { onMoviePeek(movie) },
-                onProgress = { holdProgress = it },
-                onPressed = { pressed = it },
-                onClick = {
-                    tick?.invoke()
-                    onMovieClick(movie.id)
-                },
-                wave = wave,
-            )
-            .holdCue(holdProgress),
-    )
+    val showTitles = posterTitlesOn()
+    Column {
+        AsyncImage(
+            model = movie.posterUrl,
+            contentDescription = stringResource(R.string.poster_content_description, movie.title),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f / PosterAspect)
+                .graphicsLayer {
+                    scaleX = pressScale
+                    scaleY = pressScale
+                }
+                .clip(PosterShape)
+                .background(Color.White.copy(alpha = 0.08f))
+                .posterWave(wave)
+                .holdToPeek(
+                    onPeek = { onMoviePeek(movie) },
+                    onProgress = { holdProgress = it },
+                    onPressed = { pressed = it },
+                    onClick = {
+                        tick?.invoke()
+                        onMovieClick(movie.id)
+                    },
+                    wave = wave,
+                )
+                .holdCue(holdProgress),
+        )
+        if (showTitles) PosterCaption(movie.title, movie.year)
+    }
 }
 
 @Composable
 private fun SectionSkeleton(modifier: Modifier = Modifier) {
+    val showTitles = posterTitlesOn()
     Column(
         modifier = modifier.padding(start = 12.dp, end = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -340,13 +348,16 @@ private fun SectionSkeleton(modifier: Modifier = Modifier) {
         repeat(4) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 repeat(3) {
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .aspectRatio(1f / PosterAspect)
-                            .clip(PosterShape)
-                            .background(Color.White.copy(alpha = 0.08f)),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f / PosterAspect)
+                                .clip(PosterShape)
+                                .background(Color.White.copy(alpha = 0.08f)),
+                        )
+                        if (showTitles) PosterCaptionSkeleton()
+                    }
                 }
             }
         }

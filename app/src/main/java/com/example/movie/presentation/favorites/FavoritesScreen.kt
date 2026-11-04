@@ -98,6 +98,8 @@ import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
+import com.example.movie.presentation.home.components.PosterCaption
+import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.components.BrandWordmark
 import com.example.movie.presentation.home.components.MenuSombreroEffect
 import com.example.movie.presentation.home.components.LogoMood
@@ -712,30 +714,34 @@ private fun FavoritePoster(
     var pressed by remember(item.id) { mutableStateOf(false) }
     val pressScale = rememberPressScale(pressed)
     val wave = remember(item.id) { PosterWave() }
-    AsyncImage(
-        model = item.posterUrl,
-        contentDescription = stringResource(R.string.poster_content_description, item.title),
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f / 1.46f)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-            .clip(PosterShape)
-            .background(Color.White.copy(alpha = 0.06f))
-            .posterWave(wave)
-            .holdToPeek(
-                onPeek = { onMoviePeek(item.toMovie()) },
-                onProgress = { holdProgress = it },
-                onPressed = { pressed = it },
-                onClick = {
-                    tick?.invoke()
-                    onMovieClick(item.id)
-                },
-                wave = wave,
-            )
-            .holdCue(holdProgress),
-    )
+    val showTitles = posterTitlesOn()
+    Column {
+        AsyncImage(
+            model = item.posterUrl,
+            contentDescription = stringResource(R.string.poster_content_description, item.title),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f / 1.46f)
+                .graphicsLayer {
+                    scaleX = pressScale
+                    scaleY = pressScale
+                }
+                .clip(PosterShape)
+                .background(Color.White.copy(alpha = 0.06f))
+                .posterWave(wave)
+                .holdToPeek(
+                    onPeek = { onMoviePeek(item.toMovie()) },
+                    onProgress = { holdProgress = it },
+                    onPressed = { pressed = it },
+                    onClick = {
+                        tick?.invoke()
+                        onMovieClick(item.id)
+                    },
+                    wave = wave,
+                )
+                .holdCue(holdProgress),
+        )
+        if (showTitles) PosterCaption(item.title, item.year)
+    }
 }

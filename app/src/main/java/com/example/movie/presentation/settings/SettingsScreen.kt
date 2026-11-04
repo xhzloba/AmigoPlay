@@ -95,6 +95,7 @@ fun SettingsRoute() {
         settings = settings,
         onExtractColors = repository::setExtractColors,
         onShowLogos = repository::setShowLogos,
+        onShowPosterTitles = repository::setShowPosterTitles,
         onAutoBackdrop = repository::setAutoBackdrop,
         onHaptic = repository::setHaptic,
         onGyro = repository::setGyro,
@@ -106,6 +107,7 @@ private fun SettingsScreen(
     settings: UserSettings,
     onExtractColors: (Boolean) -> Unit,
     onShowLogos: (Boolean) -> Unit,
+    onShowPosterTitles: (Boolean) -> Unit,
     onAutoBackdrop: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
     onGyro: (Boolean) -> Unit,
@@ -131,6 +133,13 @@ private fun SettingsScreen(
                     hint = stringResource(R.string.settings_extract_colors_hint),
                     checked = settings.extractColors,
                     onChecked = onExtractColors,
+                )
+                SettingsDivider()
+                SettingRow(
+                    title = stringResource(R.string.settings_poster_titles),
+                    hint = stringResource(R.string.settings_poster_titles_hint),
+                    checked = settings.showPosterTitles,
+                    onChecked = onShowPosterTitles,
                 )
                 SettingsDivider()
                 SettingRow(

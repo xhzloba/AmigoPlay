@@ -111,6 +111,9 @@ import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.MovieLogoShadow
+import com.example.movie.presentation.home.components.PosterCaption
+import com.example.movie.presentation.home.components.PosterCaptionBlock
+import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
@@ -628,13 +631,14 @@ private fun MovieStrip(
 ) {
     val listState = rememberLazyListState()
     val tick = rememberHapticTick()
+    val showTitles = posterTitlesOn()
     HapticOnChange(listState) { listState.firstVisibleItemIndex }
     LazyRow(
         state = listState,
         modifier = Modifier
             .edgeToEdge(DetailInset)
             .fillMaxWidth()
-            .height(200.dp),
+            .height(108.dp * 1.46f + if (showTitles) PosterCaptionBlock else 0.dp),
         contentPadding = PaddingValues(horizontal = DetailInset),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -671,15 +675,7 @@ private fun MovieStrip(
                         )
                         .holdCue(holdProgress),
                 )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = movie.title,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    lineHeight = 16.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (showTitles) PosterCaption(movie.title, movie.year)
             }
         }
     }

@@ -50,7 +50,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -58,6 +57,9 @@ import com.example.movie.R
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.components.PosterCaption
+import com.example.movie.presentation.home.components.PosterCaptionSkeleton
+import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.CinemaMuted
@@ -190,6 +192,7 @@ private fun SearchResults(
     onMoviePeek: (Movie) -> Unit,
 ) {
     val tick = rememberHapticTick()
+    val showTitles = posterTitlesOn()
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 96.dp),
@@ -229,16 +232,7 @@ private fun SearchResults(
                         )
                         .holdCue(holdProgress),
                 )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = movie.title,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    lineHeight = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (showTitles) PosterCaption(movie.title, movie.year)
             }
         }
     }
@@ -246,6 +240,7 @@ private fun SearchResults(
 
 @Composable
 private fun SearchSkeleton() {
+    val showTitles = posterTitlesOn()
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(horizontal = 22.dp),
@@ -255,13 +250,16 @@ private fun SearchSkeleton() {
         modifier = Modifier.fillMaxSize(),
     ) {
         items(9) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f / 1.46f)
-                    .clip(PosterShape)
-                    .background(Color.White.copy(alpha = 0.08f)),
-            )
+            Column {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f / 1.46f)
+                        .clip(PosterShape)
+                        .background(Color.White.copy(alpha = 0.08f)),
+                )
+                if (showTitles) PosterCaptionSkeleton()
+            }
         }
     }
 }
