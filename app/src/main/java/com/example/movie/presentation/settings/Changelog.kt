@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.33.3",
+            fixed = listOf(
+                "В полном списке полки боковые отступы сетки меньше.",
+                "Виброотклик при подгрузке следующих фильмов в полном списке, в том числе в «Лучшем».",
+            ),
+        ),
+        Release(
             version = "1.33.2",
             added = listOf(
                 "Когда в ленте подгружаются следующие фильмы, один виброотклик. На странице полки, в главном слайдере и в рядах, если список вырос.",

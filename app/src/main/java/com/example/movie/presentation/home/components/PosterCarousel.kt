@@ -247,7 +247,7 @@ fun PosterCarousel(
     val tilt = rememberCoverTilt()
     val tick = rememberHapticTick()
     HapticOnChange(pagerState) { pagerState.currentPage }
-    HapticOnAppend { movies.map { it.id } }
+    HapticOnAppend(movies.map { it.id })
     SettleEffect(pagerState, { pagerState.isScrollInProgress }, onSettled)
 
     LaunchedEffect(movies) {

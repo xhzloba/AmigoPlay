@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -122,12 +123,13 @@ private fun rememberScrollTicks(): ((Int) -> Unit)? {
 }
 
 @Composable
-internal fun HapticOnAppend(ids: () -> List<String>) {
+internal fun HapticOnAppend(ids: List<String>) {
     val ticks = rememberScrollTicks()
+    val current = rememberUpdatedState(ids)
     LaunchedEffect(ticks) {
         val perform = ticks ?: return@LaunchedEffect
         var previous = emptyList<String>()
-        snapshotFlow(ids).collect { value ->
+        snapshotFlow { current.value }.collect { value ->
             val grew = previous.isNotEmpty() &&
                 value.size > previous.size &&
                 value.subList(0, previous.size) == previous

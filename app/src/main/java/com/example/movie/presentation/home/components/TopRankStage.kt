@@ -122,7 +122,7 @@ internal fun TopRankStage(
     onSettled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    HapticOnAppend { movies.map { it.id } }
+    HapticOnAppend(movies.map { it.id })
     Column(modifier = modifier.fillMaxWidth()) {
         RailTitle(title = title, onClick = onOpen)
         Spacer(Modifier.height(14.dp))

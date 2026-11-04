@@ -116,7 +116,7 @@ internal fun RecommendationRail(
     onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit = {},
 ) {
-    HapticOnAppend { movies.map { it.id } }
+    HapticOnAppend(movies.map { it.id })
     Column(modifier = modifier.fillMaxWidth()) {
         if (title != null) {
             RailTitle(title = title, onClick = onOpen)

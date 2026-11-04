@@ -222,7 +222,7 @@ private fun PosterGrid(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
 ) {
-    HapticOnAppend { movies.map { it.id } }
+    HapticOnAppend(movies.map { it.id })
     LaunchedEffect(state, movies.size, end, error) {
         if (end || error != null) return@LaunchedEffect
         snapshotFlow { state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
@@ -234,7 +234,7 @@ private fun PosterGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = state,
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = topPadding, bottom = PageBottom),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = topPadding, bottom = PageBottom),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
@@ -334,7 +334,7 @@ private fun PosterCell(
 @Composable
 private fun SectionSkeleton(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.padding(start = 20.dp, end = 20.dp),
+        modifier = modifier.padding(start = 12.dp, end = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         repeat(4) {
