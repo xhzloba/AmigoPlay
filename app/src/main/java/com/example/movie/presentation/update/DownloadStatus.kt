@@ -4,14 +4,44 @@ import com.example.movie.domain.model.DownloadProgress
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-internal fun dashedNotes(notes: String): String =
-    notes.lineSequence()
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .joinToString("\n") { line ->
-            if (line.startsWith("—") || line.startsWith("–") || line.startsWith("-")) line
-            else "— $line"
+internal data class ReleaseNotes(
+    val added: List<String>,
+    val fixed: List<String>,
+)
+
+internal fun releaseNotes(body: String): ReleaseNotes {
+    val added = mutableListOf<String>()
+    val fixed = mutableListOf<String>()
+    var section = NoteSection.Added
+    body.lineSequence().forEach { raw ->
+        val line = raw.trim()
+        if (line.isEmpty()) return@forEach
+        when (line.sectionHeader()) {
+            NoteSection.Added -> section = NoteSection.Added
+            NoteSection.Fixed -> section = NoteSection.Fixed
+            null -> {
+                val item = line.itemText()
+                if (item.isEmpty()) return@forEach
+                if (section == NoteSection.Fixed) fixed += item else added += item
+            }
         }
+    }
+    return ReleaseNotes(added, fixed)
+}
+
+private enum class NoteSection { Added, Fixed }
+
+private fun String.sectionHeader(): NoteSection? {
+    val name = trim().trim('#', '*', '_', ' ').removeSuffix(":").lowercase()
+    return when (name) {
+        "добавлено", "added" -> NoteSection.Added
+        "исправлено", "fixed" -> NoteSection.Fixed
+        else -> null
+    }
+}
+
+private fun String.itemText(): String =
+    trim().trimStart('-', '—', '–', '*', '•').trim()
 
 internal fun downloadStatus(progress: DownloadProgress): String {
     val parts = mutableListOf<String>()

@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -202,13 +203,18 @@ private suspend fun LazyListState.alignStart() {
 private suspend fun LazyListState.centerItem(index: Int, estimated: Int, inset: Int) {
     val viewport = layoutInfo.viewportSize.width
     if (viewport <= 0) return
-    if (layoutInfo.visibleItemsInfo.none { it.index == index }) {
-        animateScrollToItem(index, estimated / 2 - viewport / 2)
+    val wasVisible = layoutInfo.visibleItemsInfo.any { it.index == index }
+    if (!wasVisible) {
+        animateScrollToItem(index, estimated / 2 + inset - viewport / 2)
     }
     val placed = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
     val delta = placed.offset + inset + placed.size / 2 - viewport / 2
     if (delta == 0) return
-    animateScrollBy(delta.toFloat())
+    if (wasVisible) {
+        animateScrollBy(delta.toFloat())
+    } else {
+        scroll { scrollBy(delta.toFloat()) }
+    }
 }
 
 private fun LazyListState.passedTab(): Int {

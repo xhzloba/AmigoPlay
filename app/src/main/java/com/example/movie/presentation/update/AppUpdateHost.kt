@@ -1,18 +1,10 @@
 package com.example.movie.presentation.update
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,30 +31,30 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.movie.BuildConfig
 import com.example.movie.R
-import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.AppRelease
 import com.example.movie.domain.model.DownloadProgress
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.CinemaSurface
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import java.io.File
+
+private const val ScrimMillis = 280
+private const val SheetMillis = 340
+private const val ScrimOutMillis = 200
+private const val SheetOutMillis = 220
 
 private val CardShape = RoundedCornerShape(28.dp)
 private val ButtonShape = RoundedCornerShape(22.dp)
@@ -70,94 +62,32 @@ private val VersionBlue = Color(0xFF7EC8FF)
 private val NotesColor = Color(0xFFD2D2D8)
 private val FailedColor = Color(0xFFE7B3B3)
 
-private enum class UpdatePhase {
-    Ready,
-    Downloading,
-    Failed,
-}
-
 @Composable
 fun AppUpdateHost() {
-    val container = LocalAppContainer.current
+    val updates = LocalAppUpdate.current
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val tick = rememberHapticTick()
-    var dismissed by rememberSaveable { mutableStateOf(false) }
-    var release by remember { mutableStateOf<AppRelease?>(null) }
-    var visible by remember { mutableStateOf(false) }
-    var phase by remember { mutableStateOf(UpdatePhase.Ready) }
-    var progress by remember { mutableStateOf(DownloadProgress()) }
-    var download by remember { mutableStateOf<Job?>(null) }
+    val release = updates.release
+    val visible = updates.sheet && release != null
+    var held by remember { mutableStateOf<AppRelease?>(null) }
+    if (visible && release != null) held = release
+    val shown = held
 
-    LaunchedEffect(Unit) {
-        if (dismissed) return@LaunchedEffect
-        val found = container.checkAppUpdate(BuildConfig.VERSION_CODE) ?: return@LaunchedEffect
-        if (dismissed) return@LaunchedEffect
-        release = found
-        visible = true
-    }
+    BackHandler(enabled = visible && shown != null) { updates.postpone() }
 
-    fun hide() {
-        download?.cancel()
-        download = null
-        dismissed = true
-        visible = false
-    }
-
-    fun startUpdate() {
-        val item = release ?: return
-        if (!context.packageManager.canRequestPackageInstalls()) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:${context.packageName}"),
-            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(intent)
-            return
-        }
-        tick?.invoke()
-        download?.cancel()
-        download = scope.launch {
-            phase = UpdatePhase.Downloading
-            progress = DownloadProgress()
-            try {
-                val file = container.apkInstaller.download(
-                    url = item.apkUrl,
-                    destination = File(context.cacheDir, "updates/update.apk"),
-                    onProgress = { progress = it },
-                )
-                container.apkInstaller.install(context, file)
-                hide()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                phase = UpdatePhase.Failed
-            }
-        }
-    }
-
-    BackHandler(enabled = visible) { hide() }
-
-    val shown = release
-    AnimatedVisibility(
-        visible = visible && shown != null,
-        enter = fadeIn(tween(180)) + slideInVertically(
-            animationSpec = spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow),
-            initialOffsetY = { it },
-        ),
-        exit = fadeOut(tween(140)) + slideOutVertically(
-            animationSpec = tween(180),
-            targetOffsetY = { it },
-        ),
-    ) {
-        if (shown != null) {
-            UpdateSheet(
-                release = shown,
-                phase = phase,
-                progress = progress,
-                onLater = ::hide,
-                onUpdate = ::startUpdate,
-            )
-        }
+    if (shown != null) {
+        UpdateSheet(
+            release = shown,
+            phase = updates.phase,
+            progress = updates.progress,
+            visible = visible,
+            onLater = updates::postpone,
+            onUpdate = {
+                tick?.invoke()
+                updates.download(context)
+            },
+            onHidden = { held = null },
+        )
     }
 }
 
@@ -166,18 +96,38 @@ private fun UpdateSheet(
     release: AppRelease,
     phase: UpdatePhase,
     progress: DownloadProgress,
+    visible: Boolean,
     onLater: () -> Unit,
     onUpdate: () -> Unit,
+    onHidden: () -> Unit,
 ) {
+    val scrim = remember { Animatable(0f) }
+    val sheet = remember { Animatable(1f) }
+    LaunchedEffect(visible) {
+        if (visible) {
+            coroutineScope {
+                launch { scrim.animateTo(1f, tween(ScrimMillis, easing = FastOutSlowInEasing)) }
+                launch { sheet.animateTo(0f, tween(SheetMillis, easing = FastOutSlowInEasing)) }
+            }
+        } else {
+            coroutineScope {
+                launch { scrim.animateTo(0f, tween(ScrimOutMillis, easing = FastOutSlowInEasing)) }
+                launch { sheet.animateTo(1f, tween(SheetOutMillis, easing = FastOutSlowInEasing)) }
+            }
+            onHidden()
+        }
+    }
     val animated by animateFloatAsState(
         targetValue = progress.fraction,
         animationSpec = tween(120),
         label = "updateProgress",
     )
+    val notes = remember(release.notes) { releaseNotes(release.notes) }
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = scrim.value }
                 .background(Color.Black.copy(alpha = 0.5f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -188,6 +138,10 @@ private fun UpdateSheet(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .graphicsLayer {
+                    val travel = size.height
+                    translationY = if (travel == 0f) 4000f else travel * sheet.value
+                }
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
                 .fillMaxWidth()
@@ -216,17 +170,23 @@ private fun UpdateSheet(
                 lineHeight = 38.sp,
                 letterSpacing = (-0.6).sp,
             )
-            if (release.notes.isNotBlank()) {
-                Text(
-                    text = dashedNotes(release.notes),
+            if (notes.added.isNotEmpty() || notes.fixed.isNotEmpty()) {
+                Column(
                     modifier = Modifier
                         .padding(top = 16.dp)
-                        .heightIn(max = 168.dp)
+                        .heightIn(max = 220.dp)
                         .verticalScroll(rememberScrollState()),
-                    color = NotesColor,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
-                )
+                ) {
+                    if (notes.added.isNotEmpty()) {
+                        NoteLabel(stringResource(R.string.changelog_added))
+                        notes.added.forEach { NoteLine(it) }
+                    }
+                    if (notes.fixed.isNotEmpty()) {
+                        if (notes.added.isNotEmpty()) Spacer(Modifier.height(16.dp))
+                        NoteLabel(stringResource(R.string.changelog_fixed))
+                        notes.fixed.forEach { NoteLine(it) }
+                    }
+                }
             }
             if (phase == UpdatePhase.Failed) {
                 Text(
@@ -306,5 +266,36 @@ private fun UpdateSheet(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun NoteLabel(text: String) {
+    Text(
+        text = text,
+        color = CinemaMuted,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.4.sp,
+    )
+}
+
+@Composable
+private fun NoteLine(text: String) {
+    Row(modifier = Modifier.padding(top = 8.dp)) {
+        Text(
+            text = "—",
+            color = NotesColor,
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+        )
+        Text(
+            text = text,
+            modifier = Modifier.padding(start = 8.dp),
+            color = NotesColor,
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+        )
     }
 }

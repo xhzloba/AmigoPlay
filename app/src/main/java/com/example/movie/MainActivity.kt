@@ -36,6 +36,8 @@ import com.example.movie.presentation.home.MoviePeek
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.presentation.shell.AppShell
 import com.example.movie.presentation.update.AppUpdateHost
+import com.example.movie.presentation.update.LocalAppUpdate
+import com.example.movie.presentation.update.rememberUpdateController
 import com.example.movie.ui.theme.MovieTheme
 
 class MainActivity : ComponentActivity() {
@@ -53,6 +55,8 @@ class MainActivity : ComponentActivity() {
                 LocalAppContainer provides container,
                 LocalUserSettings provides container.userSettings,
             ) {
+                val updates = rememberUpdateController()
+                CompositionLocalProvider(LocalAppUpdate provides updates) {
                 MovieTheme {
                     NavigationGesture()
                     Box(Modifier.fillMaxSize()) {
@@ -96,6 +100,7 @@ class MainActivity : ComponentActivity() {
                         }
                         AppUpdateHost()
                     }
+                }
                 }
             }
         }

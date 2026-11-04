@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -54,6 +55,8 @@ import com.example.movie.presentation.home.HomeSection
 import com.example.movie.presentation.home.SectionRoute
 import com.example.movie.presentation.home.MoviePeek
 import com.example.movie.presentation.settings.SettingsRoute
+import com.example.movie.presentation.update.LocalAppUpdate
+import com.example.movie.presentation.update.UpdateBadge
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.CinemaMuted
 
@@ -183,6 +186,7 @@ private fun AppBottomBar(
 ) {
     val tick = rememberHapticTick()
     val press = ripple(color = Color(0xFF8E8E93))
+    val updatePending = LocalAppUpdate.current.pending
     val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val belowGesture = (nav + 4.dp).coerceAtLeast(22.dp)
     Row(
@@ -203,40 +207,53 @@ private fun AppBottomBar(
     ) {
         AppTab.entries.forEach { tab ->
             val lit = tab == selected
-            Column(
+            val badge = tab == AppTab.Settings && updatePending
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 6.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .clickable(
-                        interactionSource = remember(tab) { MutableInteractionSource() },
-                        indication = press,
-                        onClick = {
-                            if (tab != selected) {
-                                tick?.invoke()
-                                onSelect(tab)
-                            }
-                        },
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                    .padding(horizontal = 6.dp),
             ) {
-                Icon(
-                    imageVector = tab.icon,
-                    contentDescription = stringResource(tab.label),
-                    tint = if (lit) tab.color else IdleInk,
-                    modifier = Modifier.size(24.dp),
-                )
-                Text(
-                    text = stringResource(tab.label),
-                    modifier = Modifier.padding(top = 5.dp),
-                    color = if (lit) tab.color else IdleInk,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 11.sp,
-                    lineHeight = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .clickable(
+                            interactionSource = remember(tab) { MutableInteractionSource() },
+                            indication = press,
+                            onClick = {
+                                if (tab != selected) {
+                                    tick?.invoke()
+                                    onSelect(tab)
+                                }
+                            },
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = tab.icon,
+                        contentDescription = stringResource(tab.label),
+                        tint = if (lit) tab.color else IdleInk,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Text(
+                        text = stringResource(tab.label),
+                        modifier = Modifier.padding(top = 5.dp),
+                        color = if (lit) tab.color else IdleInk,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.sp,
+                        lineHeight = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (badge) {
+                    UpdateBadge(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(x = 16.dp, y = (-2).dp),
+                    )
+                }
             }
         }
     }

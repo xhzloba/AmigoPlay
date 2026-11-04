@@ -62,6 +62,13 @@
     <string name="settings_gyro_hint">Активная обложка сдвигается, когда наклоняешь телефон.</string>
     <string name="settings_about">О программе</string>
     <string name="settings_version">Версия</string>
+    <string name="update_current">Актуальная</string>
+    <string name="update_current_notice">Установлена актуальная версия</string>
+    <string name="update_available">Доступно обновление</string>
+    <string name="update_available_hint">Нажмите, чтобы скачать</string>
+    <string name="update_check">Проверить обновления</string>
+    <string name="update_checking">Проверка…</string>
+    <string name="update_check_failed">Не удалось проверить</string>
     <string name="changelog_added">Добавлено</string>
     <string name="changelog_fixed">Исправлено</string>
     <string name="changelog_more">Показать ещё</string>

@@ -18,11 +18,23 @@ class DownloadStatusTest {
     }
 
     @Test
-    fun notesGetADashPerLine() {
-        assertEquals(
-            "— Новый каталог\n— Скорость загрузки",
-            dashedNotes("Новый каталог\nСкорость загрузки"),
+    fun plainNotesAreAdded() {
+        val notes = releaseNotes("Новый каталог\n— Скорость загрузки")
+        assertEquals(listOf("Новый каталог", "Скорость загрузки"), notes.added)
+        assertEquals(emptyList<String>(), notes.fixed)
+    }
+
+    @Test
+    fun sectionHeadersSplitAddedAndFixed() {
+        val notes = releaseNotes(
+            """
+            Добавлено
+            — Логотип выше
+            Исправлено
+            — Тап после прокрутки
+            """.trimIndent(),
         )
-        assertEquals("— Уже с тире", dashedNotes("— Уже с тире"))
+        assertEquals(listOf("Логотип выше"), notes.added)
+        assertEquals(listOf("Тап после прокрутки"), notes.fixed)
     }
 }

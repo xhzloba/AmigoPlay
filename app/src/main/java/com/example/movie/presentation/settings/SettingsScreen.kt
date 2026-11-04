@@ -1,7 +1,9 @@
 package com.example.movie.presentation.settings
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +16,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,12 +56,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.BuildConfig
 import com.example.movie.R
 import com.example.movie.domain.model.UserSettings
+import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandTopInset
+import com.example.movie.presentation.update.LocalAppUpdate
+import com.example.movie.presentation.update.UpdateAlert
+import com.example.movie.presentation.update.UpdateBadge
+import com.example.movie.presentation.update.UpdateNotice
+import com.example.movie.presentation.update.UpdatePhase
+import com.example.movie.presentation.update.downloadStatus
 import com.example.movie.presentation.home.components.CategoryTabFontSize
 import com.example.movie.presentation.home.components.CategoryTabLetterSpacing
 import com.example.movie.presentation.home.components.CategoryTabLineHeight
+import com.example.movie.domain.model.AppRelease
+import com.example.movie.domain.model.DownloadProgress
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.CinemaMuted
+import com.example.movie.ui.theme.CinemaSurface
 
 private enum class SettingsSection {
     Interface,
@@ -178,16 +193,78 @@ private fun AboutPage(modifier: Modifier = Modifier) {
             lineHeight = 18.sp,
         )
         Spacer(Modifier.height(6.dp))
-        Text(
-            text = BuildConfig.VERSION_NAME,
+        val updates = LocalAppUpdate.current
+        val context = LocalContext.current
+        val tick = rememberHapticTick()
+        Row(
             modifier = Modifier.padding(horizontal = 22.dp),
-            color = VersionBlue,
-            fontWeight = FontWeight.Bold,
-            fontSize = 32.sp,
-            lineHeight = 38.sp,
-            letterSpacing = (-0.6).sp,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = BuildConfig.VERSION_NAME,
+                color = VersionBlue,
+                fontWeight = FontWeight.Bold,
+                fontSize = 32.sp,
+                lineHeight = 38.sp,
+                letterSpacing = (-0.6).sp,
+            )
+            if (updates.checked && updates.release == null) {
+                Text(
+                    text = stringResource(R.string.update_current),
+                    modifier = Modifier.padding(start = 12.dp),
+                    color = CinemaMuted,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
+            }
+        }
+        val offer = updates.release
+        if (offer != null) {
+            Spacer(Modifier.height(16.dp))
+            UpdateBanner(
+                release = offer,
+                phase = updates.phase,
+                progress = updates.progress,
+                onClick = {
+                    tick?.invoke()
+                    updates.download(context)
+                },
+            )
+        }
+        Text(
+            text = if (updates.checking) {
+                stringResource(R.string.update_checking)
+            } else {
+                stringResource(R.string.update_check)
+            },
+            modifier = Modifier
+                .padding(start = 22.dp, end = 22.dp, top = if (offer != null) 14.dp else 18.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = !updates.checking,
+                    onClick = {
+                        tick?.invoke()
+                        updates.refresh(present = true)
+                    },
+                ),
+            color = if (updates.checking) CinemaMuted else VersionBlue,
+            fontWeight = FontWeight.Medium,
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
         )
-        Spacer(Modifier.height(36.dp))
+        when (updates.notice) {
+            UpdateNotice.Current -> NoticeLine(
+                text = stringResource(R.string.update_current_notice),
+                color = CinemaMuted,
+            )
+            UpdateNotice.Failed -> NoticeLine(
+                text = stringResource(R.string.update_check_failed),
+                color = Color(0xFFE7B3B3),
+            )
+            null -> Unit
+        }
+        Spacer(Modifier.height(28.dp))
         var shown by rememberSaveable { mutableIntStateOf(ReleasePage) }
         val visible = Changelog.releases.take(shown)
         visible.forEachIndexed { index, release ->
@@ -226,6 +303,102 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                 text = stringResource(R.string.changelog_collapse),
                 onClick = { shown = ReleasePage },
             )
+        }
+    }
+}
+
+@Composable
+private fun NoticeLine(text: String, color: Color) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 8.dp),
+        color = color,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+    )
+}
+
+@Composable
+private fun UpdateBanner(
+    release: AppRelease,
+    phase: UpdatePhase,
+    progress: DownloadProgress,
+    onClick: () -> Unit,
+) {
+    val fraction by animateFloatAsState(
+        targetValue = progress.fraction,
+        animationSpec = tween(120),
+        label = "bannerProgress",
+    )
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 22.dp)
+            .fillMaxWidth()
+            .clip(shape)
+            .background(CinemaSurface)
+            .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                enabled = phase != UpdatePhase.Downloading,
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(UpdateAlert),
+            )
+            Text(
+                text = stringResource(R.string.update_available),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .weight(1f),
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+            )
+            Text(
+                text = release.versionName,
+                color = VersionBlue,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+            )
+        }
+        val hint = when (phase) {
+            UpdatePhase.Downloading -> downloadStatus(progress)
+            UpdatePhase.Failed -> stringResource(R.string.update_failed)
+            UpdatePhase.Ready -> stringResource(R.string.update_available_hint)
+        }
+        Text(
+            text = hint,
+            modifier = Modifier.padding(top = 4.dp),
+            color = if (phase == UpdatePhase.Failed) Color(0xFFE7B3B3) else CinemaMuted,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+        )
+        if (phase == UpdatePhase.Downloading) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.12f)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                        .background(Color.White),
+                )
+            }
         }
     }
 }
@@ -298,19 +471,27 @@ private fun SettingsTabs(
     ) {
         items(SettingsSection.entries, key = { it.name }) { section ->
             val on = section == selected
-            Text(
-                text = stringResource(section.label),
-                color = if (on) Color.White else Color(0xFF8A8A90),
-                fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-                fontSize = CategoryTabFontSize,
-                lineHeight = CategoryTabLineHeight,
-                letterSpacing = CategoryTabLetterSpacing,
+            val badge = section == SettingsSection.About && LocalAppUpdate.current.pending
+            Row(
                 modifier = Modifier.clickable(
                     interactionSource = remember(section) { MutableInteractionSource() },
                     indication = null,
                     onClick = { onSelect(section) },
                 ),
-            )
+                verticalAlignment = Alignment.Top,
+            ) {
+                Text(
+                    text = stringResource(section.label),
+                    color = if (on) Color.White else Color(0xFF8A8A90),
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                    fontSize = CategoryTabFontSize,
+                    lineHeight = CategoryTabLineHeight,
+                    letterSpacing = CategoryTabLetterSpacing,
+                )
+                if (badge) {
+                    UpdateBadge(Modifier.padding(start = 5.dp))
+                }
+            }
         }
     }
 }
