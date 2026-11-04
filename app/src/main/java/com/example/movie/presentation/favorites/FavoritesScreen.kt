@@ -97,6 +97,7 @@ import com.example.movie.domain.model.toMovie
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandLogoBleed
+import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.BrandWordmark
 import com.example.movie.presentation.home.components.MenuSombreroEffect
 import com.example.movie.presentation.home.components.LogoMood
@@ -188,7 +189,7 @@ internal fun FavoritesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    .padding(top = 32.dp),
+                    .padding(top = BrandTopInset),
             ) {
                 LibraryBrand(hat = logo.hat, mustache = logo.mustache)
                 FavoriteTabs(
@@ -224,7 +225,7 @@ internal fun FavoritesScreen(
                 contentPadding = PaddingValues(
                     start = 22.dp,
                     end = 22.dp,
-                    top = topInset + 32.dp + brandReserve + 12.dp,
+                    top = topInset + BrandTopInset + brandReserve + 12.dp,
                     bottom = 96.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -270,7 +271,7 @@ internal fun FavoritesScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    .padding(top = 32.dp)
+                    .padding(top = BrandTopInset)
                     .onSizeChanged { brandHeight = it.height },
             )
         }
@@ -316,7 +317,7 @@ private fun LibraryScrim(progress: Float, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxWidth()
-            .height(top + 32.dp + 40.dp + 96.dp)
+            .height(top + BrandTopInset + 40.dp + 96.dp)
             .graphicsLayer { alpha = progress }
             .drawBehind {
                 drawRect(
@@ -328,7 +329,7 @@ private fun LibraryScrim(progress: Float, modifier: Modifier = Modifier) {
                         1f to Color.Transparent,
                     ),
                 )
-                val y = top.toPx() + 32.dp.toPx() + 20.dp.toPx()
+                val y = top.toPx() + BrandTopInset.toPx() + 20.dp.toPx()
                 val radius = 140.dp.toPx()
                 val logoWidth = 36.dp.toPx() * (754f / 186f)
                 val logoX = (22.dp - BrandLogoBleed).toPx() + logoWidth / 2f

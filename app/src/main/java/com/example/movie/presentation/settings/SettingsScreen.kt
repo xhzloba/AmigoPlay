@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.BuildConfig
 import com.example.movie.R
 import com.example.movie.domain.model.UserSettings
+import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.CategoryTabFontSize
 import com.example.movie.presentation.home.components.CategoryTabLetterSpacing
 import com.example.movie.presentation.home.components.CategoryTabLineHeight
@@ -101,7 +102,7 @@ private fun SettingsScreen(
             .fillMaxSize()
             .background(CinemaBlack)
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .padding(top = 32.dp),
+            .padding(top = BrandTopInset),
     ) {
         SettingsTabs(
             selected = section,

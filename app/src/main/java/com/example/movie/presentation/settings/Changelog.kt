@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.32.0",
+            added = listOf(
+                "Логотип AmigoPlay, поиск, каталог, «Мое», меню настроек и шапка страницы со всеми фильмами полки стоят на одной высоте, выше прежней.",
+                "Капсулы, вкладки и сетка под логотипом поднимаются вместе с ним.",
+            ),
+        ),
+        Release(
             version = "1.31.0",
             added = listOf(
                 "Капсулы меню с третьей прокручиваются в центр. Первая и вторая остаются у левого края, возврат к ним прокручивает ряд обратно.",

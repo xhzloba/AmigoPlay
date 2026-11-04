@@ -61,6 +61,7 @@ import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.HomeContentInset
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
@@ -119,7 +120,7 @@ private fun SectionPage(
     val grid = rememberLazyGridState()
     val density = LocalDensity.current
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
-    val header = top + 32.dp + 36.dp + 18.dp
+    val header = top + BrandTopInset + 36.dp + 18.dp
     val scrim = if (grid.firstVisibleItemIndex > 0) {
         1f
     } else {
@@ -168,7 +169,7 @@ private fun SectionBar(title: String, onBack: () -> Unit, modifier: Modifier = M
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-            .padding(top = 32.dp)
+            .padding(top = BrandTopInset)
             .height(36.dp)
             .padding(end = HomeContentInset),
         verticalAlignment = Alignment.CenterVertically,
@@ -253,7 +254,7 @@ private fun SectionScrim(progress: Float, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxWidth()
-            .height(top + 32.dp + 40.dp + 96.dp)
+            .height(top + BrandTopInset + 40.dp + 96.dp)
             .graphicsLayer { alpha = progress }
             .drawBehind {
                 drawRect(
@@ -265,7 +266,7 @@ private fun SectionScrim(progress: Float, modifier: Modifier = Modifier) {
                         1f to Color.Transparent,
                     ),
                 )
-                val y = top.toPx() + 32.dp.toPx() + 18.dp.toPx()
+                val y = top.toPx() + BrandTopInset.toPx() + 18.dp.toPx()
                 val radius = 140.dp.toPx()
                 val backX = HomeContentInset.toPx() + 4.dp.toPx()
                 fun pool(center: Offset) {

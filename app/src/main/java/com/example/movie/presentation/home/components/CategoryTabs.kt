@@ -87,6 +87,7 @@ internal val CategoryTabLetterSpacing = (-0.2).sp
 private val LogoHeight = 36.dp
 private val LogoAspect = 754f / 186f
 internal val HomeContentInset = 22.dp
+internal val BrandTopInset = 16.dp
 internal val BrandLogoBleed = LogoHeight * (29f / 186f)
 private val LetterACenter = LogoHeight * (75f / 186f)
 private val LetterATop = LogoHeight * (42f / 186f)

@@ -74,6 +74,7 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandRow
+import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
 import com.example.movie.presentation.home.components.CoverStackSkeleton
@@ -189,7 +190,7 @@ fun HomeScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    .padding(top = 32.dp),
+                    .padding(top = BrandTopInset),
             ) {
                 CategoryTabs(
                     shelves = state.shelves,
@@ -265,7 +266,7 @@ fun HomeScreen(
                             maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
                         }
                         .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                        .padding(top = 32.dp),
+                        .padding(top = BrandTopInset),
                 ) {
                 Column(Modifier.fillMaxWidth()) {
                     Spacer(Modifier.height(brandReserve + 12.dp + tabsHeight))
@@ -363,7 +364,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    .padding(top = 32.dp)
+                    .padding(top = BrandTopInset)
                     .onSizeChanged { brandHeight = it.height },
             )
             }
@@ -382,7 +383,7 @@ private fun BrandScrim(progress: Float, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxWidth()
-            .height(top + 32.dp + 40.dp + 96.dp)
+            .height(top + BrandTopInset + 40.dp + 96.dp)
             .graphicsLayer { alpha = progress }
             .drawBehind {
                 drawRect(
@@ -394,7 +395,7 @@ private fun BrandScrim(progress: Float, modifier: Modifier = Modifier) {
                         1f to Color.Transparent,
                     ),
                 )
-                val y = top.toPx() + 32.dp.toPx() + 20.dp.toPx()
+                val y = top.toPx() + BrandTopInset.toPx() + 20.dp.toPx()
                 val radius = 140.dp.toPx()
                 val logoWidth = 36.dp.toPx() * (754f / 186f)
                 val logoX = (22.dp - BrandLogoBleed).toPx() + logoWidth / 2f
@@ -446,7 +447,7 @@ private fun DataError.message(): String = when (this) {
 
 @Composable
 private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(top = 32.dp)) {
+    Column(modifier = modifier.padding(top = BrandTopInset)) {
         CategoryTabsSkeleton(onSearch = onSearch)
         Spacer(Modifier.height(36.dp))
         CoverStackSkeleton(Modifier.fillMaxWidth())

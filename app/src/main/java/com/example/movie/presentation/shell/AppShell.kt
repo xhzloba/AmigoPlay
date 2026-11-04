@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.favorites.FavoritesScreen
+import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.HomeRoute
 import com.example.movie.presentation.home.HomeSection
@@ -145,7 +146,7 @@ private fun SectionScreen(title: String) {
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
-            .padding(top = 28.dp, bottom = 96.dp),
+            .padding(top = BrandTopInset, bottom = 96.dp),
     ) {
         Text(
             text = title,
