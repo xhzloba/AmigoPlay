@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,7 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaMuted
 
-internal val PosterCaptionBlock = 42.dp
+internal val PosterCaptionBlock = 46.dp
 
 @Composable
 internal fun posterTitlesOn(): Boolean {
@@ -40,15 +42,17 @@ internal fun PosterCaption(title: String, year: Int?, modifier: Modifier = Modif
             color = Color.White,
             fontSize = 12.sp,
             lineHeight = 15.sp,
+            fontWeight = FontWeight.SemiBold,
             style = style,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        Spacer(Modifier.height(4.dp))
         Text(
             text = year?.toString().orEmpty(),
             color = CinemaMuted,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
+            fontSize = 12.sp,
+            lineHeight = 15.sp,
             style = style,
             maxLines = 1,
         )
@@ -61,19 +65,19 @@ internal fun PosterCaptionSkeleton(modifier: Modifier = Modifier) {
         modifier
             .padding(top = 10.dp)
             .height(PosterCaptionBlock - 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             Modifier
                 .fillMaxWidth(0.82f)
-                .height(9.dp)
+                .height(11.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(Color.White.copy(alpha = 0.10f)),
         )
         Box(
             Modifier
                 .fillMaxWidth(0.36f)
-                .height(8.dp)
+                .height(10.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(Color.White.copy(alpha = 0.06f)),
         )
