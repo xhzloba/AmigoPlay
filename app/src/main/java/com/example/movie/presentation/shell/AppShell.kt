@@ -2,6 +2,9 @@ package com.example.movie.presentation.shell
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +31,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -88,15 +93,30 @@ fun AppShell(
     val keyboard = LocalSoftwareKeyboardController.current
     var peek by remember { mutableStateOf<Movie?>(null) }
     var sectionName by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchCover by remember { mutableFloatStateOf(0f) }
     val section = sectionName?.let { runCatching { HomeSection.valueOf(it) }.getOrNull() }
         ?.takeIf { tab == AppTab.Home }
+    val sectionVeil = remember { Animatable(0f) }
+    var sectionShown by remember { mutableStateOf<HomeSection?>(null) }
+    LaunchedEffect(section) {
+        if (section != null) {
+            sectionShown = section
+            sectionVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        } else if (sectionShown != null) {
+            sectionVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+            sectionShown = null
+        }
+    }
+    val sectionAlpha = if (sectionShown != null) sectionVeil.value else 0f
     LaunchedEffect(peek) {
         if (peek != null) keyboard?.hide()
     }
-    BackHandler(enabled = handleBack && (peek != null || section != null || tab != AppTab.Home)) {
+    BackHandler(
+        enabled = handleBack && (peek != null || sectionShown != null || tab != AppTab.Home),
+    ) {
         when {
             peek != null -> peek = null
-            section != null -> sectionName = null
+            tab == AppTab.Home && sectionShown != null -> sectionName = null
             else -> onTabChange(AppTab.Home.name)
         }
     }
@@ -108,12 +128,17 @@ fun AppShell(
             .fillMaxSize()
             .background(CinemaBlack),
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = 1f - sectionAlpha },
+        ) {
             when (tab) {
                 AppTab.Home -> HomeRoute(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
                     onOpenSection = { sectionName = it.name },
+                    onSearchCover = { searchCover = it },
                     session = session,
                 )
                 AppTab.Catalog -> SectionScreen(title = stringResource(R.string.nav_catalog))
@@ -124,20 +149,26 @@ fun AppShell(
                 AppTab.Settings -> SettingsRoute()
             }
         }
-        if (section != null) {
+        val shown = sectionShown
+        if (shown != null) {
             SectionRoute(
-                section = section,
+                section = shown,
                 onBack = { sectionName = null },
                 onMovieClick = onMovieClick,
                 onMoviePeek = { peek = it },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = sectionAlpha },
             )
         }
-        if (section == null) {
+        val barAlpha = (1f - searchCover) * (1f - sectionAlpha)
+        if (barAlpha > 0.02f) {
             AppBottomBar(
                 selected = tab,
                 onSelect = { next -> onTabChange(next.name) },
-                modifier = Modifier.align(Alignment.BottomCenter),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer { alpha = barAlpha },
             )
         }
         MoviePeek(

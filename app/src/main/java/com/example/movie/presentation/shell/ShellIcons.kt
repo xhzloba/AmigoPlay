@@ -16,6 +16,9 @@ internal object ShellIcons {
     val settings: ImageVector = sliders()
     val media: ImageVector = icon(filled = false) { media() }
     val search: ImageVector = icon(filled = false) { magnifier() }
+    val mic: ImageVector = icon(filled = false) { mic() }
+    val close: ImageVector = icon(filled = false) { cross() }
+    val history: ImageVector = icon(filled = false) { clock() }
     val chevron: ImageVector = chevron(forward = true)
     val back: ImageVector = chevron(forward = false)
 }
@@ -106,6 +109,37 @@ private fun chevron(forward: Boolean): ImageVector = ImageVector.Builder(
         }
     }
 }.build()
+
+private fun PathBuilder.cross() {
+    moveTo(6.4f, 6.4f)
+    lineTo(17.6f, 17.6f)
+    moveTo(17.6f, 6.4f)
+    lineTo(6.4f, 17.6f)
+}
+
+private fun PathBuilder.clock() {
+    moveTo(19.2f, 12f)
+    arcTo(7.2f, 7.2f, 0f, true, true, 4.8f, 12f)
+    arcTo(7.2f, 7.2f, 0f, true, true, 19.2f, 12f)
+    close()
+    moveTo(12f, 7.4f)
+    lineTo(12f, 12.2f)
+    lineTo(15.4f, 14.2f)
+}
+
+private fun PathBuilder.mic() {
+    moveTo(9f, 6.2f)
+    quadTo(9f, 3.2f, 12f, 3.2f)
+    quadTo(15f, 3.2f, 15f, 6.2f)
+    lineTo(15f, 11.2f)
+    quadTo(15f, 14.2f, 12f, 14.2f)
+    quadTo(9f, 14.2f, 9f, 11.2f)
+    close()
+    moveTo(6.4f, 11f)
+    arcTo(5.6f, 5.6f, 0f, false, false, 17.6f, 11f)
+    moveTo(12f, 16.6f)
+    lineTo(12f, 20.6f)
+}
 
 private fun PathBuilder.magnifier() {
     moveTo(16.6f, 10.4f)

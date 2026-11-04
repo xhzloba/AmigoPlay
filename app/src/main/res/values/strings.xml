@@ -38,8 +38,12 @@
     <string name="section_top">Топ 250 фильмов</string>
     <string name="section_best">Лучшее</string>
     <string name="search">Поиск</string>
-    <string name="search_hint">Фильм или сериал</string>
+    <string name="search_hint">Поиск в AmigoPlay</string>
     <string name="search_cancel">Отмена</string>
+    <string name="search_recent">Последние запросы</string>
+    <string name="search_clear">Удалить</string>
+    <string name="search_close">Закрыть поиск</string>
+    <string name="search_voice">Голосовой поиск</string>
     <string name="nav_home">Главная</string>
     <string name="nav_catalog">Каталог</string>
     <string name="nav_favorites">Мое</string>

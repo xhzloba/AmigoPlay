@@ -8,6 +8,7 @@ import com.example.movie.data.favorites.WatchedStore
 import com.example.movie.data.remote.GithubApi
 import com.example.movie.data.remote.VokinoApi
 import com.example.movie.data.repository.MovieRepositoryImpl
+import com.example.movie.data.search.SearchHistoryStore
 import com.example.movie.data.settings.UserSettingsStore
 import com.example.movie.data.update.ApkUpdateInstaller
 import com.example.movie.data.update.GithubUpdateRepository
@@ -30,6 +31,7 @@ class AppContainer(context: Context) {
     val userSettings: UserSettingsRepository = UserSettingsStore(context)
     val favorites = FavoriteStore(context)
     val watched = WatchedStore(context)
+    val searchHistory = SearchHistoryStore(context)
     private val json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true

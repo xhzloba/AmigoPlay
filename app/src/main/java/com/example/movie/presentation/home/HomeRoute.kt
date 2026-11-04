@@ -13,6 +13,7 @@ fun HomeRoute(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onOpenSection: (HomeSection) -> Unit,
+    onSearchCover: (Float) -> Unit = {},
     session: Int = 0,
 ) {
     val container = LocalAppContainer.current
@@ -23,6 +24,7 @@ fun HomeRoute(
             getRecommendations = container.getRecommendations,
             getTopMovies = container.getTopMovies,
             searchMovies = container.searchMovies,
+            searchHistory = container.searchHistory,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -38,6 +40,8 @@ fun HomeRoute(
         onOpenSearch = viewModel::openSearch,
         onSearchQuery = viewModel::search,
         onCloseSearch = viewModel::closeSearch,
+        onClearRecent = viewModel::clearRecent,
         onOpenSection = onOpenSection,
+        onSearchCover = onSearchCover,
     )
 }

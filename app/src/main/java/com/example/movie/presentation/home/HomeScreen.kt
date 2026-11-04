@@ -41,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -106,7 +107,9 @@ fun HomeScreen(
     onOpenSearch: () -> Unit,
     onSearchQuery: (String) -> Unit,
     onCloseSearch: () -> Unit,
+    onClearRecent: () -> Unit,
     onOpenSection: (HomeSection) -> Unit = {},
+    onSearchCover: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val playAnim = remember { Animatable(PlayBlue) }
@@ -135,23 +138,29 @@ fun HomeScreen(
     val play = playAnim.value
     val logo = remember { LogoMood() }
     BackHandler(enabled = state.searchOpen, onBack = onCloseSearch)
-    if (state.searchOpen) {
-        SearchPage(
-            query = state.searchQuery,
-            results = state.searchResults,
-            searching = state.searching,
-            error = state.searchError,
-            onQuery = onSearchQuery,
-            onClose = onCloseSearch,
-            onMovieClick = onMovieClick,
-            onMoviePeek = onMoviePeek,
-        )
-        return
+    val veil = remember { androidx.compose.animation.core.Animatable(0f) }
+    var searchCover by remember { mutableStateOf(false) }
+    LaunchedEffect(state.searchOpen) {
+        if (state.searchOpen) {
+            searchCover = true
+            veil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        } else if (searchCover) {
+            veil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+            searchCover = false
+        }
     }
+    val cover = if (searchCover) veil.value else 0f
+    SideEffect { onSearchCover(cover) }
+    Box(modifier = modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = 1f - veil.value },
+        ) {
     val background = MaterialTheme.colorScheme.background
     if (state.shelves.isEmpty()) {
         Box(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .background(background)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
@@ -173,12 +182,10 @@ fun HomeScreen(
                 )
             }
         }
-        return
-    }
-
+    } else {
     val blocked = (state.phase is HomePhase.Failed || state.phase is HomePhase.Empty) && state.movies.isEmpty()
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(background)
             .windowInsetsPadding(
@@ -368,6 +375,24 @@ fun HomeScreen(
             }
         }
     }
+    }
+        }
+        if (searchCover) {
+            SearchPage(
+                query = state.searchQuery,
+                results = state.searchResults,
+                searching = state.searching,
+                error = state.searchError,
+                recent = state.recentQueries,
+                onQuery = onSearchQuery,
+                onClose = onCloseSearch,
+                onClearRecent = onClearRecent,
+                onMovieClick = onMovieClick,
+                onMoviePeek = onMoviePeek,
+                modifier = Modifier.graphicsLayer { alpha = veil.value },
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -543,6 +568,7 @@ private fun HomeScreenPreview() {
             onOpenSearch = {},
             onSearchQuery = {},
             onCloseSearch = {},
+            onClearRecent = {},
         )
     }
 }

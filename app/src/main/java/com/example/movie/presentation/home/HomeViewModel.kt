@@ -9,6 +9,7 @@ import com.example.movie.domain.usecase.GetHomeShelvesUseCase
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
 import com.example.movie.domain.usecase.GetTopMoviesUseCase
+import com.example.movie.data.search.SearchHistoryStore
 import com.example.movie.domain.usecase.SearchMoviesUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,11 +24,12 @@ class HomeViewModel(
     private val getRecommendations: GetRecommendationsUseCase,
     private val getTopMovies: GetTopMoviesUseCase,
     private val searchMovies: SearchMoviesUseCase,
+    private val searchHistory: SearchHistoryStore,
 ) : ViewModel() {
     private val cache = mutableMapOf<String, List<Movie>>()
     private var moviesJob: Job? = null
     private var searchJob: Job? = null
-    private val _state = MutableStateFlow(HomeUiState())
+    private val _state = MutableStateFlow(HomeUiState(recentQueries = searchHistory.items()))
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
     init {
@@ -52,7 +54,13 @@ class HomeViewModel(
             searchResults = emptyList(),
             searching = false,
             searchError = null,
+            recentQueries = searchHistory.items(),
         )
+    }
+
+    fun clearRecent() {
+        searchHistory.clear()
+        _state.value = _state.value.copy(recentQueries = emptyList())
     }
 
     fun closeSearch() {
@@ -80,7 +88,12 @@ class HomeViewModel(
             searchMovies(query)
                 .onSuccess { movies ->
                     if (_state.value.searchQuery.trim() != query) return@onSuccess
-                    _state.value = _state.value.copy(searchResults = movies, searching = false)
+                    searchHistory.remember(query)
+                    _state.value = _state.value.copy(
+                        searchResults = movies,
+                        searching = false,
+                        recentQueries = searchHistory.items(),
+                    )
                 }
                 .onFailure { error ->
                     if (_state.value.searchQuery.trim() != query) return@onFailure
