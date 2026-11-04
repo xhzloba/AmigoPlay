@@ -82,6 +82,7 @@ import com.example.movie.ui.theme.PlayBlue
 private val SheetShape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
 private val PopupShape = RoundedCornerShape(22.dp)
 private val Scrim = Color.Black.copy(alpha = 0.55f)
+private val MenuScrim = Color(0xFF3A3A3E).copy(alpha = 0.86f)
 private val RowInk = Color(0xFFE8E8EC)
 
 private enum class PeekPage {
@@ -118,6 +119,7 @@ internal fun MoviePeek(
             onDismiss = {
                 if (!suppressDismiss) onDismiss()
             },
+            onWatch = { onOpen(shown.id) },
             onSummary = {
                 suppressDismiss = true
                 page = PeekPage.Summary
@@ -136,6 +138,7 @@ internal fun MoviePeek(
 private fun MovieMenu(
     movie: Movie,
     onDismiss: () -> Unit,
+    onWatch: () -> Unit,
     onSummary: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -151,7 +154,7 @@ private fun MovieMenu(
         sheetState = sheetState,
         containerColor = CinemaBlack,
         contentColor = Color.White,
-        scrimColor = Scrim,
+        scrimColor = MenuScrim,
         dragHandle = null,
         shape = SheetShape,
         tonalElevation = 0.dp,
@@ -178,6 +181,14 @@ private fun MovieMenu(
             )
             MenuHeading(movie)
             Spacer(Modifier.height(6.dp))
+            MenuRow(
+                icon = PlayIcon,
+                label = stringResource(R.string.menu_watch),
+                onClick = {
+                    tick?.invoke()
+                    onWatch()
+                },
+            )
             MenuRow(
                 icon = OverviewIcon,
                 label = stringResource(R.string.menu_overview),
@@ -467,6 +478,13 @@ private fun OverviewPopup(
             }
         }
     }
+}
+
+private val PlayIcon = strokeIcon("play") {
+    moveTo(9f, 6.4f)
+    lineTo(18.4f, 12f)
+    lineTo(9f, 17.6f)
+    close()
 }
 
 private val OverviewIcon = strokeIcon("overview") {

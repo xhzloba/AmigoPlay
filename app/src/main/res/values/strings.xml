@@ -10,6 +10,7 @@
     <string name="watch_now">Смотреть</string>
     <string name="age_badge">%1$d+</string>
     <string name="peek_director">Режиссёр</string>
+    <string name="menu_watch">Смотреть</string>
     <string name="menu_overview">Краткое описание</string>
     <string name="menu_overview_empty">Описания нет</string>
     <string name="menu_favorite_add">Добавить в избранное</string>
