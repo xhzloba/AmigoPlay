@@ -6,6 +6,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import androidx.compose.animation.core.Animatable
@@ -246,6 +247,7 @@ fun PosterCarousel(
     val tilt = rememberCoverTilt()
     val tick = rememberHapticTick()
     HapticOnChange(pagerState) { pagerState.currentPage }
+    HapticOnAppend { movies.map { it.id } }
     SettleEffect(pagerState, { pagerState.isScrollInProgress }, onSettled)
 
     LaunchedEffect(movies) {

@@ -49,6 +49,7 @@ import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
+import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.shell.ShellIcons
@@ -115,6 +116,7 @@ internal fun RecommendationRail(
     onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit = {},
 ) {
+    HapticOnAppend { movies.map { it.id } }
     Column(modifier = modifier.fillMaxWidth()) {
         if (title != null) {
             RailTitle(title = title, onClick = onOpen)

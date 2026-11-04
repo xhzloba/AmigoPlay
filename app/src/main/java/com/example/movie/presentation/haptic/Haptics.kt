@@ -120,3 +120,19 @@ private fun rememberScrollTicks(): ((Int) -> Unit)? {
     }
     return if (vibrator?.hasVibrator() == true && hapticOn.haptic) play else null
 }
+
+@Composable
+internal fun HapticOnAppend(ids: () -> List<String>) {
+    val ticks = rememberScrollTicks()
+    LaunchedEffect(ticks) {
+        val perform = ticks ?: return@LaunchedEffect
+        var previous = emptyList<String>()
+        snapshotFlow(ids).collect { value ->
+            val grew = previous.isNotEmpty() &&
+                value.size > previous.size &&
+                value.subList(0, previous.size) == previous
+            previous = value
+            if (grew) perform(1)
+        }
+    }
+}

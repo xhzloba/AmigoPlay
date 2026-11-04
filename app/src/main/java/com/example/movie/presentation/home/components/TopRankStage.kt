@@ -88,6 +88,7 @@ import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
+import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.PosterShape
@@ -121,6 +122,7 @@ internal fun TopRankStage(
     onSettled: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    HapticOnAppend { movies.map { it.id } }
     Column(modifier = modifier.fillMaxWidth()) {
         RailTitle(title = title, onClick = onOpen)
         Spacer(Modifier.height(14.dp))

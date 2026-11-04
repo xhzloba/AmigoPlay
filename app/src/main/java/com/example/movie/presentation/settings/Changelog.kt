@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.33.2",
+            added = listOf(
+                "Когда в ленте подгружаются следующие фильмы, один виброотклик. На странице полки, в главном слайдере и в рядах, если список вырос.",
+            ),
+        ),
+        Release(
             version = "1.33.1",
             fixed = listOf(
                 "Виброотклик при прокрутке срабатывает и на быстром свайпе. В слайдерах и в пунктах меню.",

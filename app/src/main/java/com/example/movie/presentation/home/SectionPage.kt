@@ -60,6 +60,7 @@ import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
+import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.HomeContentInset
@@ -221,6 +222,7 @@ private fun PosterGrid(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
 ) {
+    HapticOnAppend { movies.map { it.id } }
     LaunchedEffect(state, movies.size, end, error) {
         if (end || error != null) return@LaunchedEffect
         snapshotFlow { state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
