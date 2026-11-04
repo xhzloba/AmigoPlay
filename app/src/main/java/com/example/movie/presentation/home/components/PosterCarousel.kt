@@ -422,14 +422,6 @@ fun PosterCarousel(
                             wave = wave,
                         )
                         .holdCue(holdProgress)
-                        .clickable(
-                            interactionSource = remember(movie.id) { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                tick?.invoke()
-                                onMovieClick(movie.id)
-                            },
-                        )
                         .drawWithContent {
                             drawContent()
                             if (!active || !posterReady || travel <= 0f || travel >= 1f) return@drawWithContent

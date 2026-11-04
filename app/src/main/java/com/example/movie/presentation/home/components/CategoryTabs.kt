@@ -11,9 +11,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -55,11 +57,14 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +72,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import com.example.movie.R
 import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.haptic.HapticOnChange
@@ -94,6 +100,8 @@ private val MustacheWidth = LogoHeight * (92f / 186f) * 1.4f
 private val MustacheHeight = MustacheWidth * (348f / 892f)
 private const val MustacheX = 443f / 892f
 private const val MustacheY = 207f / 348f
+
+private const val LeftPinnedShelves = 2
 
 private val CapsuleInk = Color.White
 private val CapsuleIdleInk = Color(0xFFC7C7CC)
@@ -123,34 +131,83 @@ internal fun CategoryTabs(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    MenuSombreroEffect(listState, onMenuSettled)
+    var centering by remember { mutableStateOf(false) }
+    MenuSombreroEffect(listState, onMenuSettled) { centering }
     HapticOnChange(listState) { listState.passedTab() }
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val capsuleStyle = remember {
+        TextStyle(
+            fontWeight = FontWeight.Normal,
+            fontSize = CategoryTabFontSize,
+            lineHeight = CategoryTabLineHeight,
+            letterSpacing = CategoryTabLetterSpacing,
+        )
+    }
+    val capsulePad = with(density) { 40.dp.roundToPx() }
+    val inset = with(density) { HomeContentInset.roundToPx() }
     LaunchedEffect(selectedId, shelves) {
         val index = shelves.indexOfFirst { it.id == selectedId }
         if (index < 0) return@LaunchedEffect
-        val visible = listState.layoutInfo.visibleItemsInfo.any { it.index == index }
-        if (!visible) listState.animateScrollToItem(index)
-    }
-    Column(modifier = modifier) {
-        if (showBrand) {
-            BrandRow(play = play.value, onSearch = onSearch, hat = hat, mustache = mustache)
-            Spacer(Modifier.height(12.dp))
-        }
-        LazyRow(
-            state = listState,
-            contentPadding = PaddingValues(start = HomeContentInset, end = HomeContentInset),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-        items(shelves, key = { it.id }) { shelf ->
-            ShelfCapsule(
-                title = shelf.title,
-                selected = shelf.id == selectedId,
-                border = border,
-                onClick = { onSelect(shelf.id) },
-            )
-        }
+        snapshotFlow { listState.layoutInfo.viewportSize.width }.first { it > 0 }
+        centering = true
+        try {
+            if (index < LeftPinnedShelves) {
+                listState.alignStart()
+            } else {
+                val estimated = measurer.measure(
+                    text = shelves[index].title,
+                    style = capsuleStyle,
+                    maxLines = 1,
+                ).size.width + capsulePad
+                listState.centerItem(index, estimated, inset)
+            }
+            snapshotFlow { listState.isScrollInProgress }.first { !it }
+        } finally {
+            centering = false
         }
     }
+    BoxWithConstraints(modifier = modifier) {
+        val side = maxWidth / 2
+        Column {
+            if (showBrand) {
+                BrandRow(play = play.value, onSearch = onSearch, hat = hat, mustache = mustache)
+                Spacer(Modifier.height(12.dp))
+            }
+            LazyRow(
+                state = listState,
+                contentPadding = PaddingValues(start = HomeContentInset),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                items(shelves, key = { it.id }) { shelf ->
+                    ShelfCapsule(
+                        title = shelf.title,
+                        selected = shelf.id == selectedId,
+                        border = border,
+                        onClick = { onSelect(shelf.id) },
+                    )
+                }
+                item(key = "tail") { Spacer(Modifier.width(side)) }
+            }
+        }
+    }
+}
+
+private suspend fun LazyListState.alignStart() {
+    if (firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset == 0) return
+    animateScrollToItem(0)
+}
+
+private suspend fun LazyListState.centerItem(index: Int, estimated: Int, inset: Int) {
+    val viewport = layoutInfo.viewportSize.width
+    if (viewport <= 0) return
+    if (layoutInfo.visibleItemsInfo.none { it.index == index }) {
+        animateScrollToItem(index, estimated / 2 - viewport / 2)
+    }
+    val placed = layoutInfo.visibleItemsInfo.firstOrNull { it.index == index } ?: return
+    val delta = placed.offset + inset + placed.size / 2 - viewport / 2
+    if (delta == 0) return
+    animateScrollBy(delta.toFloat())
 }
 
 private fun LazyListState.passedTab(): Int {
@@ -251,8 +308,12 @@ internal fun BrandRow(
 private data class SplitLogo(val amigo: ImageBitmap, val play: ImageBitmap)
 
 @Composable
-internal fun MenuSombreroEffect(listState: LazyListState, onSettled: () -> Unit) {
-    SettleEffect(listState, { listState.isScrollInProgress }, onSettled)
+internal fun MenuSombreroEffect(
+    listState: LazyListState,
+    onSettled: () -> Unit,
+    suspended: () -> Boolean = { false },
+) {
+    SettleEffect(listState, { listState.isScrollInProgress && !suspended() }, onSettled)
 }
 
 @Composable

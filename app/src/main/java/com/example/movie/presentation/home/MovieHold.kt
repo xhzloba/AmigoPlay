@@ -31,6 +31,9 @@ import com.example.movie.presentation.haptic.rememberHoldHaptic
 import kotlin.math.PI
 import kotlin.math.hypot
 import kotlin.math.sin
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -39,6 +42,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private const val HoldMillis = 450L
 private const val PressMillis = 110L
+private const val PressInMillis = 70
+private const val PressOutMillis = 160
 private const val BuzzMillis = 280L
 
 internal class PosterWave {
@@ -50,11 +55,13 @@ internal class PosterWave {
         private set
     var killed by mutableStateOf(false)
         private set
+    private var settle = CompletableDeferred<Unit>().apply { complete(Unit) }
 
     fun press(at: Offset) {
         origin = at
         released = false
         killed = false
+        settle = CompletableDeferred()
         token += 1
     }
 
@@ -65,6 +72,12 @@ internal class PosterWave {
     fun kill() {
         killed = true
     }
+
+    fun gate(): CompletableDeferred<Unit> = settle
+
+    suspend fun awaitSettled() {
+        settle.await()
+    }
 }
 
 @Composable
@@ -73,20 +86,25 @@ internal fun Modifier.posterWave(wave: PosterWave): Modifier {
     val ink = remember { Animatable(0f) }
     LaunchedEffect(wave.token) {
         if (wave.token == 0) return@LaunchedEffect
-        radius.snapTo(0.18f)
-        ink.snapTo(1f)
-        val grow = launch {
-            radius.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
-        }
-        snapshotFlow { wave.killed to wave.released }.first { it.first || it.second }
-        if (wave.killed) {
-            grow.cancel()
-            radius.snapTo(0f)
-            ink.snapTo(0f)
-        } else {
-            grow.join()
-            ink.animateTo(0f, tween(150, easing = FastOutSlowInEasing))
-            radius.snapTo(0f)
+        val gate = wave.gate()
+        try {
+            radius.snapTo(0.18f)
+            ink.snapTo(1f)
+            val grow = launch {
+                radius.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+            }
+            snapshotFlow { wave.killed to wave.released }.first { it.first || it.second }
+            if (wave.killed) {
+                grow.cancel()
+                radius.snapTo(0f)
+                ink.snapTo(0f)
+            } else {
+                grow.join()
+                ink.animateTo(0f, tween(150, easing = FastOutSlowInEasing))
+                radius.snapTo(0f)
+            }
+        } finally {
+            if (!gate.isCompleted) gate.complete(Unit)
         }
     }
     return drawWithContent {
@@ -124,7 +142,7 @@ internal fun rememberPressScale(pressed: Boolean): Float {
     return animateFloatAsState(
         targetValue = if (pressed) 0.968f else 1f,
         animationSpec = tween(
-            durationMillis = if (pressed) 70 else 160,
+            durationMillis = if (pressed) PressInMillis else PressOutMillis,
             easing = FastOutSlowInEasing,
         ),
         label = "press-in",
@@ -159,6 +177,11 @@ internal fun Modifier.holdToPeek(
         val at = coordinates.positionInWindow()
         window[0] = at.x
         window[1] = at.y
+    }.semantics {
+        onClick {
+            clicks[0].invoke()
+            true
+        }
     }.pointerInput(Unit) {
         val slop = viewConfiguration.touchSlop
         var pressEpoch = 0
@@ -167,7 +190,6 @@ internal fun Modifier.holdToPeek(
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 val origin = down.position
                 val originFinger = fingerOnScreen(window, down)
-                val scrollTookDown = down.isConsumed
                 val started = System.nanoTime()
                 val pressToken = ++pressEpoch
                 waves[0]?.press(origin)
@@ -178,7 +200,7 @@ internal fun Modifier.holdToPeek(
                 }
                 var draggedAway = false
                 var releaseDelay = 0L
-                var armClick = false
+                var openDetail = false
                 try {
                     val tapped = withTimeoutOrNull(HoldMillis) {
                         while (true) {
@@ -187,7 +209,10 @@ internal fun Modifier.holdToPeek(
                             val dragged = change != null &&
                                 (fingerOnScreen(window, change) - originFinger).getDistance() > slop
                             if (dragged || change == null) return@withTimeoutOrNull false
-                            if (!change.pressed) return@withTimeoutOrNull true
+                            if (!change.pressed) {
+                                change.consume()
+                                return@withTimeoutOrNull true
+                            }
                         }
                         @Suppress("UNREACHABLE_CODE")
                         false
@@ -197,7 +222,7 @@ internal fun Modifier.holdToPeek(
                     } else if (tapped == true) {
                         val elapsed = (System.nanoTime() - started) / 1_000_000
                         if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
-                        armClick = scrollTookDown
+                        openDetail = true
                     } else {
                         buzz.cancel()
                         motor[0]?.stop()
@@ -211,15 +236,22 @@ internal fun Modifier.holdToPeek(
                 } finally {
                     buzz.cancel()
                     motor[0]?.stop()
+                    if (draggedAway) waves[0]?.kill() else waves[0]?.release()
                     val mine = pressToken
                     val hold = releaseDelay
+                    val open = openDetail
                     launch {
                         if (hold > 0) delay(hold)
-                        if (pressEpoch == mine) presser[0].invoke(false)
+                        if (pressEpoch != mine) return@launch
+                        presser[0].invoke(false)
+                        if (!open) return@launch
+                        coroutineScope {
+                            launch { delay(PressOutMillis.toLong()) }
+                            launch { waves[0]?.awaitSettled() }
+                        }
+                        if (pressEpoch == mine) clicks[0].invoke()
                     }
-                    if (draggedAway) waves[0]?.kill() else waves[0]?.release()
                 }
-                if (armClick) clicks[0].invoke()
             }
         }
     }

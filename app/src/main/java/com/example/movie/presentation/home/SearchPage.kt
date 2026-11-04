@@ -227,15 +227,7 @@ private fun SearchResults(
                             },
                             wave = wave,
                         )
-                        .holdCue(holdProgress)
-                        .clickable(
-                            interactionSource = remember(movie.id) { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                tick?.invoke()
-                                onMovieClick(movie.id)
-                            },
-                        ),
+                        .holdCue(holdProgress),
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(

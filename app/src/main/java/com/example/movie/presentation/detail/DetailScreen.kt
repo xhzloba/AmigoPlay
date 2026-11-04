@@ -669,15 +669,7 @@ private fun MovieStrip(
                             },
                             wave = wave,
                         )
-                        .holdCue(holdProgress)
-                        .clickable(
-                            interactionSource = remember(movie.id) { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                tick?.invoke()
-                                onOpenMovie(movie.id)
-                            },
-                        ),
+                        .holdCue(holdProgress),
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(

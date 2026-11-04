@@ -735,14 +735,6 @@ private fun FavoritePoster(
                 },
                 wave = wave,
             )
-            .holdCue(holdProgress)
-            .clickable(
-                interactionSource = remember(item.id) { MutableInteractionSource() },
-                indication = null,
-                onClick = {
-                    tick?.invoke()
-                    onMovieClick(item.id)
-                },
-            ),
+            .holdCue(holdProgress),
     )
 }
