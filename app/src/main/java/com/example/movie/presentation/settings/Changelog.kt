@@ -11,6 +11,16 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.40.0",
+            added = listOf(
+                "На главной «История просмотров», если открыто больше пяти фильмов. Перед «Возможно, вам понравится». Повторный заход поднимает фильм первым, без дубля.",
+                "Долгий тап по фильму из истории показывает логотип.",
+            ),
+            fixed = listOf(
+                "Одинаковый отступ между слайдерами на главной.",
+            ),
+        ),
+        Release(
             version = "1.39.0",
             added = listOf(
                 "На главной пункт «Аниме» сразу после «Мультфильмы».",

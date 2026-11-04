@@ -18,6 +18,7 @@ data class SavedTitle(
     val ratingKp: Float? = null,
     val ratingImdb: Float? = null,
     val age: Int? = null,
+    val logoUrl: String? = null,
 )
 
 internal fun Movie.toSaved(): SavedTitle = SavedTitle(
@@ -35,6 +36,7 @@ internal fun Movie.toSaved(): SavedTitle = SavedTitle(
     ratingKp = ratingKp,
     ratingImdb = ratingImdb,
     age = age,
+    logoUrl = logoUrl,
 )
 
 internal fun MovieDetail.toSaved(): SavedTitle = SavedTitle(
@@ -48,6 +50,7 @@ internal fun MovieDetail.toSaved(): SavedTitle = SavedTitle(
     ratingKp = ratingKp,
     ratingImdb = ratingImdb,
     age = age,
+    logoUrl = logoUrl,
 )
 
 internal fun SavedTitle.toMovie(): Movie = Movie(
@@ -61,7 +64,7 @@ internal fun SavedTitle.toMovie(): Movie = Movie(
     director = director,
     posterUrl = posterUrl,
     backdropUrl = null,
-    logoUrl = null,
+    logoUrl = logoUrl,
     ratingKp = ratingKp,
     ratingImdb = ratingImdb,
     age = age,

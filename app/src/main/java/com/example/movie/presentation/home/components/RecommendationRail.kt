@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -115,6 +116,7 @@ internal fun RecommendationRail(
     title: String? = null,
     onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit = {},
+    stickToStart: Boolean = false,
 ) {
     HapticOnAppend(movies.map { it.id })
     Column(modifier = modifier.fillMaxWidth()) {
@@ -130,6 +132,7 @@ internal fun RecommendationRail(
                 onMovieClick = onMovieClick,
                 onMoviePeek = onMoviePeek,
                 onSettled = onSettled,
+                stickToStart = stickToStart,
             )
         }
     }
@@ -176,9 +179,14 @@ private fun RecommendationPager(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onSettled: () -> Unit,
+    stickToStart: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
+    val head = movies.firstOrNull()?.id
+    LaunchedEffect(head) {
+        if (stickToStart && head != null) listState.scrollToItem(0)
+    }
     val tick = rememberHapticTick()
     SettleEffect(listState, { listState.isScrollInProgress }, onSettled)
     HapticOnChange(listState) { listState.firstVisibleItemIndex }

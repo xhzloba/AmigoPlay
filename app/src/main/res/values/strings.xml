@@ -31,6 +31,7 @@
     <string name="section_sequels">Сиквелы и приквелы</string>
     <string name="section_back">Назад</string>
     <string name="section_recommendations">Возможно, вам понравится</string>
+    <string name="section_history">История просмотров</string>
     <string name="section_watching">Сейчас смотрят</string>
     <string name="kind_movie">Фильм</string>
     <string name="kind_series">Сериал</string>

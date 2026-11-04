@@ -233,11 +233,31 @@ private fun MovieMenu(
 @Composable
 private fun MenuHeading(movie: Movie) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    var logoFailed by remember(movie.id, movie.logoUrl, settings.showLogos) {
-        mutableStateOf(!settings.showLogos || movie.logoUrl.isNullOrBlank())
+    val container = LocalAppContainer.current
+    var resolvedLogo by remember(movie.id, movie.logoUrl) {
+        mutableStateOf(movie.logoUrl?.takeIf { it.isNotBlank() })
     }
-    var logoReady by remember(movie.id, movie.logoUrl, settings.showLogos) { mutableStateOf(false) }
-    if (!logoFailed) {
+    var lookupDone by remember(movie.id, movie.logoUrl) {
+        mutableStateOf(!movie.logoUrl.isNullOrBlank())
+    }
+    LaunchedEffect(movie.id, settings.showLogos) {
+        if (!settings.showLogos || !resolvedLogo.isNullOrBlank()) {
+            lookupDone = true
+            return@LaunchedEffect
+        }
+        val logo = container.getMovieDetail(movie.id).getOrNull()?.logoUrl?.takeIf { it.isNotBlank() }
+        if (logo != null) {
+            resolvedLogo = logo
+            container.viewHistory.attachLogo(movie.id, logo)
+        }
+        lookupDone = true
+    }
+    var logoFailed by remember(movie.id, resolvedLogo, settings.showLogos) {
+        mutableStateOf(!settings.showLogos)
+    }
+    var logoReady by remember(movie.id, resolvedLogo, settings.showLogos) { mutableStateOf(false) }
+    val showLogo = settings.showLogos && !logoFailed && (resolvedLogo != null || !lookupDone)
+    if (showLogo) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -245,21 +265,23 @@ private fun MenuHeading(movie: Movie) {
             contentAlignment = Alignment.Center,
         ) {
             if (!logoReady) MenuLogoSkeleton()
-            AsyncImage(
-                model = movie.logoUrl,
-                contentDescription = movie.title,
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.Center,
-                onSuccess = { logoReady = true },
-                onError = { logoFailed = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 56.dp)
-                    .height(48.dp)
-                    .graphicsLayer { alpha = if (logoReady) 1f else 0f },
-            )
+            if (resolvedLogo != null) {
+                AsyncImage(
+                    model = resolvedLogo,
+                    contentDescription = movie.title,
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.Center,
+                    onSuccess = { logoReady = true },
+                    onError = { logoFailed = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 56.dp)
+                        .height(48.dp)
+                        .graphicsLayer { alpha = if (logoReady) 1f else 0f },
+                )
+            }
         }
-    } else {
+    } else if (lookupDone || !settings.showLogos) {
         Text(
             text = movie.title,
             modifier = Modifier

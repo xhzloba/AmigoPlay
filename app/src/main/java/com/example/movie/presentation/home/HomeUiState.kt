@@ -8,6 +8,7 @@ data class HomeUiState(
     val shelves: List<Shelf> = emptyList(),
     val selectedId: String? = null,
     val movies: List<Movie> = emptyList(),
+    val history: List<Movie> = emptyList(),
     val recommendations: List<Movie> = emptyList(),
     val recommendationsReady: Boolean = false,
     val watching: List<Movie> = emptyList(),

@@ -25,6 +25,7 @@ fun HomeRoute(
             getTopMovies = container.getTopMovies,
             searchMovies = container.searchMovies,
             searchHistory = container.searchHistory,
+            viewHistory = container.viewHistory,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()

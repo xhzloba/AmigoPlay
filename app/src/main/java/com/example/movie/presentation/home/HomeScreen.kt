@@ -88,6 +88,7 @@ import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
 private val HomeBottomClearance = 96.dp
+private const val HistoryRailMin = 5
 
 private data class ShelfTint(
     val play: Color,
@@ -308,8 +309,21 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
+                    val showHistory = state.history.size > HistoryRailMin
+                    if (showHistory) {
                         Spacer(Modifier.height(24.dp))
+                        RecommendationRail(
+                            movies = state.history,
+                            onMovieClick = onMovieClick,
+                            onMoviePeek = onMoviePeek,
+                            title = stringResource(R.string.section_history),
+                            onSettled = logo::onSettled,
+                            stickToStart = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
+                        Spacer(Modifier.height(if (showHistory) CatalogGap else 24.dp))
                         RecommendationRail(
                             movies = state.recommendations,
                             onMovieClick = onMovieClick,
@@ -345,7 +359,7 @@ fun HomeScreen(
                         )
                     }
                     if (!state.bestReady || state.best.isNotEmpty()) {
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(CatalogGap))
                         RecommendationRail(
                             movies = state.best,
                             onMovieClick = onMovieClick,
@@ -495,7 +509,7 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
             onMoviePeek = {},
             title = stringResource(R.string.section_top),
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(CatalogGap))
         RecommendationRail(
             movies = emptyList(),
             onMovieClick = {},

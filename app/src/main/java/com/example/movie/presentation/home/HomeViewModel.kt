@@ -9,7 +9,9 @@ import com.example.movie.domain.usecase.GetHomeShelvesUseCase
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
 import com.example.movie.domain.usecase.GetTopMoviesUseCase
+import com.example.movie.data.history.ViewHistoryStore
 import com.example.movie.data.search.SearchHistoryStore
+import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.usecase.SearchMoviesUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -25,6 +27,7 @@ class HomeViewModel(
     private val getTopMovies: GetTopMoviesUseCase,
     private val searchMovies: SearchMoviesUseCase,
     private val searchHistory: SearchHistoryStore,
+    private val viewHistory: ViewHistoryStore,
 ) : ViewModel() {
     private val cache = mutableMapOf<String, List<Movie>>()
     private var moviesJob: Job? = null
@@ -33,6 +36,11 @@ class HomeViewModel(
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            viewHistory.items.collect { saved ->
+                _state.value = _state.value.copy(history = saved.map { it.toMovie() })
+            }
+        }
         loadShelves()
         loadRecommendations()
         loadWatching()
