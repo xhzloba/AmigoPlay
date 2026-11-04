@@ -4,8 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -35,15 +36,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.example.movie.R
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.PlayBlue
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private val LogoHeight = 86.dp
@@ -54,13 +54,7 @@ private val HatWidth = LogoHeight * (92f / 186f) * 1.9f
 private val HatHeight = HatWidth * (476f / 752f)
 private const val HatCrownX = 362f / 752f
 private const val HatCrownY = 280f / 476f
-private val LetterAMid = LogoHeight * (104f / 186f)
-private val MustacheCenter = LogoHeight * (75f / 186f)
-private val MustacheWidth = LogoHeight * (92f / 186f) * 1.4f
-private val MustacheHeight = MustacheWidth * (348f / 892f)
-private const val MustacheX = 443f / 892f
-private const val MustacheY = 207f / 348f
-private val Slide = 64.dp
+private val Enter = CubicBezierEasing(0.22f, 0.08f, 0.18f, 1f)
 
 private data class SplitLogo(val amigo: ImageBitmap, val play: ImageBitmap)
 
@@ -69,22 +63,17 @@ internal fun SplashScreen(onFinished: () -> Unit) {
     val amigo = remember { Animatable(0f) }
     val play = remember { Animatable(0f) }
     val hat = remember { Animatable(0f) }
-    val whiskers = remember { Animatable(0f) }
     val veil = remember { Animatable(1f) }
     LaunchedEffect(Unit) {
-        coroutineScope {
-            launch { amigo.animateTo(1f, tween(720, easing = LinearOutSlowInEasing)) }
-            delay(90)
-            launch { play.animateTo(1f, tween(720, easing = LinearOutSlowInEasing)) }
-        }
-        hat.animateTo(1f, tween(720, easing = FastOutSlowInEasing))
-        whiskers.animateTo(1f, tween(680, easing = FastOutSlowInEasing))
-        delay(520)
+        amigo.animateTo(1f, tween(920, easing = Enter))
+        play.animateTo(1f, tween(920, easing = Enter))
+        hat.animateTo(1f, tween(760, easing = FastOutSlowInEasing))
+        delay(460)
         veil.animateTo(0f, tween(860, easing = FastOutSlowInEasing))
         onFinished()
     }
     BackHandler(enabled = true) {}
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer { alpha = veil.value }
@@ -100,7 +89,7 @@ internal fun SplashScreen(onFinished: () -> Unit) {
             amigo = amigo.value,
             play = play.value,
             hat = hat.value,
-            whiskers = whiskers.value,
+            slide = maxWidth * 0.62f,
         )
     }
 }
@@ -110,7 +99,7 @@ private fun SplashWordmark(
     amigo: Float,
     play: Float,
     hat: Float,
-    whiskers: Float,
+    slide: Dp,
 ) {
     val context = LocalContext.current
     val logo = remember {
@@ -128,8 +117,8 @@ private fun SplashWordmark(
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer {
-                    translationX = (1f - amigo) * -Slide.toPx()
-                    alpha = amigo
+                    translationX = (1f - amigo) * -slide.toPx()
+                    alpha = (amigo / 0.12f).coerceIn(0f, 1f)
                 },
         ) {
             drawBold(logo.amigo, Color.White)
@@ -138,8 +127,8 @@ private fun SplashWordmark(
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer {
-                    translationX = (1f - play) * Slide.toPx()
-                    alpha = play
+                    translationX = (1f - play) * slide.toPx()
+                    alpha = (play / 0.12f).coerceIn(0f, 1f)
                 },
         ) {
             drawBold(logo.play, PlayBlue)
@@ -157,35 +146,14 @@ private fun SplashWordmark(
                     )
                     .graphicsLayer {
                         transformOrigin = TransformOrigin(HatCrownX, HatCrownY)
-                        translationY = (1f - hat) * -18.dp.toPx()
-                        alpha = hat
-                        val scale = 0.94f + 0.06f * hat
+                        translationY = (1f - hat) * -46.dp.toPx()
+                        rotationZ = (1f - hat) * -16f
+                        alpha = (hat * 1.7f).coerceIn(0f, 1f)
+                        val scale = 0.8f + 0.2f * hat
                         scaleX = scale
                         scaleY = scale
                     }
                     .size(HatWidth, HatHeight),
-            )
-        }
-        if (whiskers > 0.01f) {
-            Image(
-                painter = painterResource(R.drawable.mustache),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = MustacheCenter - MustacheWidth * MustacheX,
-                        y = LetterAMid - MustacheHeight * MustacheY,
-                    )
-                    .graphicsLayer {
-                        transformOrigin = TransformOrigin(MustacheX, MustacheY)
-                        translationY = (1f - whiskers) * 12.dp.toPx()
-                        alpha = whiskers
-                        val scale = 0.86f + 0.14f * whiskers
-                        scaleX = scale
-                        scaleY = scale
-                    }
-                    .size(MustacheWidth, MustacheHeight),
             )
         }
     }

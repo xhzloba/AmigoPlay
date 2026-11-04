@@ -32,9 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.detail.DetailRoute
@@ -49,7 +46,10 @@ import com.example.movie.ui.theme.MovieTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        val prefs = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
+        val closed = prefs.getBoolean(KEY_CLOSED, false)
+        if (closed) prefs.edit().remove(KEY_CLOSED).commit()
+        super.onCreate(if (closed) null else savedInstanceState)
         if (Build.VERSION.SDK_INT >= 31) {
             splashScreen.setOnExitAnimationListener { view -> view.remove() }
         }
@@ -69,16 +69,7 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalAppUpdate provides updates) {
                 MovieTheme {
                     NavigationGesture()
-                    val lifecycleOwner = LocalLifecycleOwner.current
-                    var session by rememberSaveable { mutableIntStateOf(0) }
-                    DisposableEffect(lifecycleOwner) {
-                        val observer = LifecycleEventObserver { _, event ->
-                            val turning = (lifecycleOwner as? android.app.Activity)?.isChangingConfigurations == true
-                            if (event == Lifecycle.Event.ON_STOP && !turning) session++
-                        }
-                        lifecycleOwner.lifecycle.addObserver(observer)
-                        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-                    }
+                    val session by rememberSaveable { mutableIntStateOf(0) }
                     var splash by remember { mutableStateOf(true) }
                     Box(Modifier.fillMaxSize()) {
                         key(session) {
@@ -144,6 +135,21 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         WindowInsetsControllerCompat(window, window.decorView)
             .show(WindowInsetsCompat.Type.navigationBars())
+    }
+
+    override fun onDestroy() {
+        if (isFinishing && !isChangingConfigurations) {
+            getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
+                .edit()
+                .putBoolean(KEY_CLOSED, true)
+                .commit()
+        }
+        super.onDestroy()
+    }
+
+    private companion object {
+        const val SESSION_PREFS = "session"
+        const val KEY_CLOSED = "closed"
     }
 }
 
