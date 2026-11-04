@@ -1,6 +1,7 @@
 package com.example.movie
 
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -40,6 +41,7 @@ import com.example.movie.presentation.detail.DetailRoute
 import com.example.movie.presentation.home.MoviePeek
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.presentation.shell.AppShell
+import com.example.movie.presentation.splash.SplashScreen
 import com.example.movie.presentation.update.AppUpdateHost
 import com.example.movie.presentation.update.LocalAppUpdate
 import com.example.movie.presentation.update.rememberUpdateController
@@ -48,6 +50,9 @@ import com.example.movie.ui.theme.MovieTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 31) {
+            splashScreen.setOnExitAnimationListener { view -> view.remove() }
+        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -74,6 +79,7 @@ class MainActivity : ComponentActivity() {
                         lifecycleOwner.lifecycle.addObserver(observer)
                         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                     }
+                    var splash by remember { mutableStateOf(true) }
                     Box(Modifier.fillMaxSize()) {
                         key(session) {
                         val stack = rememberSaveable(
@@ -124,6 +130,9 @@ class MainActivity : ComponentActivity() {
                         }
                         }
                         AppUpdateHost()
+                        if (splash) {
+                            SplashScreen(onFinished = { splash = false })
+                        }
                     }
                 }
                 }
