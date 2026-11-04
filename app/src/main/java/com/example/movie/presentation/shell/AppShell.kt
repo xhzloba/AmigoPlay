@@ -139,7 +139,14 @@ fun AppShell(
             },
             modifier = Modifier.align(Alignment.BottomCenter),
         )
-        MoviePeek(movie = peek, onDismiss = { peek = null })
+        MoviePeek(
+            movie = peek,
+            onDismiss = { peek = null },
+            onOpen = { id ->
+                peek = null
+                onMovieClick(id)
+            },
+        )
     }
 }
 

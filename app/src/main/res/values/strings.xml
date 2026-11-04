@@ -10,6 +10,15 @@
     <string name="watch_now">Смотреть</string>
     <string name="age_badge">%1$d+</string>
     <string name="peek_director">Режиссёр</string>
+    <string name="menu_overview">Краткое описание</string>
+    <string name="menu_overview_empty">Описания нет</string>
+    <string name="menu_favorite_add">Добавить в избранное</string>
+    <string name="menu_favorite_remove">Убрать из избранного</string>
+    <string name="menu_watched">Просмотрено</string>
+    <string name="menu_unwatched">Не просмотрено</string>
+    <string name="menu_list">Добавить в список</string>
+    <string name="menu_comment">Комментарий</string>
+    <string name="menu_open_detail">Перейти</string>
     <string name="runtime_hours_minutes">%1$dч %2$dм</string>
     <string name="runtime_hours">%1$dч</string>
     <string name="runtime_minutes">%1$dм</string>

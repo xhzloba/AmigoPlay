@@ -157,7 +157,15 @@ internal fun FavoritesScreen(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
 ) {
-    val items by LocalAppContainer.current.favorites.items.collectAsStateWithLifecycle()
+    val favorites by LocalAppContainer.current.favorites.items.collectAsStateWithLifecycle()
+    val watched by LocalAppContainer.current.watched.items.collectAsStateWithLifecycle()
+    var libraryName by rememberSaveable { mutableStateOf(LibrarySection.Favorites.name) }
+    val library = LibrarySection.valueOf(libraryName)
+    val items = when (library) {
+        LibrarySection.Favorites -> favorites
+        LibrarySection.Watched -> watched
+        LibrarySection.Actors -> emptyList()
+    }
     var tabName by rememberSaveable { mutableStateOf(FavoriteTab.All.name) }
     var genreRaw by rememberSaveable { mutableStateOf("") }
     var sortRaw by rememberSaveable { mutableStateOf("") }
@@ -193,7 +201,12 @@ internal fun FavoritesScreen(
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     .padding(top = BrandTopInset),
             ) {
-                LibraryBrand(hat = logo.hat, mustache = logo.mustache)
+                LibraryBrand(
+                    hat = logo.hat,
+                    mustache = logo.mustache,
+                    library = library,
+                    onLibrary = { libraryName = it.name },
+                )
                 FavoriteTabs(
                     selected = tab,
                     genres = genres,
@@ -270,6 +283,8 @@ internal fun FavoritesScreen(
             LibraryBrand(
                 hat = logo.hat,
                 mustache = logo.mustache,
+                library = library,
+                onLibrary = { libraryName = it.name },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
@@ -299,6 +314,8 @@ internal fun FavoritesScreen(
 private fun LibraryBrand(
     hat: Boolean,
     mustache: Boolean,
+    library: LibrarySection,
+    onLibrary: (LibrarySection) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -309,7 +326,7 @@ private fun LibraryBrand(
     ) {
         BrandWordmark(play = FavoritePlay, hat = hat, mustache = mustache)
         Spacer(Modifier.weight(1f))
-        LibraryMenu()
+        LibraryMenu(selected = library, onSelect = onLibrary)
     }
 }
 
@@ -364,7 +381,10 @@ private enum class LibrarySection(@StringRes val label: Int) {
 }
 
 @Composable
-private fun LibraryMenu() {
+private fun LibraryMenu(
+    selected: LibrarySection,
+    onSelect: (LibrarySection) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier.height(40.dp),
@@ -384,7 +404,7 @@ private fun LibraryMenu() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(R.string.nav_favorites),
+                text = stringResource(selected.label),
                 color = CapsuleInk,
                 fontWeight = FontWeight.Medium,
                 fontSize = 14.sp,
@@ -401,7 +421,7 @@ private fun LibraryMenu() {
             shape = MenuShape,
         ) {
             LibrarySection.entries.forEach { section ->
-                val lit = section == LibrarySection.Favorites
+                val lit = section == selected
                 Text(
                     text = stringResource(section.label),
                     color = if (lit) CapsuleInk else CinemaMuted,
@@ -412,7 +432,10 @@ private fun LibraryMenu() {
                         .clickable(
                             interactionSource = remember(section.name) { MutableInteractionSource() },
                             indication = null,
-                            onClick = { open = false },
+                            onClick = {
+                                open = false
+                                onSelect(section)
+                            },
                         )
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                 )

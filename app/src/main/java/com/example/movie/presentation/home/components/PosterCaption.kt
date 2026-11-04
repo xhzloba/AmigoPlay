@@ -23,9 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaMuted
 
-internal val PosterCaptionBlock = 34.dp
-
-private val TitleColor = Color(0xFFC8C8CE)
+internal val PosterCaptionBlock = 42.dp
 
 @Composable
 internal fun posterTitlesOn(): Boolean {
@@ -36,10 +34,10 @@ internal fun posterTitlesOn(): Boolean {
 @Composable
 internal fun PosterCaption(title: String, year: Int?, modifier: Modifier = Modifier) {
     val style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-    Column(modifier.padding(top = 4.dp)) {
+    Column(modifier.padding(top = 10.dp)) {
         Text(
             text = title,
-            color = TitleColor,
+            color = Color.White,
             fontSize = 12.sp,
             lineHeight = 15.sp,
             style = style,
@@ -61,9 +59,9 @@ internal fun PosterCaption(title: String, year: Int?, modifier: Modifier = Modif
 internal fun PosterCaptionSkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier
-            .padding(top = 6.dp)
-            .height(PosterCaptionBlock - 6.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp),
+            .padding(top = 10.dp)
+            .height(PosterCaptionBlock - 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
             Modifier

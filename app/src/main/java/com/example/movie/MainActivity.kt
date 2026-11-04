@@ -95,7 +95,14 @@ class MainActivity : ComponentActivity() {
                                     onOpenMovie = { id -> if (stack.lastOrNull() != id) stack.add(id) },
                                     onMoviePeek = { detailPeek = it },
                                 )
-                                MoviePeek(movie = detailPeek, onDismiss = { detailPeek = null })
+                                MoviePeek(
+                                    movie = detailPeek,
+                                    onDismiss = { detailPeek = null },
+                                    onOpen = { id ->
+                                        detailPeek = null
+                                        if (stack.lastOrNull() != id) stack.add(id)
+                                    },
+                                )
                             }
                         }
                         AppUpdateHost()
