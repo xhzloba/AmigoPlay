@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.36.2",
+            fixed = listOf(
+                "После закрытия приложения открывается главная. Возврат из деталки оставляет список на том же месте.",
+            ),
+        ),
+        Release(
             version = "1.36.1",
             fixed = listOf(
                 "Одинаковые боковые отступы у полного списка, избранного, главной и настроек. Скелетоны на той же линии.",

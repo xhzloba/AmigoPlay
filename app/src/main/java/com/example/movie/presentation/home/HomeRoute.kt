@@ -1,6 +1,7 @@
 package com.example.movie.presentation.home
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -12,6 +13,7 @@ fun HomeRoute(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onOpenSection: (HomeSection) -> Unit,
+    session: Int = 0,
 ) {
     val container = LocalAppContainer.current
     val viewModel: HomeViewModel = viewModel {
@@ -24,6 +26,9 @@ fun HomeRoute(
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(session) {
+        if (session > 0) viewModel.closeSearch()
+    }
     HomeScreen(
         state = state,
         onSelectShelf = viewModel::select,

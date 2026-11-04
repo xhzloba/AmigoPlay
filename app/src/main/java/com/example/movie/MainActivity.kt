@@ -20,6 +20,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +31,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.detail.DetailRoute
@@ -59,7 +64,18 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalAppUpdate provides updates) {
                 MovieTheme {
                     NavigationGesture()
+                    val lifecycleOwner = LocalLifecycleOwner.current
+                    var session by rememberSaveable { mutableIntStateOf(0) }
+                    DisposableEffect(lifecycleOwner) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            val turning = (lifecycleOwner as? android.app.Activity)?.isChangingConfigurations == true
+                            if (event == Lifecycle.Event.ON_STOP && !turning) session++
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                    }
                     Box(Modifier.fillMaxSize()) {
+                        key(session) {
                         val stack = rememberSaveable(
                             saver = listSaver(
                                 save = { it.toList() },
@@ -75,6 +91,7 @@ class MainActivity : ComponentActivity() {
                             onTabChange = { tabName = it },
                             onMovieClick = { id -> if (stack.lastOrNull() != id) stack.add(id) },
                             handleBack = openedId == null,
+                            session = session,
                         )
                         BackHandler(enabled = openedId != null) {
                             if (detailPeek != null) detailPeek = null
@@ -104,6 +121,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                 )
                             }
+                        }
                         }
                         AppUpdateHost()
                     }

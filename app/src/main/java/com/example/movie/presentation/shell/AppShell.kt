@@ -82,6 +82,7 @@ fun AppShell(
     onTabChange: (String) -> Unit,
     onMovieClick: (String) -> Unit,
     handleBack: Boolean = true,
+    session: Int = 0,
 ) {
     val tab = AppTab.valueOf(tabName)
     val keyboard = LocalSoftwareKeyboardController.current
@@ -113,6 +114,7 @@ fun AppShell(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
                     onOpenSection = { sectionName = it.name },
+                    session = session,
                 )
                 AppTab.Catalog -> SectionScreen(title = stringResource(R.string.nav_catalog))
                 AppTab.Favorites -> FavoritesScreen(
