@@ -271,7 +271,7 @@ fun HomeScreen(
                 ) {
                 Column(Modifier.fillMaxWidth()) {
                     Spacer(Modifier.height(brandReserve + 12.dp + tabsHeight))
-                    Spacer(Modifier.height(36.dp))
+                    Spacer(Modifier.height(16.dp))
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
                         PosterSkeleton(Modifier.fillMaxWidth())
                     } else {

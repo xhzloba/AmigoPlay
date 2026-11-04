@@ -11,6 +11,15 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.37.2",
+            fixed = listOf(
+                "Верхнее меню на главной без капсул, размер как у заголовков слайдеров.",
+                "В полном списке из слайдера нет нижнего меню.",
+                "Главный слайдер и ленты под ним подняты ближе к меню.",
+                "На сплэше «Play» выезжает справа раньше и быстрее.",
+            ),
+        ),
+        Release(
             version = "1.37.1",
             fixed = listOf(
                 "Сплэш: сначала «Amigo» слева, потом «Play» справа, затем шляпа. Без усов.",

@@ -49,7 +49,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
@@ -79,6 +78,7 @@ import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.shell.ShellIcons
+import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.PlayBlue
 
 internal val CategoryTabFontSize = 18.sp
@@ -106,9 +106,7 @@ private const val MustacheY = 207f / 348f
 
 private const val LeftPinnedShelves = 2
 
-private val CapsuleInk = Color.White
-private val CapsuleIdleInk = Color(0xFFC7C7CC)
-private val CapsuleIdleStroke = Color(0xFF484848)
+private val ShelfInk = Color.White
 
 private val TabSkeletonLabels = listOf(
     "Популярное",
@@ -147,7 +145,7 @@ internal fun CategoryTabs(
             letterSpacing = CategoryTabLetterSpacing,
         )
     }
-    val capsulePad = with(density) { 40.dp.roundToPx() }
+    val capsulePad = with(density) { 0.dp.roundToPx() }
     val inset = with(density) { HomeContentInset.roundToPx() }
     LaunchedEffect(selectedId, shelves) {
         val index = shelves.indexOfFirst { it.id == selectedId }
@@ -180,7 +178,7 @@ internal fun CategoryTabs(
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(start = HomeContentInset),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
             ) {
                 items(shelves, key = { it.id }) { shelf ->
                     ShelfCapsule(
@@ -231,33 +229,8 @@ private fun ShelfCapsule(
     onClick: (() -> Unit)? = null,
     ghost: Boolean = false,
 ) {
-    Text(
-        text = title,
-        color = if (ghost) Color.Transparent else if (selected) CapsuleInk else CapsuleIdleInk,
-        fontWeight = FontWeight.Normal,
-        fontSize = CategoryTabFontSize,
-        lineHeight = CategoryTabLineHeight,
-        letterSpacing = CategoryTabLetterSpacing,
+    Column(
         modifier = Modifier
-            .drawBehind {
-                if (ghost) {
-                    val radius = size.minDimension / 2f
-                    drawRoundRect(
-                        color = Color.White.copy(alpha = 0.12f),
-                        cornerRadius = CornerRadius(radius, radius),
-                    )
-                    return@drawBehind
-                }
-                val stroke = (if (selected) 2.dp else 1.dp).toPx()
-                val inset = stroke / 2f
-                drawRoundRect(
-                    color = if (selected) border else CapsuleIdleStroke,
-                    topLeft = Offset(inset, inset),
-                    size = Size(size.width - stroke, size.height - stroke),
-                    cornerRadius = CornerRadius((size.minDimension - stroke) / 2f, (size.minDimension - stroke) / 2f),
-                    style = Stroke(width = stroke),
-                )
-            }
             .then(
                 if (onClick == null) {
                     Modifier
@@ -269,8 +242,42 @@ private fun ShelfCapsule(
                     )
                 },
             )
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-    )
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = title,
+            color = if (ghost) Color.Transparent else if (selected) ShelfInk else CinemaMuted,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontSize = CategoryTabFontSize,
+            lineHeight = CategoryTabLineHeight,
+            letterSpacing = CategoryTabLetterSpacing,
+            modifier = Modifier.drawBehind {
+                if (!ghost) return@drawBehind
+                val bar = 13.dp.toPx()
+                val top = (size.height - bar) / 2f
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.10f),
+                    topLeft = Offset(0f, top),
+                    size = Size(size.width, bar),
+                    cornerRadius = CornerRadius(bar / 2f, bar / 2f),
+                )
+            },
+        )
+        Box(
+            modifier = Modifier
+                .padding(top = 6.dp)
+                .height(2.dp)
+                .fillMaxWidth()
+                .drawBehind {
+                    if (!selected || ghost) return@drawBehind
+                    drawRoundRect(
+                        color = border,
+                        cornerRadius = CornerRadius(size.height / 2f, size.height / 2f),
+                    )
+                },
+        )
+    }
 }
 
 @Composable
@@ -532,7 +539,7 @@ fun CategoryTabsSkeleton(
         Spacer(Modifier.height(12.dp))
         LazyRow(
             contentPadding = PaddingValues(start = HomeContentInset, end = HomeContentInset),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             userScrollEnabled = false,
         ) {
         items(TabSkeletonLabels.size) { index ->

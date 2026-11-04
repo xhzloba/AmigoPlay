@@ -133,14 +133,13 @@ fun AppShell(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        AppBottomBar(
-            selected = if (section != null) null else tab,
-            onSelect = { next ->
-                if (next == AppTab.Home) sectionName = null
-                onTabChange(next.name)
-            },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
+        if (section == null) {
+            AppBottomBar(
+                selected = tab,
+                onSelect = { next -> onTabChange(next.name) },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
         MoviePeek(
             movie = peek,
             onDismiss = { peek = null },

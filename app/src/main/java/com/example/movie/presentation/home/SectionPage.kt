@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -77,7 +78,6 @@ import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-private val PageBottom = 96.dp
 private val PosterAspect = 1.46f
 
 @Composable
@@ -124,6 +124,7 @@ private fun SectionPage(
     val grid = rememberLazyGridState()
     val density = LocalDensity.current
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    val pageBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
     val header = top + BrandTopInset + 36.dp + 18.dp
     val scrim = if (grid.firstVisibleItemIndex > 0) {
         1f
@@ -148,6 +149,7 @@ private fun SectionPage(
                 movies = state.movies,
                 state = grid,
                 topPadding = header,
+                bottomPadding = pageBottom,
                 loadingMore = state.loadingMore,
                 end = state.end,
                 error = state.error,
@@ -217,6 +219,7 @@ private fun PosterGrid(
     movies: List<Movie>,
     state: LazyGridState,
     topPadding: Dp,
+    bottomPadding: Dp,
     loadingMore: Boolean,
     end: Boolean,
     error: DataError?,
@@ -237,7 +240,7 @@ private fun PosterGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = state,
-        contentPadding = PaddingValues(start = PosterGridInset, end = PosterGridInset, top = topPadding, bottom = PageBottom),
+        contentPadding = PaddingValues(start = PosterGridInset, end = PosterGridInset, top = topPadding, bottom = bottomPadding),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),

@@ -43,7 +43,9 @@ import androidx.compose.ui.unit.dp
 import com.example.movie.R
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.PlayBlue
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private val LogoHeight = 86.dp
@@ -65,8 +67,11 @@ internal fun SplashScreen(onFinished: () -> Unit) {
     val hat = remember { Animatable(0f) }
     val veil = remember { Animatable(1f) }
     LaunchedEffect(Unit) {
-        amigo.animateTo(1f, tween(920, easing = Enter))
-        play.animateTo(1f, tween(920, easing = Enter))
+        coroutineScope {
+            launch { amigo.animateTo(1f, tween(920, easing = Enter)) }
+            delay(340)
+            launch { play.animateTo(1f, tween(680, easing = Enter)) }
+        }
         hat.animateTo(1f, tween(760, easing = FastOutSlowInEasing))
         delay(460)
         veil.animateTo(0f, tween(860, easing = FastOutSlowInEasing))
