@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.39.0",
+            added = listOf(
+                "На главной пункт «Аниме» сразу после «Мультфильмы».",
+            ),
+        ),
+        Release(
             version = "1.38.0",
             added = listOf(
                 "Поиск растворяет страницу и появляется так же. Последние запросы, «Удалить» и крестик, который только стирает текст. Круглая кнопка закрывает поиск.",

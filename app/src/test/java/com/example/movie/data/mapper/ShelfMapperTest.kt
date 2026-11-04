@@ -22,7 +22,8 @@ class ShelfMapperTest {
               ],
               "channels": [
                 {"title": "ТВ Шоу", "playlist_url": "https://api.vokino.pro/v2/category?type=tvshow"},
-                {"title": "Мультфильмы", "playlist_url": "https://api.vokino.pro/v2/category?type=multfilm"}
+                {"title": "Мультфильмы", "playlist_url": "https://api.vokino.pro/v2/category?type=multfilm"},
+                {"title": "Аниме", "playlist_url": "https://api.vokino.pro/v2/category?type=anime"}
               ]
             }
         """.trimIndent()
@@ -39,6 +40,7 @@ class ShelfMapperTest {
                 "Фильмы",
                 "Сериалы",
                 "Мультфильмы",
+                "Аниме",
             ),
             shelves.map { it.title },
         )
@@ -51,5 +53,7 @@ class ShelfMapperTest {
         assertEquals(true, shelves[3].query.dolbyVision)
         assertEquals("new::dolby", shelves[3].id)
         assertEquals("multfilm", shelves[7].query.type)
+        assertEquals("anime", shelves[8].query.type)
+        assertEquals("popular:anime", shelves[8].id)
     }
 }

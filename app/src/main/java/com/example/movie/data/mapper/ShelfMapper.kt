@@ -27,6 +27,7 @@ internal fun MainResponseDto.toShelves(): List<Shelf> {
         shelf(listTitles["popular:movie"] ?: "Фильмы", "popular", "movie"),
         shelf(listTitles["popular:serial"] ?: "Сериалы", "popular", "serial"),
         shelf(channelTitles["multfilm"] ?: "Мультфильмы", "popular", "multfilm"),
+        shelf(channelTitles["anime"] ?: "Аниме", "popular", "anime"),
     )
 }
 
