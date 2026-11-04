@@ -242,7 +242,7 @@ private fun ShelfCapsule(
                     )
                 },
             )
-            .padding(vertical = 8.dp),
+            .padding(bottom = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(

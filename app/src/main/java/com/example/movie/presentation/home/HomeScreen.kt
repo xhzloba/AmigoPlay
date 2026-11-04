@@ -259,7 +259,6 @@ fun HomeScreen(
                         maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
                     },
             ) {
-                var tabsHeight by remember { mutableStateOf(48.dp) }
                 Box(
                     modifier = Modifier
                         .scrollContent(scroll) { full ->
@@ -270,7 +269,22 @@ fun HomeScreen(
                         .padding(top = BrandTopInset),
                 ) {
                 Column(Modifier.fillMaxWidth()) {
-                    Spacer(Modifier.height(brandReserve + 12.dp + tabsHeight))
+                    Spacer(Modifier.height(brandReserve + 12.dp))
+                    CategoryTabs(
+                        shelves = state.shelves,
+                        selectedId = state.selectedId,
+                        play = playAnim,
+                        border = capsuleAnim.value,
+                        onSelect = onSelectShelf,
+                        onSearch = onOpenSearch,
+                        hat = logo.hat,
+                        mustache = logo.mustache,
+                        onMenuSettled = logo::onSettled,
+                        showBrand = false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .zIndex(1f),
+                    )
                     Spacer(Modifier.height(16.dp))
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
                         PosterSkeleton(Modifier.fillMaxWidth())
@@ -337,23 +351,6 @@ fun HomeScreen(
                     }
                     Spacer(Modifier.height(HomeBottomClearance))
                 }
-                CategoryTabs(
-                    shelves = state.shelves,
-                    selectedId = state.selectedId,
-                    play = playAnim,
-                    border = capsuleAnim.value,
-                    onSelect = onSelectShelf,
-                    onSearch = onOpenSearch,
-                    hat = logo.hat,
-                    mustache = logo.mustache,
-                    onMenuSettled = logo::onSettled,
-                    showBrand = false,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .zIndex(1f)
-                        .padding(top = brandReserve + 12.dp)
-                        .onSizeChanged { tabsHeight = with(density) { it.height.toDp() } },
-                )
                 }
             }
             BrandScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
@@ -450,7 +447,7 @@ private fun DataError.message(): String = when (this) {
 private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier.padding(top = BrandTopInset)) {
         CategoryTabsSkeleton(onSearch = onSearch)
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(16.dp))
         CoverStackSkeleton(Modifier.fillMaxWidth())
         Spacer(Modifier.height(24.dp))
         RecommendationRail(

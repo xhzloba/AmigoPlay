@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.37.3",
+            fixed = listOf(
+                "Пункты меню на главной на той же высоте, что вкладки в избранном.",
+                "Главный слайдер больше не подпрыгивает при возврате с другой вкладки.",
+            ),
+        ),
+        Release(
             version = "1.37.2",
             fixed = listOf(
                 "Верхнее меню на главной без капсул, размер как у заголовков слайдеров.",
