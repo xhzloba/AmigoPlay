@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -26,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -350,24 +350,26 @@ private fun PosterCell(
 @Composable
 internal fun SectionSkeleton(modifier: Modifier = Modifier) {
     val showTitles = posterTitlesOn()
-    Column(
-        modifier = modifier.padding(horizontal = PosterGridInset),
+    // Сетка, как у загруженного списка: у колонки на весь экран нижние ряды
+    // сжимаются и полоска года залезает на следующий постер.
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        contentPadding = PaddingValues(horizontal = PosterGridInset),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
+        userScrollEnabled = false,
+        modifier = modifier.fillMaxSize(),
     ) {
-        repeat(4) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                repeat(3) {
-                    Column(Modifier.weight(1f)) {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f / PosterAspect)
-                                .clip(PosterShape)
-                                .background(Color.White.copy(alpha = 0.08f)),
-                        )
-                        if (showTitles) PosterCaptionSkeleton()
-                    }
-                }
+        items(12) {
+            Column {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f / PosterAspect)
+                        .clip(PosterShape)
+                        .background(Color.White.copy(alpha = 0.08f)),
+                )
+                if (showTitles) PosterCaptionSkeleton()
             }
         }
     }
