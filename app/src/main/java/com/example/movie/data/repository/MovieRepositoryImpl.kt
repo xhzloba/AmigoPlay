@@ -4,6 +4,8 @@ import com.example.movie.data.mapper.toDomain
 import com.example.movie.data.mapper.toMovieDetail
 import com.example.movie.data.mapper.toShelves
 import com.example.movie.data.remote.VokinoApi
+import com.example.movie.data.remote.dto.CatalogResponseDto
+import com.example.movie.data.remote.dto.ChannelDto
 import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
@@ -32,7 +34,7 @@ internal class MovieRepositoryImpl(
             uhd = if (query.uhd) 1 else null,
             dolbyVision = if (query.dolbyVision) 1 else null,
         )
-            .channels
+            .requireChannels()
             .map { it.toDomain() }
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
             .let { movies ->
@@ -43,14 +45,14 @@ internal class MovieRepositoryImpl(
 
     override suspend fun getRecommendations(): Result<List<Movie>> = runApi {
         api.recommendations(token)
-            .channels
+            .requireChannels()
             .map { it.toDomain() }
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
     }
 
     override suspend fun getTopMovies(): Result<List<Movie>> = runApi {
         api.compilation(TopMoviesId, token)
-            .channels
+            .requireChannels()
             .map { it.toDomain() }
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
             .distinctBy { it.id }
@@ -59,7 +61,7 @@ internal class MovieRepositoryImpl(
 
     override suspend fun search(name: String): Result<List<Movie>> = runApi {
         api.search(name, token)
-            .channels
+            .requireChannels()
             .map { it.toDomain() }
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
             .distinctBy { it.id }
@@ -68,6 +70,11 @@ internal class MovieRepositoryImpl(
 
     override suspend fun getMovie(id: String): Result<MovieDetail> = runApi {
         api.view(id, token).toMovieDetail()
+    }
+
+    private fun CatalogResponseDto.requireChannels(): List<ChannelDto> {
+        if (error != null) throw IllegalStateException("catalog $error")
+        return channels
     }
 
     private inline fun <T> runApi(block: () -> T): Result<T> =

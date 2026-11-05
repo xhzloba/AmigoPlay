@@ -49,12 +49,16 @@ internal class CatalogViewModel(
     private val _state = MutableStateFlow(CatalogUiState(sorts.map { CatalogRail(it) }))
     val state: StateFlow<CatalogUiState> = _state.asStateFlow()
     private var loadJob: Job? = null
+    private var started = false
 
-    init {
+    fun ensureLoaded() {
+        if (started) return
+        started = true
         load()
     }
 
     fun retry() {
+        started = true
         _state.value = CatalogUiState(sorts.map { CatalogRail(it) })
         load()
     }

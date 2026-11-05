@@ -23,6 +23,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +72,7 @@ fun CatalogScreen(
     onMoviePeek: (Movie) -> Unit,
     onSearch: () -> Unit,
     onOpenShelf: (type: String, sort: String) -> Unit,
+    active: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var tabName by rememberSaveable { mutableStateOf(CatalogTab.Movies.name) }
@@ -80,6 +82,9 @@ fun CatalogScreen(
         CatalogViewModel(type = tab.type, getShelfMovies = container.getShelfMovies)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(active) {
+        if (active) viewModel.ensureLoaded()
+    }
     val play = remember { Animatable(PlayBlue) }
     val menu = CatalogTab.entries.map { item ->
         Shelf(

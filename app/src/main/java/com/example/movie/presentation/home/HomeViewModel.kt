@@ -15,6 +15,7 @@ import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.usecase.SearchMoviesUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,7 +51,10 @@ class HomeViewModel(
 
     fun select(id: String) {
         if (_state.value.shelves.none { it.id == id }) return
-        if (id == _state.value.selectedId && _state.value.phase !is HomePhase.Failed) return
+        val phase = _state.value.phase
+        val stuck = phase is HomePhase.Failed || phase is HomePhase.Empty
+        if (id == _state.value.selectedId && !stuck) return
+        if (stuck) cache.remove(id)
         showShelf(id)
     }
 
@@ -250,9 +254,15 @@ class HomeViewModel(
             phase = HomePhase.Loading,
         )
         moviesJob = viewModelScope.launch {
-            getShelfMovies(shelf.query)
+            var result = getShelfMovies(shelf.query)
+            if (result.isFailure) {
+                delay(600)
+                if (!isActive || _state.value.selectedId != id) return@launch
+                result = getShelfMovies(shelf.query)
+            }
+            result
                 .onSuccess { movies ->
-                    cache[id] = movies
+                    if (movies.isNotEmpty()) cache[id] = movies
                     if (_state.value.selectedId != id) return@onSuccess
                     _state.value = _state.value.copy(
                         movies = movies,

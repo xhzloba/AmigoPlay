@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonElement
 @Serializable
 internal data class CatalogResponseDto(
     val channels: List<ChannelDto> = emptyList(),
+    val error: Int? = null,
 )
 
 @Serializable

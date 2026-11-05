@@ -246,6 +246,7 @@ fun AppShell(
                     onMoviePeek = { peek = it },
                     onSearch = homeViewModel::openSearch,
                     onOpenShelf = { type, sort -> catalogListKey = "$type:$sort" },
+                    active = tab == AppTab.Catalog,
                 )
             }
         }
