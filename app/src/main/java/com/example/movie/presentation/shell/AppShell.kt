@@ -57,8 +57,10 @@ import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.favorites.FavoritesScreen
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.CatalogGenresPage
 import com.example.movie.presentation.home.CatalogListRoute
 import com.example.movie.presentation.home.CatalogScreen
+import com.example.movie.presentation.home.GenreAll
 import com.example.movie.presentation.home.CatalogSort
 import com.example.movie.presentation.home.HomeRoute
 import com.example.movie.presentation.home.HomeSection
@@ -141,6 +143,24 @@ fun AppShell(
     }
     val sectionAlpha = if (sectionShown != null) sectionVeil.value else 0f
     var catalogListKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var genresType by rememberSaveable { mutableStateOf<String?>(null) }
+    val genresVeil = remember { Animatable(0f) }
+    var genresShown by remember { mutableStateOf(false) }
+    var genresHold by remember { mutableStateOf<String?>(null) }
+    val genresOpen = genresType != null && tab == AppTab.Catalog
+    LaunchedEffect(genresOpen) {
+        if (genresOpen) {
+            genresHold = genresType
+            genresShown = true
+            withFrameNanos { }
+            genresVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        } else if (genresShown) {
+            genresVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+            genresShown = false
+            genresHold = null
+        }
+    }
+    val genresAlpha = if (genresShown) genresVeil.value else 0f
     val catalogList = catalogListKey?.takeIf { tab == AppTab.Catalog }
     val listVeil = remember { Animatable(0f) }
     var listShown by remember { mutableStateOf<String?>(null) }
@@ -190,6 +210,7 @@ fun AppShell(
             peek != null -> peek = null
             tab == AppTab.Catalog && homeState.searchOpen -> homeViewModel.closeSearch()
             listShown != null -> catalogListKey = null
+            genresShown -> genresType = null
             tab == AppTab.Home && sectionShown != null -> sectionName = null
             else -> onTabChange(AppTab.Home.name)
         }
@@ -246,6 +267,7 @@ fun AppShell(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
                     onSearch = homeViewModel::openSearch,
+                    onGenres = { genresType = it },
                     onOpenShelf = { type, sort -> catalogListKey = "$type:$sort" },
                     active = tab == AppTab.Catalog,
                 )
@@ -263,15 +285,33 @@ fun AppShell(
                     .graphicsLayer { alpha = sectionAlpha },
             )
         }
+        if (genresShown) {
+            CatalogGenresPage(
+                onBack = { genresType = null },
+                onGenre = { name ->
+                    val type = genresHold ?: return@CatalogGenresPage
+                    catalogListKey = if (name == GenreAll) {
+                        "$type:popular"
+                    } else {
+                        "$type:g:$name"
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = genresVeil.value },
+            )
+        }
         val opened = listShown
         if (opened != null) {
-            val sort = opened.substringAfter(':')
-            val titleRes = CatalogSort.entries.firstOrNull { it.sort == sort }?.title
-            if (titleRes != null) {
+            val type = opened.substringBefore(':')
+            val rest = opened.substringAfter(':')
+            val genreName = rest.removePrefix("g:").takeIf { rest.startsWith("g:") }
+            if (genreName != null) {
                 CatalogListRoute(
-                    type = opened.substringBefore(':'),
-                    sort = sort,
-                    title = stringResource(titleRes),
+                    type = type,
+                    sort = "",
+                    genre = genreName,
+                    title = genreName,
                     onBack = { catalogListKey = null },
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
@@ -279,10 +319,25 @@ fun AppShell(
                         .fillMaxSize()
                         .graphicsLayer { alpha = listVeil.value },
                 )
+            } else {
+                val titleRes = CatalogSort.entries.firstOrNull { it.sort == rest }?.title
+                if (titleRes != null) {
+                    CatalogListRoute(
+                        type = type,
+                        sort = rest,
+                        title = stringResource(titleRes),
+                        onBack = { catalogListKey = null },
+                        onMovieClick = onMovieClick,
+                        onMoviePeek = { peek = it },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = listVeil.value },
+                    )
+                }
             }
         }
         val searchDim = if (tab == AppTab.Catalog) searchVeil.value else searchCover
-        val barAlpha = (1f - searchDim) * (1f - sectionAlpha) * (1f - listAlpha)
+        val barAlpha = (1f - searchDim) * (1f - sectionAlpha) * (1f - listAlpha) * (1f - genresAlpha)
         if (barAlpha > 0.02f) {
             AppBottomBar(
                 selected = tab,

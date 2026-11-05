@@ -71,6 +71,7 @@ fun CatalogScreen(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onSearch: () -> Unit,
+    onGenres: (type: String) -> Unit,
     onOpenShelf: (type: String, sort: String) -> Unit,
     active: Boolean = false,
     modifier: Modifier = Modifier,
@@ -147,6 +148,7 @@ fun CatalogScreen(
         )
         CatalogBrand(
             onSearch = onSearch,
+            onGenres = { onGenres(tab.type) },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
@@ -157,7 +159,11 @@ fun CatalogScreen(
 }
 
 @Composable
-private fun CatalogBrand(onSearch: () -> Unit, modifier: Modifier = Modifier) {
+private fun CatalogBrand(
+    onSearch: () -> Unit,
+    onGenres: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val tick = rememberHapticTick()
     Row(
         modifier = modifier
@@ -167,6 +173,26 @@ private fun CatalogBrand(onSearch: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         BrandWordmark(play = PlayBlue)
         Spacer(Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        tick?.invoke()
+                        onGenres()
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = ShellIcons.genres,
+                contentDescription = stringResource(R.string.catalog_genres),
+                tint = Color.White,
+                modifier = Modifier.size(22.dp),
+            )
+        }
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -229,6 +255,7 @@ private fun CatalogScrim(progress: Float, modifier: Modifier = Modifier) {
                     )
                 }
                 pool(Offset(logoX, y))
+                pool(Offset(searchX - 40.dp.toPx(), y))
                 pool(Offset(searchX, y))
             },
     )
@@ -239,15 +266,16 @@ internal fun CatalogListRoute(
     type: String,
     sort: String,
     title: String,
+    genre: String? = null,
     onBack: () -> Unit,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val container = LocalAppContainer.current
-    val viewModel: CatalogListViewModel = viewModel(key = "$type:$sort") {
+    val viewModel: CatalogListViewModel = viewModel(key = "$type:$sort:${genre.orEmpty()}") {
         CatalogListViewModel(
-            query = CatalogQuery(sort = sort, type = type),
+            query = CatalogQuery(sort = sort, type = type, genre = genre),
             getShelfMovies = container.getShelfMovies,
         )
     }

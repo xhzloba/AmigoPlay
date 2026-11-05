@@ -14,6 +14,7 @@
     <string name="catalog_popular">Популярное</string>
     <string name="catalog_new">Новинки</string>
     <string name="catalog_updates">Обновления</string>
+    <string name="catalog_genres">Жанры</string>
     <string name="poster_content_description">Постер «%1$s»</string>
     <string name="watch_now">Смотреть</string>
     <string name="age_badge">%1$d+</string>

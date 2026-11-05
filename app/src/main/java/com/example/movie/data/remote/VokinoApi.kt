@@ -13,12 +13,13 @@ internal interface VokinoApi {
 
     @GET("v2/list")
     suspend fun list(
-        @Query("sort") sort: String,
+        @Query("sort") sort: String?,
         @Query("type") type: String?,
         @Query("page") page: Int,
         @Query("token") token: String,
         @Query("uhd") uhd: Int? = null,
         @Query("dolbyvision") dolbyVision: Int? = null,
+        @Query("genre") genre: String? = null,
     ): CatalogResponseDto
 
     @GET("v2/recommendations/list")

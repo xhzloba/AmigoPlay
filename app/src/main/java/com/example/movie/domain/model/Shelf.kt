@@ -5,6 +5,7 @@ data class CatalogQuery(
     val type: String? = null,
     val uhd: Boolean = false,
     val dolbyVision: Boolean = false,
+    val genre: String? = null,
 ) {
     val id: String = buildString {
         append(sort)
@@ -12,6 +13,7 @@ data class CatalogQuery(
         append(type.orEmpty())
         if (uhd) append(":uhd")
         if (dolbyVision) append(":dolby")
+        if (!genre.isNullOrBlank()) append(':').append(genre)
     }
 }
 

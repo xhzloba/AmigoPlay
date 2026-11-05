@@ -27,12 +27,13 @@ internal class MovieRepositoryImpl(
 
     override suspend fun getMovies(query: CatalogQuery, page: Int, limit: Int?): Result<List<Movie>> = runApi {
         api.list(
-            sort = query.sort,
+            sort = query.sort.takeIf { it.isNotBlank() },
             type = query.type,
             page = page,
             token = token,
             uhd = if (query.uhd) 1 else null,
             dolbyVision = if (query.dolbyVision) 1 else null,
+            genre = query.genre?.takeIf { it.isNotBlank() },
         )
             .requireChannels()
             .map { it.toDomain() }

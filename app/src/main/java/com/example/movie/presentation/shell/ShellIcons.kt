@@ -16,6 +16,7 @@ internal object ShellIcons {
     val settings: ImageVector = sliders()
     val media: ImageVector = icon(filled = false) { media() }
     val search: ImageVector = icon(filled = false) { magnifier() }
+    val genres: ImageVector = genreTag()
     val mic: ImageVector = icon(filled = false) { mic() }
     val close: ImageVector = icon(filled = false) { cross() }
     val history: ImageVector = icon(filled = false) { clock() }
@@ -164,6 +165,34 @@ private fun PathBuilder.roundRect(left: Float, top: Float, size: Float, radius: 
     quadTo(left, top, left + radius, top)
     close()
 }
+
+private fun genreTag(): ImageVector = ImageVector.Builder(
+    name = "genres",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.7f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    ) {
+        moveTo(4.2f, 12.2f)
+        lineTo(12.2f, 4.2f)
+        lineTo(20.2f, 4.2f)
+        lineTo(20.2f, 12.2f)
+        lineTo(12.2f, 20.2f)
+        close()
+    }
+    path(fill = SolidColor(Color.Black)) {
+        moveTo(16.7f, 8.2f)
+        arcTo(1.15f, 1.15f, 0f, true, true, 14.4f, 8.2f)
+        arcTo(1.15f, 1.15f, 0f, true, true, 16.7f, 8.2f)
+        close()
+    }
+}.build()
 
 private fun sliders(): ImageVector = ImageVector.Builder(
     name = "settings",
