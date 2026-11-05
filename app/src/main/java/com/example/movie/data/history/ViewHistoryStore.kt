@@ -23,6 +23,10 @@ class ViewHistoryStore(context: Context) {
         write(next)
     }
 
+    fun clear() {
+        write(emptyList())
+    }
+
     fun attachLogo(id: String, logoUrl: String) {
         if (id.isBlank() || logoUrl.isBlank()) return
         val current = itemsState.value

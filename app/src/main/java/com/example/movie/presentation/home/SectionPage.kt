@@ -95,6 +95,7 @@ fun SectionRoute(
             getShelfMovies = container.getShelfMovies,
             getRecommendations = container.getRecommendations,
             getTopMovies = container.getTopMovies,
+            viewHistory = container.viewHistory,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -106,6 +107,14 @@ fun SectionRoute(
         onRetry = viewModel::retry,
         onMovieClick = onMovieClick,
         onMoviePeek = onMoviePeek,
+        onClear = if (section == HomeSection.History) {
+            {
+                viewModel.clearHistory()
+                onBack()
+            }
+        } else {
+            null
+        },
         modifier = modifier,
     )
 }
@@ -119,6 +128,7 @@ internal fun SectionPage(
     onRetry: () -> Unit,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onClear: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val grid = rememberLazyGridState()
@@ -163,6 +173,7 @@ internal fun SectionPage(
         SectionBar(
             title = title,
             onBack = onBack,
+            onClear = onClear,
             modifier = Modifier.align(Alignment.TopCenter),
         )
     }
@@ -172,6 +183,7 @@ internal fun SectionPage(
 private fun SectionBar(
     title: String,
     onBack: () -> Unit,
+    onClear: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
@@ -193,8 +205,28 @@ private fun SectionBar(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = 56.dp),
+                .padding(horizontal = if (onClear != null) 108.dp else 56.dp),
         )
+        if (onClear != null) {
+            Text(
+                text = stringResource(R.string.search_clear),
+                color = Color(0xFF4DA3FF),
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = PosterGridInset)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            tick?.invoke()
+                            onClear()
+                        },
+                    ),
+            )
+        }
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)

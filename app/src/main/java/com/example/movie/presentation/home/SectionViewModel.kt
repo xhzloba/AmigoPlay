@@ -4,9 +4,11 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.movie.R
+import com.example.movie.data.history.ViewHistoryStore
 import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
+import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
 import com.example.movie.domain.usecase.GetTopMoviesUseCase
@@ -20,6 +22,7 @@ enum class HomeSection(@StringRes val title: Int) {
     Watching(R.string.section_watching),
     Top(R.string.section_top),
     Best(R.string.section_best),
+    History(R.string.section_history),
     ;
 
     val paged: Boolean
@@ -39,15 +42,34 @@ class SectionViewModel(
     private val getShelfMovies: GetShelfMoviesUseCase,
     private val getRecommendations: GetRecommendationsUseCase,
     private val getTopMovies: GetTopMoviesUseCase,
+    private val viewHistory: ViewHistoryStore,
 ) : ViewModel() {
     private val seen = mutableSetOf<String>()
     private var page = 0
     private var busy = false
-    private val _state = MutableStateFlow(SectionUiState())
+    private val _state = MutableStateFlow(
+        if (section == HomeSection.History) SectionUiState(loading = false, end = true) else SectionUiState(),
+    )
     val state: StateFlow<SectionUiState> = _state.asStateFlow()
 
     init {
-        loadMore()
+        if (section == HomeSection.History) {
+            viewModelScope.launch {
+                viewHistory.items.collect { saved ->
+                    _state.value = SectionUiState(
+                        movies = saved.map { it.toMovie() },
+                        loading = false,
+                        end = true,
+                    )
+                }
+            }
+        } else {
+            loadMore()
+        }
+    }
+
+    fun clearHistory() {
+        viewHistory.clear()
     }
 
     fun retry() {
@@ -95,5 +117,6 @@ class SectionViewModel(
         HomeSection.Top -> getTopMovies()
         HomeSection.Watching -> getShelfMovies(CatalogQuery(sort = "watching"), page = page)
         HomeSection.Best -> getShelfMovies(CatalogQuery(sort = "rating", type = "movie"), page = page)
+        HomeSection.History -> Result.success(emptyList())
     }
 }

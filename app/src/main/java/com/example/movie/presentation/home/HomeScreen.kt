@@ -88,7 +88,7 @@ import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
 private val HomeBottomClearance = 96.dp
-private const val HistoryRailMin = 5
+private const val HistoryRailSize = 15
 
 private data class ShelfTint(
     val play: Color,
@@ -311,14 +311,19 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    val showHistory = state.history.size > HistoryRailMin
+                    val showHistory = state.history.isNotEmpty()
                     if (showHistory) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
-                            movies = state.history,
+                            movies = state.history.take(HistoryRailSize),
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_history),
+                            onOpen = if (state.history.size >= HistoryRailSize) {
+                                { onOpenSection(HomeSection.History) }
+                            } else {
+                                null
+                            },
                             onSettled = logo::onSettled,
                             stickToStart = true,
                             modifier = Modifier.fillMaxWidth(),

@@ -24,10 +24,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -82,7 +86,6 @@ internal fun CatalogGenresPage(
     onGenre: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tick = rememberHapticTick()
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val header = top + BrandTopInset + 36.dp + 18.dp
     Box(
@@ -108,36 +111,50 @@ internal fun CatalogGenresPage(
             modifier = Modifier.fillMaxSize(),
         ) {
             items(CatalogGenres, key = { it }) { name ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                tick?.invoke()
-                                onGenre(name)
-                            },
-                        ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = name,
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        lineHeight = 20.sp,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                }
+                GenreTile(name = name, onClick = { onGenre(name) })
             }
         }
         GenresBar(onBack = onBack, modifier = Modifier.align(Alignment.TopCenter))
+    }
+}
+
+@Composable
+private fun GenreTile(name: String, onClick: () -> Unit) {
+    val tick = rememberHapticTick()
+    var pressed by remember(name) { mutableStateOf(false) }
+    val scale = rememberPressScale(pressed)
+    val wave = remember(name) { PosterWave() }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .posterWave(wave, light = true)
+            .pressToOpen(
+                onPressed = { pressed = it },
+                onClick = {
+                    tick?.invoke()
+                    onClick()
+                },
+                wave = wave,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = name,
+            color = Color.White,
+            fontSize = 16.sp,
+            lineHeight = 20.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
     }
 }
 

@@ -81,7 +81,7 @@ internal class PosterWave {
 }
 
 @Composable
-internal fun Modifier.posterWave(wave: PosterWave): Modifier {
+internal fun Modifier.posterWave(wave: PosterWave, light: Boolean = false): Modifier {
     val radius = remember { Animatable(0f) }
     val ink = remember { Animatable(0f) }
     LaunchedEffect(wave.token) {
@@ -120,12 +120,15 @@ internal fun Modifier.posterWave(wave: PosterWave): Modifier {
             hypot(size.width - origin.x, size.height - origin.y),
         )
         val r = lerp(size.minDimension * 0.12f, reach, spread)
-        drawRect(Color.Black.copy(alpha = 0.08f * alpha))
+        val wash = if (light) Color(0xFF909096) else Color.Black
+        val core = if (light) Color(0xFFA8A8AE) else Color.Black
+        val mid = if (light) Color(0xFF808086) else Color.Black
+        drawRect(wash.copy(alpha = 0.08f * alpha))
         drawCircle(
             brush = Brush.radialGradient(
                 colorStops = arrayOf(
-                    0f to Color.Black.copy(alpha = 0.36f * alpha),
-                    0.62f to Color.Black.copy(alpha = 0.16f * alpha),
+                    0f to core.copy(alpha = (if (light) 0.50f else 0.36f) * alpha),
+                    0.55f to mid.copy(alpha = (if (light) 0.26f else 0.16f) * alpha),
                     1f to Color.Transparent,
                 ),
                 center = origin,
@@ -245,6 +248,85 @@ internal fun Modifier.holdToPeek(
                         if (pressEpoch != mine) return@launch
                         presser[0].invoke(false)
                         if (!open) return@launch
+                        coroutineScope {
+                            launch { delay(PressOutMillis.toLong()) }
+                            launch { waves[0]?.awaitSettled() }
+                        }
+                        if (pressEpoch == mine) clicks[0].invoke()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun Modifier.pressToOpen(
+    onPressed: (Boolean) -> Unit,
+    onClick: () -> Unit,
+    wave: PosterWave,
+): Modifier {
+    val press by rememberUpdatedState(onPressed)
+    val click by rememberUpdatedState(onClick)
+    val waveState by rememberUpdatedState(wave)
+    val presser = remember { arrayOf<(Boolean) -> Unit>({ }) }
+    val clicks = remember { arrayOf<() -> Unit>({ }) }
+    val waves = remember { arrayOfNulls<PosterWave>(1) }
+    val window = remember { floatArrayOf(Float.NaN, Float.NaN) }
+    presser[0] = press
+    clicks[0] = click
+    waves[0] = waveState
+    return onGloballyPositioned { coordinates ->
+        val at = coordinates.positionInWindow()
+        window[0] = at.x
+        window[1] = at.y
+    }.semantics {
+        onClick {
+            clicks[0].invoke()
+            true
+        }
+    }.pointerInput(Unit) {
+        val slop = viewConfiguration.touchSlop
+        var pressEpoch = 0
+        coroutineScope {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                val originFinger = fingerOnScreen(window, down)
+                val started = System.nanoTime()
+                val pressToken = ++pressEpoch
+                waves[0]?.press(down.position)
+                presser[0].invoke(true)
+                var draggedAway = false
+                var releaseDelay = 0L
+                var open = false
+                try {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        val dragged = change != null &&
+                            (fingerOnScreen(window, change) - originFinger).getDistance() > slop
+                        if (dragged || change == null) {
+                            draggedAway = true
+                            break
+                        }
+                        if (!change.pressed) {
+                            change.consume()
+                            val elapsed = (System.nanoTime() - started) / 1_000_000
+                            if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
+                            open = true
+                            break
+                        }
+                    }
+                } finally {
+                    if (draggedAway) waves[0]?.kill() else waves[0]?.release()
+                    val mine = pressToken
+                    val hold = releaseDelay
+                    val go = open
+                    launch {
+                        if (hold > 0) delay(hold)
+                        if (pressEpoch != mine) return@launch
+                        presser[0].invoke(false)
+                        if (!go) return@launch
                         coroutineScope {
                             launch { delay(PressOutMillis.toLong()) }
                             launch { waves[0]?.awaitSettled() }
