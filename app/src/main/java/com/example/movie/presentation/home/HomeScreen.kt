@@ -95,7 +95,7 @@ private data class ShelfTint(
     val chip: Color,
     val dragging: Boolean,
 )
-private val CatalogGap = 36.dp
+internal val CatalogGap = 36.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -111,6 +111,7 @@ fun HomeScreen(
     onClearRecent: () -> Unit,
     onOpenSection: (HomeSection) -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
+    presentSearch: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val playAnim = remember { Animatable(PlayBlue) }
@@ -138,10 +139,11 @@ fun HomeScreen(
     }
     val play = playAnim.value
     val logo = remember { LogoMood() }
-    BackHandler(enabled = state.searchOpen, onBack = onCloseSearch)
+    BackHandler(enabled = presentSearch && state.searchOpen, onBack = onCloseSearch)
     val veil = remember { androidx.compose.animation.core.Animatable(0f) }
     var searchCover by remember { mutableStateOf(false) }
-    LaunchedEffect(state.searchOpen) {
+    LaunchedEffect(state.searchOpen, presentSearch) {
+        if (!presentSearch) return@LaunchedEffect
         if (state.searchOpen) {
             searchCover = true
             veil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
@@ -391,7 +393,7 @@ fun HomeScreen(
     }
     }
         }
-        if (searchCover) {
+        if (presentSearch && searchCover) {
             SearchPage(
                 query = state.searchQuery,
                 results = state.searchResults,

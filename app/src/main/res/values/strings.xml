@@ -6,6 +6,14 @@
     <string name="popular_http_error">Сервер ответил ошибкой (%1$d).</string>
     <string name="popular_parse_error">Ответ сервера не разобрать.</string>
     <string name="catalog_empty">Здесь пока пусто.</string>
+    <string name="catalog_movies">Фильмы</string>
+    <string name="catalog_series">Сериалы</string>
+    <string name="catalog_cartoons">Мультфильмы</string>
+    <string name="catalog_cartoon_series">Мультсериалы</string>
+    <string name="catalog_anime">Аниме</string>
+    <string name="catalog_popular">Популярное</string>
+    <string name="catalog_new">Новинки</string>
+    <string name="catalog_updates">Обновления</string>
     <string name="poster_content_description">Постер «%1$s»</string>
     <string name="watch_now">Смотреть</string>
     <string name="age_badge">%1$d+</string>

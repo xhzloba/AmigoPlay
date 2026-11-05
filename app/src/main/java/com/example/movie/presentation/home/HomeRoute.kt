@@ -14,6 +14,7 @@ fun HomeRoute(
     onMoviePeek: (Movie) -> Unit,
     onOpenSection: (HomeSection) -> Unit,
     onSearchCover: (Float) -> Unit = {},
+    presentSearch: Boolean = true,
     session: Int = 0,
 ) {
     val container = LocalAppContainer.current
@@ -44,5 +45,6 @@ fun HomeRoute(
         onClearRecent = viewModel::clearRecent,
         onOpenSection = onOpenSection,
         onSearchCover = onSearchCover,
+        presentSearch = presentSearch,
     )
 }

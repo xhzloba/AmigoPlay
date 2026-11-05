@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -50,6 +49,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -99,7 +99,7 @@ fun SectionRoute(
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
     SectionPage(
-        section = section,
+        title = stringResource(section.title),
         state = state,
         onBack = onBack,
         onLoadMore = viewModel::loadMore,
@@ -111,8 +111,8 @@ fun SectionRoute(
 }
 
 @Composable
-private fun SectionPage(
-    section: HomeSection,
+internal fun SectionPage(
+    title: String,
     state: SectionUiState,
     onBack: () -> Unit,
     onLoadMore: () -> Unit,
@@ -161,7 +161,7 @@ private fun SectionPage(
         }
         SectionScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
         SectionBar(
-            title = stringResource(section.title),
+            title = title,
             onBack = onBack,
             modifier = Modifier.align(Alignment.TopCenter),
         )
@@ -169,19 +169,35 @@ private fun SectionPage(
 }
 
 @Composable
-private fun SectionBar(title: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
+private fun SectionBar(
+    title: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val tick = rememberHapticTick()
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
             .padding(top = BrandTopInset)
-            .height(36.dp)
-            .padding(end = PosterGridInset),
-        verticalAlignment = Alignment.CenterVertically,
+            .height(36.dp),
     ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 18.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 56.dp),
+        )
         Box(
             modifier = Modifier
+                .align(Alignment.CenterStart)
                 .padding(start = PosterGridInset - 7.dp)
                 .size(36.dp)
                 .clickable(
@@ -201,21 +217,11 @@ private fun SectionBar(title: String, onBack: () -> Unit, modifier: Modifier = M
                 modifier = Modifier.size(22.dp),
             )
         }
-        Spacer(Modifier.width(2.dp))
-        Text(
-            text = title,
-            color = Color.White,
-            fontSize = 18.sp,
-            lineHeight = 24.sp,
-            fontWeight = FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
 @Composable
-private fun PosterGrid(
+internal fun PosterGrid(
     movies: List<Movie>,
     state: LazyGridState,
     topPadding: Dp,
@@ -342,7 +348,7 @@ private fun PosterCell(
 }
 
 @Composable
-private fun SectionSkeleton(modifier: Modifier = Modifier) {
+internal fun SectionSkeleton(modifier: Modifier = Modifier) {
     val showTitles = posterTitlesOn()
     Column(
         modifier = modifier.padding(horizontal = PosterGridInset),
@@ -368,7 +374,7 @@ private fun SectionSkeleton(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SectionError(onRetry: () -> Unit) {
+internal fun SectionError(onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
