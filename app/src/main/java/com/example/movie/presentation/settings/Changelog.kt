@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.41.4",
+            fixed = listOf(
+                "В полном списке из слайдера скелетоны больше не дёргаются, когда появляются фильмы. Нижние ряды не подпрыгивают, если включены название и год.",
+            ),
+        ),
+        Release(
             version = "1.41.3",
             fixed = listOf(
                 "В полном списке из слайдера скелетоны названия и года больше не наезжают на нижние ряды.",

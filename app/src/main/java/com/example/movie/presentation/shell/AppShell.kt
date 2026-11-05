@@ -147,6 +147,7 @@ fun AppShell(
     LaunchedEffect(catalogList) {
         if (catalogList != null) {
             listShown = catalogList
+            withFrameNanos { }
             listVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
         } else if (listShown != null) {
             listVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))

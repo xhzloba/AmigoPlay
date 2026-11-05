@@ -1,7 +1,6 @@
 package com.example.movie.presentation.home.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -19,6 +19,7 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -61,25 +62,34 @@ internal fun PosterCaption(title: String, year: Int?, modifier: Modifier = Modif
 
 @Composable
 internal fun PosterCaptionSkeleton(modifier: Modifier = Modifier) {
-    Column(
-        modifier
-            .padding(top = 10.dp)
-            .height(PosterCaptionBlock - 10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(
-            Modifier
-                .fillMaxWidth(0.82f)
-                .height(11.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.10f)),
+    // Те же слоты, что у PosterCaption: 10.dp, строка 15.sp, 4.dp, строка 15.sp.
+    // Иначе нижние ряды подпрыгивают, когда скелетон сменяется текстом.
+    Column(modifier.padding(top = 10.dp)) {
+        CaptionBar(0.82f, 11.dp, 0.10f, FontWeight.SemiBold)
+        Spacer(Modifier.height(4.dp))
+        CaptionBar(0.36f, 10.dp, 0.06f, FontWeight.Normal)
+    }
+}
+
+@Composable
+private fun CaptionBar(fraction: Float, bar: Dp, alpha: Float, weight: FontWeight) {
+    Box(Modifier.fillMaxWidth()) {
+        Text(
+            text = " ",
+            color = Color.Transparent,
+            fontSize = 12.sp,
+            lineHeight = 15.sp,
+            fontWeight = weight,
+            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+            maxLines = 1,
         )
         Box(
             Modifier
-                .fillMaxWidth(0.36f)
-                .height(10.dp)
+                .align(Alignment.CenterStart)
+                .fillMaxWidth(fraction)
+                .height(bar)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.06f)),
+                .background(Color.White.copy(alpha = alpha)),
         )
     }
 }

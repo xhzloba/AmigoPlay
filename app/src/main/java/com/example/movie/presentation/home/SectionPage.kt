@@ -143,7 +143,6 @@ internal fun SectionPage(
             ),
     ) {
         when {
-            state.loading && state.movies.isEmpty() -> SectionSkeleton(Modifier.padding(top = header))
             state.error != null && state.movies.isEmpty() -> SectionError(onRetry)
             else -> PosterGrid(
                 movies = state.movies,
@@ -153,6 +152,7 @@ internal fun SectionPage(
                 loadingMore = state.loadingMore,
                 end = state.end,
                 error = state.error,
+                placeholder = state.loading && state.movies.isEmpty(),
                 onLoadMore = onLoadMore,
                 onRetry = onRetry,
                 onMovieClick = onMovieClick,
@@ -229,14 +229,15 @@ internal fun PosterGrid(
     loadingMore: Boolean,
     end: Boolean,
     error: DataError?,
+    placeholder: Boolean,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
 ) {
     HapticOnAppend(movies.map { it.id })
-    LaunchedEffect(state, movies.size, end, error) {
-        if (end || error != null) return@LaunchedEffect
+    LaunchedEffect(state, movies.size, end, error, placeholder) {
+        if (placeholder || end || error != null) return@LaunchedEffect
         snapshotFlow { state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
             .distinctUntilChanged()
             .collect { last ->
@@ -251,10 +252,15 @@ internal fun PosterGrid(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        items(movies.size, key = { movies[it].id }) { index ->
-            PosterCell(movies[index], onMovieClick, onMoviePeek)
+        val count = if (placeholder) 12 else movies.size
+        items(count, key = { it }) { index ->
+            if (placeholder) {
+                SkeletonPoster()
+            } else {
+                PosterCell(movies[index], onMovieClick, onMoviePeek)
+            }
         }
-        if (loadingMore || error != null) {
+        if (!placeholder && (loadingMore || error != null)) {
             item(span = { GridItemSpan(3) }) {
                 MoreRow(loading = loadingMore, error = error, onRetry = onRetry)
             }
@@ -348,30 +354,17 @@ private fun PosterCell(
 }
 
 @Composable
-internal fun SectionSkeleton(modifier: Modifier = Modifier) {
+private fun SkeletonPoster() {
     val showTitles = posterTitlesOn()
-    // Сетка, как у загруженного списка: у колонки на весь экран нижние ряды
-    // сжимаются и полоска года залезает на следующий постер.
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        contentPadding = PaddingValues(horizontal = PosterGridInset),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        userScrollEnabled = false,
-        modifier = modifier.fillMaxSize(),
-    ) {
-        items(12) {
-            Column {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f / PosterAspect)
-                        .clip(PosterShape)
-                        .background(Color.White.copy(alpha = 0.08f)),
-                )
-                if (showTitles) PosterCaptionSkeleton()
-            }
-        }
+    Column {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f / PosterAspect)
+                .clip(PosterShape)
+                .background(Color.White.copy(alpha = 0.08f)),
+        )
+        if (showTitles) PosterCaptionSkeleton()
     }
 }
 
