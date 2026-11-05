@@ -82,7 +82,7 @@ fun CatalogScreen(
         CatalogViewModel(type = tab.type, getShelfMovies = container.getShelfMovies)
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LaunchedEffect(active) {
+    LaunchedEffect(active, tab.type) {
         if (active) viewModel.ensureLoaded()
     }
     val play = remember { Animatable(PlayBlue) }

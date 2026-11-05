@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.41.2",
+            fixed = listOf(
+                "В каталоге «Сериалы», «Мультфильмы» и вкладки дальше грузят слайдеры, а не остаются на скелетонах.",
+            ),
+        ),
+        Release(
             version = "1.41.1",
             fixed = listOf(
                 "На главной «Популярное» больше не остаётся пустым. Если сервер просит подождать, полка пробует ещё раз.",
