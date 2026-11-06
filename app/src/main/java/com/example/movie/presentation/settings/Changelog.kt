@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.48.0",
+            added = listOf(
+                "Фон деталки из цветов обложки. Четыре угла, у каждого свой цвет. Плоская заливка по краю не берётся.",
+                "При скролле сверху ложится тот же цвет, темнее. Кадр остаётся, но едва.",
+            ),
+        ),
+        Release(
             version = "1.47.0",
             added = listOf(
                 "После сезонов «Ссылки»: Кинопоиск и IMDb. Нажатие открывает системный выбор, чем открыть.",

@@ -5,7 +5,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -74,12 +73,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -107,7 +108,6 @@ import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.palette.PosterWash
-import com.example.movie.presentation.palette.differsInHue
 import com.example.movie.presentation.palette.posterWash
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.toSaved
@@ -127,11 +127,13 @@ import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.shell.ShellIcons
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.scale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.max
 import kotlin.math.roundToInt
 import java.util.Locale
 
@@ -164,7 +166,7 @@ private fun RoundAction(icon: ImageVector) {
 }
 
 internal val DetailInset = 20.dp
-private const val BackdropPeek = 0.26f
+private const val BackdropPeek = 0.08f
 
 internal fun Modifier.edgeToEdge(inset: Dp): Modifier = layout { measurable, constraints ->
     val extra = inset.roundToPx()
@@ -231,8 +233,8 @@ private fun DetailContent(
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack)
-    val hidden = PosterWash(Color(0xFF121212), Color(0xFF121212), Color(0xFF121212))
+    val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack, CinemaBlack)
+    val hidden = PosterWash(Color(0xFF121212), Color(0xFF121212), Color(0xFF121212), Color(0xFF121212))
     var target by remember(detail.id) { mutableStateOf(if (settings.extractColors) hidden else flat) }
     val reveal = remember(detail.id) { Animatable(if (settings.extractColors) 0f else 1f) }
     LaunchedEffect(detail.id, detail.posterUrl, settings.extractColors) {
@@ -262,23 +264,25 @@ private fun DetailContent(
     val scroll = rememberScrollState()
     LaunchedEffect(detail.id) { scroll.scrollTo(0) }
     val density = LocalDensity.current
-    val backdropAway = scroll.value > with(density) { 32.dp.toPx() }
-    val backdropAlpha by animateFloatAsState(
-        targetValue = if (backdropAway) BackdropPeek else 1f,
-        animationSpec = tween(durationMillis = 280),
-        label = "backdrop-away",
-    )
-    val dotsAlpha by animateFloatAsState(
-        targetValue = if (backdropAway) 0f else 1f,
-        animationSpec = tween(durationMillis = 280),
-        label = "backdrop-dots",
-    )
+    val shadeTravel = with(density) { 200.dp.toPx() }
+    val shade = (scroll.value / shadeTravel).coerceIn(0f, 1f)
+    val backdropAlpha = 1f - shade * (1f - BackdropPeek)
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
                 drawRect(Color(0xFF121212))
-                drawPosterWash(target.base, target.right, target.accent, washAlpha)
+                drawPosterWash(target, washAlpha)
+                if (shade > 0f) {
+                    val ink = lerp(target.topLeft, target.topRight, 0.5f).sunk()
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            0f to ink.copy(alpha = 0.94f * shade),
+                            0.28f to ink.copy(alpha = 0.62f * shade),
+                            0.58f to Color.Transparent,
+                        ),
+                    )
+                }
             },
     ) {
         val heroHeight = maxHeight * 0.72f
@@ -325,7 +329,7 @@ private fun DetailContent(
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(top = 12.dp)
-                    .graphicsLayer { alpha = dotsAlpha * (1f - pageAlpha) },
+                    .graphicsLayer { alpha = (1f - shade) * (1f - pageAlpha) },
             )
         }
         Column(
@@ -882,7 +886,14 @@ private fun DataError.message(): String = when (this) {
     is DataError.Unknown -> stringResource(R.string.popular_load_error)
 }
 
-internal fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color, alpha: Float) {
+private fun Color.sunk(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    hsv[2] = (hsv[2] * 0.34f).coerceIn(0.04f, 0.2f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
+
+internal fun DrawScope.drawPosterWash(wash: PosterWash, alpha: Float) {
     if (alpha <= 0f) return
     val layer = alpha < 0.99f
     if (layer) {
@@ -891,67 +902,34 @@ internal fun DrawScope.drawPosterWash(base: Color, right: Color, accent: Color, 
             Paint().apply { this.alpha = alpha },
         )
     }
-    val split = base.differsInHue(right)
-    val third = split && accent.differsInHue(base) && accent.differsInHue(right)
-    drawRect(base)
-    if (!split || third) {
-        val accentRadius = if (third) size.width * 1.35f else size.width * 0.95f
-        val accentCenter = if (third) Offset(0f, size.height) else Offset(size.width * 0.06f, size.height)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colorStops = if (third) {
-                    arrayOf(
-                        0f to accent,
-                        0.22f to accent.copy(alpha = 0.82f),
-                        0.48f to accent.copy(alpha = 0.46f),
-                        0.72f to accent.copy(alpha = 0.16f),
-                        1f to Color.Transparent,
-                    )
-                } else {
-                    arrayOf(
-                        0f to accent,
-                        0.4f to accent.copy(alpha = 0.5f),
-                        1f to Color.Transparent,
-                    )
-                },
-                center = accentCenter,
-                radius = accentRadius,
-            ),
-            radius = accentRadius,
-            center = accentCenter,
-        )
+    drawRect(Color(0xFF1E1E1E))
+    val side = max(size.width, size.height)
+    val radius = side * 1.41421356f
+    fun pool(color: Color, endX: Boolean, endY: Boolean) {
+        scale(
+            scaleX = size.width / side,
+            scaleY = size.height / side,
+            pivot = Offset.Zero,
+        ) {
+            val center = Offset(if (endX) side else 0f, if (endY) side else 0f)
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0f to color,
+                        0.95f to Color.Transparent,
+                    ),
+                    center = center,
+                    radius = radius,
+                ),
+                radius = radius,
+                center = center,
+            )
+        }
     }
-    val rightRadius = if (split) size.width * 1.55f else size.maxDimension * 0.92f
-    val rightCenter = if (split) {
-        Offset(size.width * 1.42f, size.height * 0.48f)
-    } else {
-        Offset(size.width * 1.04f, size.height * 0.62f)
-    }
-    drawCircle(
-        brush = Brush.radialGradient(
-            colorStops = if (split) {
-                arrayOf(
-                    0f to right,
-                    0.18f to right.copy(alpha = 0.9f),
-                    0.4f to right.copy(alpha = 0.62f),
-                    0.62f to right.copy(alpha = 0.28f),
-                    0.82f to right.copy(alpha = 0.08f),
-                    1f to Color.Transparent,
-                )
-            } else {
-                arrayOf(
-                    0f to right,
-                    0.32f to right.copy(alpha = 0.78f),
-                    0.68f to right.copy(alpha = 0.3f),
-                    1f to Color.Transparent,
-                )
-            },
-            center = rightCenter,
-            radius = rightRadius,
-        ),
-        radius = rightRadius,
-        center = rightCenter,
-    )
+    pool(wash.bottomLeft, endX = false, endY = true)
+    pool(wash.bottomRight, endX = true, endY = true)
+    pool(wash.topRight, endX = true, endY = false)
+    pool(wash.topLeft, endX = false, endY = false)
     if (layer) drawContext.canvas.restore()
 }
 

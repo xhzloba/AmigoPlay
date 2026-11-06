@@ -164,50 +164,151 @@ internal fun DominantColors.seat(): DominantColors = DominantColors(primary.seat
 internal fun DominantColors.richer(): DominantColors = DominantColors(primary.richer(), secondary.richer())
 
 internal data class PosterWash(
-    val base: Color,
-    val right: Color,
-    val accent: Color,
+    val topLeft: Color,
+    val topRight: Color,
+    val bottomRight: Color,
+    val bottomLeft: Color,
 )
 
 internal fun android.graphics.Bitmap.posterWash(): PosterWash? {
-    val ranked = washClusters() ?: return null
-    val chromatic = ranked.filter { it.saturation() >= GraySat }
-    val dominant = ranked.first()
-    val pool = when {
-        chromatic.isEmpty() -> ranked
-        dominant.saturation() < GraySat -> listOf(dominant) + chromatic
-        else -> chromatic
-    }
-    val picks = ArrayList<HueCluster>(3)
-    for (cluster in pool) {
-        if (picks.size == 3) break
-        if (picks.isNotEmpty() && cluster.count < picks[0].count * 0.05f) continue
-        val gray = cluster.saturation() < GraySat
-        val distinct = picks.all { other ->
-            val otherGray = other.saturation() < GraySat
-            when {
-                gray && otherGray -> false
-                gray || otherGray -> true
-                else -> hueDistance(cluster.hue(), other.hue()) >= 0.07f
-            }
+    if (width < 2 || height < 2) return null
+    val pixels = IntArray(width * height)
+    getPixels(pixels, 0, width, 0, 0, width, height)
+    val background = backgroundHue(pixels)
+    val midX = width / 2
+    val midY = height / 2
+    return PosterWash(
+        topLeft = washCorner(pixels, 0, 0, midX, midY, background),
+        topRight = washCorner(pixels, midX, 0, width, midY, background),
+        bottomLeft = washCorner(pixels, 0, midY, midX, height, background),
+        bottomRight = washCorner(pixels, midX, midY, width, height, background),
+    )
+}
+
+private fun android.graphics.Bitmap.backgroundHue(pixels: IntArray): Int? {
+    val margin = (minOf(width, height) * 0.05f).toInt().coerceAtLeast(2)
+    val buckets = HashMap<Int, Int>()
+    var total = 0
+    for (y in 0 until height) {
+        val edgeRow = y < margin || y >= height - margin
+        val row = y * width
+        for (x in 0 until width) {
+            if (!edgeRow && x >= margin && x < width - margin) continue
+            val pixel = pixels[row + x]
+            val key = (android.graphics.Color.red(pixel) shr 4 shl 8) or
+                (android.graphics.Color.green(pixel) shr 4 shl 4) or
+                (android.graphics.Color.blue(pixel) shr 4)
+            buckets[key] = (buckets[key] ?: 0) + 1
+            total += 1
         }
-        if (!distinct) continue
-        picks.add(cluster)
     }
-    if (picks.isEmpty()) return null
-    val base = picks[0].toColor().posterInk()
-    val baseValue = base.toHsv()[2]
-    val right = if (picks.size >= 2) {
-        picks[1].toColor().posterInk().lift(0.16f)
+    if (total == 0) return null
+    val top = buckets.maxBy { it.value }
+    if (top.value < total * 0.6f) return null
+    val red = ((top.key shr 8) and 15) * 16 + 8
+    val green = ((top.key shr 4) and 15) * 16 + 8
+    val blue = (top.key and 15) * 16 + 8
+    val max = maxOf(red, green, blue)
+    val min = minOf(red, green, blue)
+    if (max == 0 || (max - min).toFloat() / max < 0.45f) return null
+    val hsv = FloatArray(3)
+    android.graphics.Color.RGBToHSV(red, green, blue, hsv)
+    return (hsv[0] / HueStep).toInt() % HueBins
+}
+
+private fun android.graphics.Bitmap.washCorner(
+    pixels: IntArray,
+    x0: Int,
+    y0: Int,
+    x1: Int,
+    y1: Int,
+    background: Int?,
+): Color {
+    val bins = Array(HueBins) { HueBin() }
+    val hsv = FloatArray(3)
+    for (y in y0 until y1) {
+        val row = y * width
+        for (x in x0 until x1) {
+            val pixel = pixels[row + x]
+            android.graphics.Color.colorToHSV(pixel, hsv)
+            if (hsv[1] < 0.22f || hsv[2] < 0.08f) continue
+            val bin = (hsv[0] / HueStep).toInt() % HueBins
+            if (background != null && hueBinDistance(bin, background) <= 1) continue
+            val red = android.graphics.Color.red(pixel)
+            val green = android.graphics.Color.green(pixel)
+            val blue = android.graphics.Color.blue(pixel)
+            val chroma = (maxOf(red, green, blue) - minOf(red, green, blue)).toDouble()
+            bins[bin].add(red, green, blue, chroma)
+        }
+    }
+    val chosen = bins.filter { it.count > 8 }.maxByOrNull { it.mass }
+    return (chosen?.color() ?: meanColor(pixels, x0, y0, x1, y1)).toWashTone()
+}
+
+private fun hueBinDistance(a: Int, b: Int): Int {
+    val delta = kotlin.math.abs(a - b)
+    return minOf(delta, HueBins - delta)
+}
+
+private class HueBin {
+    var mass = 0.0
+    var red = 0.0
+    var green = 0.0
+    var blue = 0.0
+    var count = 0
+
+    fun add(componentRed: Int, componentGreen: Int, componentBlue: Int, chroma: Double) {
+        mass += chroma
+        red += componentRed
+        green += componentGreen
+        blue += componentBlue
+        count += 1
+    }
+
+    fun color(): Color = Color(
+        (red / count).toInt(),
+        (green / count).toInt(),
+        (blue / count).toInt(),
+    )
+}
+
+private fun android.graphics.Bitmap.meanColor(
+    pixels: IntArray,
+    x0: Int,
+    y0: Int,
+    x1: Int,
+    y1: Int,
+): Color {
+    var red = 0L
+    var green = 0L
+    var blue = 0L
+    var count = 0
+    for (y in y0 until y1) {
+        val row = y * width
+        for (x in x0 until x1) {
+            val pixel = pixels[row + x]
+            red += android.graphics.Color.red(pixel)
+            green += android.graphics.Color.green(pixel)
+            blue += android.graphics.Color.blue(pixel)
+            count += 1
+        }
+    }
+    if (count == 0) return Color(0xFF121212)
+    return Color((red / count).toInt(), (green / count).toInt(), (blue / count).toInt())
+}
+
+private const val HueBins = 18
+private const val HueStep = 20f
+
+private fun Color.toWashTone(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    if (hsv[1] < 0.08f) {
+        hsv[2] = hsv[2].coerceIn(0.05f, 0.2f)
     } else {
-        base.withValue(baseValue + 0.14f)
+        hsv[2] = hsv[2].coerceAtMost(0.78f)
     }
-    val accent = if (picks.size >= 3) {
-        picks[2].toColor().posterInk()
-    } else {
-        base.withValue(baseValue - 0.05f)
-    }
-    return PosterWash(base, right, accent)
+    return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
 internal fun Color.differsInHue(other: Color): Boolean {
@@ -220,117 +321,11 @@ internal fun Color.differsInHue(other: Color): Boolean {
     return hueDistance(a[0] / 360f, b[0] / 360f) >= 0.07f
 }
 
-private class HueCluster(
-    var count: Int,
-    var red: Int,
-    var green: Int,
-    var blue: Int,
-    val seedHue: Float,
-    val seedSat: Float,
-)
-
-private fun android.graphics.Bitmap.washClusters(): List<HueCluster>? {
-    if (width == 0 || height == 0) return null
-    val pixels = IntArray(width * height)
-    getPixels(pixels, 0, width, 0, 0, width, height)
-    val buckets = HashMap<Int, IntArray>(256)
-    val hsv = FloatArray(3)
-    for (pixel in pixels) {
-        android.graphics.Color.colorToHSV(pixel, hsv)
-        val sat = hsv[1]
-        val value = hsv[2]
-        if (value > 0.97f) continue
-        if (value < 0.035f) continue
-        if (value < 0.06f && sat < 0.2f) continue
-        val key = ((android.graphics.Color.red(pixel) shr 3) shl 10) or
-            ((android.graphics.Color.green(pixel) shr 3) shl 5) or
-            (android.graphics.Color.blue(pixel) shr 3)
-        val bucket = buckets.getOrPut(key) { IntArray(4) }
-        bucket[0] += 1
-        bucket[1] += android.graphics.Color.red(pixel)
-        bucket[2] += android.graphics.Color.green(pixel)
-        bucket[3] += android.graphics.Color.blue(pixel)
-    }
-    if (buckets.isEmpty()) return null
-    val clusters = ArrayList<HueCluster>(16)
-    for (bucket in buckets.values.sortedByDescending { it[0] }) {
-        val bucketHsv = bucket.toHsv()
-        val match = clusters.firstOrNull { cluster ->
-            val bucketChromatic = bucketHsv[1] >= 0.12f
-            val seedChromatic = cluster.seedSat >= 0.12f
-            if (bucketChromatic && seedChromatic) {
-                hueDistance(bucketHsv[0] / 360f, cluster.seedHue) < 0.08f
-            } else if (!bucketChromatic && !seedChromatic) {
-                rgbDistance(bucket, cluster.sums()) < 55 * 55
-            } else {
-                false
-            }
-        }
-        if (match == null) {
-            clusters.add(
-                HueCluster(
-                    count = bucket[0],
-                    red = bucket[1],
-                    green = bucket[2],
-                    blue = bucket[3],
-                    seedHue = bucketHsv[0] / 360f,
-                    seedSat = bucketHsv[1],
-                ),
-            )
-        } else {
-            match.count += bucket[0]
-            match.red += bucket[1]
-            match.green += bucket[2]
-            match.blue += bucket[3]
-        }
-    }
-    if (clusters.isEmpty()) return null
-    clusters.sortByDescending { it.count }
-    val minCount = pixels.size * 0.012f
-    val ranked = clusters.filter { it.count >= minCount }
-    return ranked.ifEmpty { listOf(clusters.first()) }
-}
-
-private fun HueCluster.sums(): IntArray = intArrayOf(count, red, green, blue)
-
-private fun HueCluster.toColor(): Color = Color(red / count, green / count, blue / count)
-
-private fun HueCluster.hue(): Float = sums().toHsv()[0] / 360f
-
-private fun HueCluster.saturation(): Float = sums().toHsv()[1]
-
 internal fun DominantColors.backdropBrush(): Brush {
     return Brush.horizontalGradient(
         0f to primary,
         1f to secondary,
     )
-}
-
-private const val GraySat = 0.28f
-
-private fun Color.posterInk(): Color {
-    val hsv = toHsv()
-    if (hsv[1] < GraySat) {
-        hsv[1] = 0f
-        hsv[2] = 0.16f
-        return Color(android.graphics.Color.HSVToColor(hsv))
-    }
-    hsv[1] = (hsv[1] * 1.5f + 0.2f).coerceIn(0.68f, 0.94f)
-    val bright = if (hsv[2] < 0.22f) hsv[2] + 0.06f else hsv[2] * 0.95f
-    hsv[2] = bright.coerceIn(0.18f, 0.58f)
-    return Color(android.graphics.Color.HSVToColor(hsv))
-}
-
-private fun Color.lift(extra: Float): Color {
-    val hsv = toHsv()
-    hsv[2] = (hsv[2] + extra).coerceIn(0.22f, 0.68f)
-    return Color(android.graphics.Color.HSVToColor(hsv))
-}
-
-private fun Color.withValue(value: Float): Color {
-    val hsv = toHsv()
-    hsv[2] = value.coerceIn(0.24f, 0.7f)
-    return Color(android.graphics.Color.HSVToColor(hsv))
 }
 
 private fun Color.richer(): Color {
