@@ -100,6 +100,7 @@ fun SettingsRoute() {
         onShowLogos = repository::setShowLogos,
         onShowPosterTitles = repository::setShowPosterTitles,
         onAutoBackdrop = repository::setAutoBackdrop,
+        onWatchGlow = repository::setWatchGlow,
         onHaptic = repository::setHaptic,
         onGyro = repository::setGyro,
     )
@@ -113,6 +114,7 @@ private fun SettingsScreen(
     onShowLogos: (Boolean) -> Unit,
     onShowPosterTitles: (Boolean) -> Unit,
     onAutoBackdrop: (Boolean) -> Unit,
+    onWatchGlow: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
     onGyro: (Boolean) -> Unit,
 ) {
@@ -165,6 +167,13 @@ private fun SettingsScreen(
                     hint = stringResource(R.string.settings_backdrop_auto_hint),
                     checked = settings.autoBackdrop,
                     onChecked = onAutoBackdrop,
+                )
+                SettingsDivider()
+                SettingRow(
+                    title = stringResource(R.string.settings_watch_glow),
+                    hint = stringResource(R.string.settings_watch_glow_hint),
+                    checked = settings.watchGlow,
+                    onChecked = onWatchGlow,
                 )
             }
             SettingsSection.Sensors -> {

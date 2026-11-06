@@ -7,6 +7,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -83,9 +84,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -99,6 +104,9 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -377,6 +385,18 @@ private fun DetailContent(
     }
     val washAlpha = reveal.value
     val paintWash = if (settings.extractBackdrop) animateWash(backdropWash) else target
+    var backdropColorReady by remember(detail.id, shownBackdrop) { mutableStateOf(false) }
+    var watchGlow by remember(detail.id) { mutableStateOf<Color?>(null) }
+    LaunchedEffect(detail.id, settings.watchGlow) {
+        if (!settings.watchGlow || watchGlow != null) return@LaunchedEffect
+        snapshotFlow { shownBackdrop to backdropColorReady }
+            .first { (url, ready) -> url != null && ready }
+        val url = shownBackdrop ?: return@LaunchedEffect
+        val color = context.extractBackdrop(url, 320, 180)?.playColor() ?: return@LaunchedEffect
+        delay(1_800)
+        if (watchGlow != null) return@LaunchedEffect
+        watchGlow = color
+    }
     val scroll = rememberScrollState()
     LaunchedEffect(detail.id) { scroll.scrollTo(0) }
     val density = LocalDensity.current
@@ -422,6 +442,9 @@ private fun DetailContent(
                             url = backdrops[page],
                             height = heroHeight,
                             dim = if (colored) 0f else shade,
+                            onReady = {
+                                if (backdrops[page] == shownBackdrop) backdropColorReady = true
+                            },
                         )
                     }
                 } else {
@@ -436,6 +459,7 @@ private fun DetailContent(
                             dim = if (colored) 0f else shade,
                             onReady = {
                                 if (url == backdrops.getOrNull(frame)) frameReady = true
+                                if (url == shownBackdrop) backdropColorReady = true
                             },
                             onError = {
                                 if (url != backdrops.getOrNull(frame)) return@BackdropStill
@@ -499,7 +523,11 @@ private fun DetailContent(
                 RatingsRow(detail)
             }
             Spacer(Modifier.height(22.dp))
-            WatchBar(paintWash)
+            WatchBar(
+                wash = paintWash,
+                glow = if (settings.watchGlow) watchGlow else null,
+                glowKey = detail.id,
+            )
             Spacer(Modifier.height(22.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -684,8 +712,20 @@ private fun CastPage(cast: List<CastMember>, onBack: () -> Unit, modifier: Modif
 }
 
 @Composable
-private fun WatchBar(wash: PosterWash) {
+private fun WatchBar(wash: PosterWash, glow: Color?, glowKey: String) {
     val play = wash.playColor()
+    val travel = remember(glowKey) { Animatable(0f) }
+    LaunchedEffect(glowKey, glow) {
+        if (glow == null) {
+            travel.snapTo(0f)
+            return@LaunchedEffect
+        }
+        travel.snapTo(0f)
+        travel.animateTo(1f, tween(1600, easing = LinearEasing))
+    }
+    val borderT = travel.value
+    val borderReveal = (borderT / 0.72f).coerceIn(0f, 1f)
+    val borderAlpha = if (borderT <= 0.72f) 1f else ((1f - borderT) / 0.28f).coerceIn(0f, 1f)
     val context = LocalContext.current
     val logo = remember {
         val options = android.graphics.BitmapFactory.Options().apply { inScaled = false }
@@ -696,6 +736,7 @@ private fun WatchBar(wash: PosterWash) {
         )
         source.splitWatchLogo()
     }
+    Box(Modifier.fillMaxWidth().height(72.dp)) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -760,6 +801,47 @@ private fun WatchBar(wash: PosterWash) {
             )
         }
     }
+        if (glow != null && borderAlpha > 0.01f && borderReveal > 0f) {
+            Canvas(
+                Modifier
+                    .matchParentSize()
+                    .graphicsLayer {
+                        alpha = borderAlpha * 0.4f
+                        renderEffect = BlurEffect(6f, 6f, TileMode.Decal)
+                    },
+            ) {
+                drawWatchBorder(glow, 2.dp.toPx(), borderReveal)
+            }
+            Canvas(Modifier.matchParentSize().graphicsLayer { alpha = borderAlpha }) {
+                drawWatchBorder(glow, 1.1.dp.toPx(), borderReveal)
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawWatchBorder(color: Color, widthPx: Float, reveal: Float) {
+    val inset = widthPx / 2f + 0.6.dp.toPx()
+    val radius = (18.dp.toPx() - inset).coerceAtLeast(0f)
+    val outline = Path().apply {
+        addRoundRect(
+            RoundRect(
+                left = inset,
+                top = inset,
+                right = size.width - inset,
+                bottom = size.height - inset,
+                cornerRadius = CornerRadius(radius, radius),
+            ),
+        )
+    }
+    val measure = PathMeasure().apply { setPath(outline, false) }
+    if (measure.length <= 0f) return
+    val segment = Path()
+    measure.getSegment(0f, measure.length * reveal, segment, true)
+    drawPath(
+        path = segment,
+        color = color,
+        style = Stroke(width = widthPx, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
 }
 
 private const val WatchLogoAspect = 754f / 186f

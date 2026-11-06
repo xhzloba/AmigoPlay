@@ -31,6 +31,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setAutoBackdrop(enabled: Boolean) = write { it.copy(autoBackdrop = enabled) }
 
+    override fun setWatchGlow(enabled: Boolean) = write { it.copy(watchGlow = enabled) }
+
     override fun setHaptic(enabled: Boolean) = write { it.copy(haptic = enabled) }
 
     override fun setGyro(enabled: Boolean) = write { it.copy(gyro = enabled) }
@@ -44,6 +46,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_BACKDROP_COLORS, next.extractBackdrop)
             .putBoolean(KEY_LOGOS, next.showLogos)
             .putBoolean(KEY_BACKDROP, next.autoBackdrop)
+            .putBoolean(KEY_WATCH_GLOW, next.watchGlow)
             .putBoolean(KEY_HAPTIC, next.haptic)
             .putBoolean(KEY_GYRO, next.gyro)
             .putBoolean(KEY_POSTER_TITLES, next.showPosterTitles)
@@ -56,6 +59,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
+        watchGlow = prefs.getBoolean(KEY_WATCH_GLOW, false),
         haptic = prefs.getBoolean(KEY_HAPTIC, true),
         gyro = prefs.getBoolean(KEY_GYRO, true),
         showPosterTitles = prefs.getBoolean(KEY_POSTER_TITLES, false),
@@ -67,6 +71,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_BACKDROP_COLORS = "extract_backdrop"
         const val KEY_LOGOS = "show_logos"
         const val KEY_BACKDROP = "auto_backdrop"
+        const val KEY_WATCH_GLOW = "watch_glow"
         const val KEY_HAPTIC = "haptic"
         const val KEY_GYRO = "gyro"
         const val KEY_POSTER_TITLES = "poster_titles"

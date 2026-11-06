@@ -7,6 +7,7 @@ data class UserSettings(
     val extractBackdrop: Boolean = false,
     val showLogos: Boolean = true,
     val autoBackdrop: Boolean = true,
+    val watchGlow: Boolean = false,
     val haptic: Boolean = true,
     val gyro: Boolean = true,
     val showPosterTitles: Boolean = false,
@@ -22,6 +23,8 @@ interface UserSettingsRepository {
     fun setShowLogos(enabled: Boolean)
 
     fun setAutoBackdrop(enabled: Boolean)
+
+    fun setWatchGlow(enabled: Boolean)
 
     fun setHaptic(enabled: Boolean)
 
