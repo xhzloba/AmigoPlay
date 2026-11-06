@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
                 MovieTheme {
                     NavigationGesture()
                     val session by rememberSaveable { mutableIntStateOf(0) }
-                    var splash by remember { mutableStateOf(true) }
+                    var splash by rememberSaveable { mutableStateOf(true) }
                     Box(Modifier.fillMaxSize()) {
                         key(session) {
                         val stack = rememberSaveable(
