@@ -22,6 +22,7 @@ internal object ShellIcons {
     val history: ImageVector = icon(filled = false) { clock() }
     val chevron: ImageVector = chevron(forward = true)
     val back: ImageVector = chevron(forward = false)
+    val person: ImageVector = person()
 }
 
 private fun icon(filled: Boolean, body: PathBuilder.() -> Unit): ImageVector =
@@ -141,6 +142,29 @@ private fun PathBuilder.mic() {
     moveTo(12f, 16.6f)
     lineTo(12f, 20.6f)
 }
+
+private fun person(): ImageVector = ImageVector.Builder(
+    name = "person",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.6f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    ) {
+        moveTo(15.2f, 8.2f)
+        arcTo(3.2f, 3.2f, 0f, true, true, 8.8f, 8.2f)
+        arcTo(3.2f, 3.2f, 0f, true, true, 15.2f, 8.2f)
+        close()
+        moveTo(5.7f, 19.6f)
+        curveTo(6.5f, 15.1f, 8.8f, 13.4f, 12f, 13.4f)
+        curveTo(15.2f, 13.4f, 17.5f, 15.1f, 18.3f, 19.6f)
+    }
+}.build()
 
 private fun PathBuilder.magnifier() {
     moveTo(16.6f, 10.4f)

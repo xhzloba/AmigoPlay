@@ -24,6 +24,8 @@ data class Franchise(
     val facts: List<String> = emptyList(),
     val trailers: List<FranchiseTrailer> = emptyList(),
     val seasons: List<FranchiseSeason> = emptyList(),
+    val kinopoiskId: Int? = null,
+    val imdbId: String? = null,
 )
 
 data class FranchiseTrailer(

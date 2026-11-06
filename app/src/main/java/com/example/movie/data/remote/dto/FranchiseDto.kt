@@ -21,6 +21,7 @@ internal data class FranchiseDto(
     @SerialName("serial_status") val serialStatus: String? = null,
     val type: String? = null,
     @SerialName("kinopoisk_id") val kinopoiskId: JsonElement? = null,
+    @SerialName("imdb_id") val imdbId: JsonElement? = null,
     val director: JsonElement? = null,
     val screenwriter: JsonElement? = null,
     val producer: JsonElement? = null,

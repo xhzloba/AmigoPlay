@@ -65,6 +65,8 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
             )
         },
         seasons = seasonList,
+        kinopoiskId = kinopoiskId.asInt(),
+        imdbId = imdbId.asText()?.removePrefix("tt")?.takeIf { it.isNotBlank() },
     )
 }
 

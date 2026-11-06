@@ -36,6 +36,9 @@
     <string name="rating_kp">Рейтинг Кинопоиска</string>
     <string name="rating_imdb">Рейтинг IMDb</string>
     <string name="section_cast">Актёры</string>
+    <string name="cast_people_one">%d персона</string>
+    <string name="cast_people_few">%d персоны</string>
+    <string name="cast_people_many">%d персон</string>
     <string name="franchise_about">О фильме</string>
     <string name="franchise_about_series">О сериале</string>
     <string name="franchise_status">Статус</string>
@@ -60,6 +63,9 @@
     <string name="franchise_voice">Озвучка</string>
     <string name="franchise_facts">Знаете ли вы что?</string>
     <string name="franchise_trailers">Трейлеры</string>
+    <string name="franchise_links">Ссылки</string>
+    <string name="franchise_link_kp">Кинопоиск</string>
+    <string name="franchise_link_imdb">IMDb</string>
     <string name="franchise_trailer_season">Трейлер, сезон %1$d</string>
     <string name="franchise_seasons">Сезоны</string>
     <string name="franchise_season_one">%d сезон</string>

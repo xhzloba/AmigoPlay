@@ -3,8 +3,12 @@ package com.example.movie.presentation.detail
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -121,6 +125,7 @@ import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
+import com.example.movie.presentation.shell.ShellIcons
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -408,7 +413,10 @@ private fun DetailContent(
             }
             if (detail.cast.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
-                SectionTitle(stringResource(R.string.section_cast))
+                OpenTitle(
+                    title = stringResource(R.string.section_cast),
+                    onOpen = { franchisePage = "cast" },
+                )
                 Spacer(Modifier.height(12.dp))
                 CastRow(detail.cast)
             }
@@ -446,6 +454,12 @@ private fun DetailContent(
                     onBack = { franchisePage = null },
                     modifier = pageModifier,
                 )
+            } else if (openedPage == "cast") {
+                CastPage(
+                    cast = detail.cast,
+                    onBack = { franchisePage = null },
+                    modifier = pageModifier,
+                )
             } else {
                 FranchiseAboutPage(
                     detail = detail,
@@ -456,6 +470,59 @@ private fun DetailContent(
         }
         playingTrailer?.let { trailer ->
             TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
+        }
+    }
+}
+
+@Composable
+private fun CastPage(cast: List<CastMember>, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    StackPage(
+        title = stringResource(R.string.section_cast),
+        onBack = onBack,
+        modifier = modifier,
+    ) {
+        Text(
+            text = stringResource(peopleCountRes(cast.size), cast.size),
+            color = Color.White.copy(alpha = 0.55f),
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+        )
+        Spacer(Modifier.height(8.dp))
+        cast.forEachIndexed { index, member ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PersonPhoto(url = member.photoUrl, name = member.name, size = CastAvatar)
+                Spacer(Modifier.width(CastGap))
+                Text(
+                    text = member.name,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = ShellIcons.chevron,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            if (index != cast.lastIndex) {
+                Box(
+                    Modifier
+                        .padding(start = CastAvatar + CastGap)
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color.White.copy(alpha = 0.08f)),
+                )
+            }
         }
     }
 }
@@ -626,6 +693,76 @@ private fun SectionTitle(title: String) {
     )
 }
 
+private val CastAvatar = 68.dp
+private val CastGap = 14.dp
+
+@Composable
+private fun PersonPhoto(url: String?, name: String, size: Dp) {
+    var failed by remember(url) { mutableStateOf(url.isNullOrBlank()) }
+    var loaded by remember(url) { mutableStateOf(false) }
+    val loading = !failed && !loaded && !url.isNullOrBlank()
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color(0xFF2C2C2E)),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (loading) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = photoPulse())),
+            )
+        }
+        if (failed) {
+            Icon(
+                imageVector = ShellIcons.person,
+                contentDescription = name,
+                tint = Color(0xFF9A9AA0),
+                modifier = Modifier.size(size * 0.5f),
+            )
+        } else if (!url.isNullOrBlank()) {
+            AsyncImage(
+                model = url,
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                onSuccess = { loaded = true },
+                onError = { failed = true },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = if (loaded) 1f else 0f },
+            )
+        }
+    }
+}
+
+@Composable
+private fun photoPulse(): Float {
+    val transition = rememberInfiniteTransition(label = "cast-photo")
+    val pulse by transition.animateFloat(
+        initialValue = 0.06f,
+        targetValue = 0.16f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "cast-pulse",
+    )
+    return pulse
+}
+
+private fun peopleCountRes(count: Int): Int {
+    val mod10 = count % 10
+    val mod100 = count % 100
+    return when {
+        mod100 in 11..14 -> R.string.cast_people_many
+        mod10 == 1 -> R.string.cast_people_one
+        mod10 in 2..4 -> R.string.cast_people_few
+        else -> R.string.cast_people_many
+    }
+}
+
 @Composable
 private fun CastRow(cast: List<CastMember>) {
     val listState = rememberLazyListState()
@@ -641,21 +778,7 @@ private fun CastRow(cast: List<CastMember>) {
         items(count = cast.size, key = { it }) { index ->
             val member = cast[index]
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(92.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(92.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f)),
-                ) {
-                    if (!member.photoUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = member.photoUrl,
-                            contentDescription = member.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                }
+                PersonPhoto(url = member.photoUrl, name = member.name, size = 92.dp)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = member.name,
