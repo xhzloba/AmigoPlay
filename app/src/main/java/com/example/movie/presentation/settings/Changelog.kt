@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.45.2",
+            fixed = listOf(
+                "Трейлеры перед «Знаете ли вы что?».",
+                "Карточки «Знаете ли вы что?» и сезонов плотнее.",
+            ),
+        ),
+        Release(
             version = "1.45.1",
             fixed = listOf(
                 "Поворот экрана больше не запускает сплэш заново.",

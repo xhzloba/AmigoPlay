@@ -79,10 +79,11 @@ import java.util.Locale
 private val Label = Color(0xFF8E8E93)
 private val Value = Color(0xFFE8E8ED)
 private val Card = Color.White.copy(alpha = 0.06f)
+private val Panel = Color.White.copy(alpha = 0.16f)
 private val dateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("ru"))
 
 @Composable
-internal fun FranchiseBlock(detail: MovieDetail) {
+internal fun FranchiseBlock(detail: MovieDetail, onPlayTrailer: (FranchiseTrailer) -> Unit) {
     val franchise = detail.franchise ?: return
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
         Text(
@@ -131,6 +132,17 @@ internal fun FranchiseBlock(detail: MovieDetail) {
         if (franchise.photos.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
             PhotoStrip(franchise.photos)
+        }
+        if (franchise.trailers.isNotEmpty()) {
+            Spacer(Modifier.height(22.dp))
+            Text(
+                text = stringResource(R.string.franchise_trailers),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(12.dp))
+            TrailerRow(franchise.trailers, onPlayTrailer)
         }
         if (franchise.facts.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
@@ -416,7 +428,7 @@ private fun Facts(facts: List<String>) {
                 modifier = Modifier
                     .width(236.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Card)
+                    .background(Panel)
                     .pointerInput(fact) {
                         detectTapGestures(onTap = {
                             tick?.invoke()
@@ -503,7 +515,7 @@ private fun Seasons(franchise: Franchise) {
                 .fillMaxWidth()
                 .padding(bottom = 8.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Card),
+                .background(Panel),
         ) {
             Row(
                 modifier = Modifier

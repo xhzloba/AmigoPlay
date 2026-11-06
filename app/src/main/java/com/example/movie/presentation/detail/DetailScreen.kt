@@ -390,13 +390,6 @@ private fun DetailContent(
                 Spacer(Modifier.height(22.dp))
                 Overview(text = detail.overview, width = textWidth)
             }
-            val trailers = detail.franchise?.trailers.orEmpty()
-            if (trailers.isNotEmpty()) {
-                Spacer(Modifier.height(28.dp))
-                SectionTitle(stringResource(R.string.franchise_trailers))
-                Spacer(Modifier.height(12.dp))
-                TrailerRow(trailers, onPlay = { playingTrailer = it })
-            }
             if (detail.cast.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
                 SectionTitle(stringResource(R.string.section_cast))
@@ -405,7 +398,7 @@ private fun DetailContent(
             }
             if (detail.franchise != null) {
                 Spacer(Modifier.height(28.dp))
-                FranchiseBlock(detail)
+                FranchiseBlock(detail, onPlayTrailer = { playingTrailer = it })
             }
             if (detail.similar.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
