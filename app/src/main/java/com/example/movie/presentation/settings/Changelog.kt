@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.48.1",
+            fixed = listOf(
+                "Одинаковый адрес у нескольких трейлеров или кадров больше не закрывает деталку. Повтор трейлера не показывается.",
+                "Если один цвет обложки в нескольких углах, тон общий и точнее. Яркость у каждого угла своя.",
+            ),
+        ),
+        Release(
             version = "1.48.0",
             added = listOf(
                 "Фон деталки из цветов обложки. Четыре угла, у каждого свой цвет. Плоская заливка по краю не берётся.",

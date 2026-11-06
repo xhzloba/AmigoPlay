@@ -53,7 +53,7 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
         voiceActing = voiceActing.names(),
         serialStatus = serialStatus.clean(),
         series = type.equals("serial", ignoreCase = true) || seasonList.isNotEmpty(),
-        photos = shootingPhotos.names().filter { it.startsWith("http") },
+        photos = shootingPhotos.names().filter { it.startsWith("http") }.distinct(),
         facts = (trivia ?: facts).names().map { it.stripTags() }.filter { it.isNotBlank() },
         trailers = trailers.asObjects().mapNotNull { item ->
             val url = item.string("iframe_url")?.takeIf { it.startsWith("http") } ?: return@mapNotNull null
@@ -63,7 +63,7 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
                 url = url,
                 season = item["season"].asInt(),
             )
-        },
+        }.distinctBy { it.url },
         seasons = seasonList,
         kinopoiskId = kinopoiskId.asInt(),
         imdbId = imdbId.asText()?.removePrefix("tt")?.takeIf { it.isNotBlank() },

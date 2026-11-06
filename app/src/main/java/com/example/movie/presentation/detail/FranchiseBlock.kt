@@ -208,7 +208,8 @@ private fun PhotoStrip(photos: List<String>) {
         contentPadding = PaddingValues(end = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(photos, key = { it }) { url ->
+        items(photos.size, key = { it }) { index ->
+            val url = photos[index]
             AsyncImage(
                 model = url,
                 contentDescription = null,
@@ -235,7 +236,7 @@ internal fun TrailerRow(trailers: List<FranchiseTrailer>, onPlay: (FranchiseTrai
         contentPadding = PaddingValues(horizontal = DetailInset),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        items(trailers.size, key = { trailers[it].url }) { index ->
+        items(trailers.size, key = { it }) { index ->
             val trailer = trailers[index]
             Column(Modifier.width(260.dp)) {
                 Box(

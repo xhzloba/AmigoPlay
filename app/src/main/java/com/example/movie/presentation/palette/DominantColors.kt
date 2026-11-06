@@ -177,12 +177,64 @@ internal fun android.graphics.Bitmap.posterWash(): PosterWash? {
     val background = backgroundHue(pixels)
     val midX = width / 2
     val midY = height / 2
-    return PosterWash(
-        topLeft = washCorner(pixels, 0, 0, midX, midY, background),
-        topRight = washCorner(pixels, midX, 0, width, midY, background),
-        bottomLeft = washCorner(pixels, 0, midY, midX, height, background),
-        bottomRight = washCorner(pixels, midX, midY, width, height, background),
+    val colors = refineWash(
+        listOf(
+            washCorner(pixels, 0, 0, midX, midY, background),
+            washCorner(pixels, midX, 0, width, midY, background),
+            washCorner(pixels, midX, midY, width, height, background),
+            washCorner(pixels, 0, midY, midX, height, background),
+        ),
     )
+    return PosterWash(
+        topLeft = colors[0],
+        topRight = colors[1],
+        bottomRight = colors[2],
+        bottomLeft = colors[3],
+    )
+}
+
+private fun refineWash(samples: List<WashSample>): List<Color> {
+    val parent = IntArray(samples.size) { it }
+    fun find(index: Int): Int {
+        var cursor = index
+        while (parent[cursor] != cursor) cursor = parent[cursor]
+        return cursor
+    }
+    for (i in samples.indices) {
+        for (j in i + 1 until samples.size) {
+            val left = samples[i]
+            val right = samples[j]
+            if (left.saturation < 0.2f || right.saturation < 0.2f) continue
+            if (hueDistance(left.hue / 360f, right.hue / 360f) > SimilarHue) continue
+            parent[find(i)] = find(j)
+        }
+    }
+    val hue = FloatArray(samples.size)
+    samples.indices.groupBy { find(it) }.values.forEach { group ->
+        val shared = if (group.size == 1) {
+            samples[group[0]].hue
+        } else {
+            var sinSum = 0.0
+            var cosSum = 0.0
+            for (index in group) {
+                val sample = samples[index]
+                val weight = sample.count.coerceAtLeast(1).toDouble()
+                val radians = Math.toRadians(sample.hue.toDouble())
+                sinSum += kotlin.math.sin(radians) * weight
+                cosSum += kotlin.math.cos(radians) * weight
+            }
+            ((Math.toDegrees(kotlin.math.atan2(sinSum, cosSum)) + 360.0) % 360.0).toFloat()
+        }
+        for (index in group) hue[index] = shared
+    }
+    return samples.mapIndexed { index, sample ->
+        val hsv = floatArrayOf(
+            hue[index],
+            sample.saturation.coerceIn(0f, 1f),
+            sample.value.coerceIn(0f, 1f),
+        )
+        Color(android.graphics.Color.HSVToColor(hsv)).toWashTone()
+    }
 }
 
 private fun android.graphics.Bitmap.backgroundHue(pixels: IntArray): Int? {
@@ -223,7 +275,7 @@ private fun android.graphics.Bitmap.washCorner(
     x1: Int,
     y1: Int,
     background: Int?,
-): Color {
+): WashSample {
     val bins = Array(HueBins) { HueBin() }
     val hsv = FloatArray(3)
     for (y in y0 until y1) {
@@ -238,11 +290,15 @@ private fun android.graphics.Bitmap.washCorner(
             val green = android.graphics.Color.green(pixel)
             val blue = android.graphics.Color.blue(pixel)
             val chroma = (maxOf(red, green, blue) - minOf(red, green, blue)).toDouble()
-            bins[bin].add(red, green, blue, chroma)
+            bins[bin].add(hsv[0], hsv[1], hsv[2], chroma)
         }
     }
     val chosen = bins.filter { it.count > 8 }.maxByOrNull { it.mass }
-    return (chosen?.color() ?: meanColor(pixels, x0, y0, x1, y1)).toWashTone()
+    if (chosen == null) {
+        val fallback = meanColor(pixels, x0, y0, x1, y1).toHsv()
+        return WashSample(fallback[0], fallback[1], fallback[2], 1)
+    }
+    return WashSample(chosen.hue(), chosen.medianSat(), chosen.medianValue(), chosen.count)
 }
 
 private fun hueBinDistance(a: Int, b: Int): Int {
@@ -250,27 +306,53 @@ private fun hueBinDistance(a: Int, b: Int): Int {
     return minOf(delta, HueBins - delta)
 }
 
+private data class WashSample(
+    val hue: Float,
+    val saturation: Float,
+    val value: Float,
+    val count: Int,
+)
+
 private class HueBin {
     var mass = 0.0
-    var red = 0.0
-    var green = 0.0
-    var blue = 0.0
     var count = 0
+    var sinSum = 0.0
+    var cosSum = 0.0
+    val satHist = IntArray(ShadeBuckets)
+    val valueHist = IntArray(ShadeBuckets)
 
-    fun add(componentRed: Int, componentGreen: Int, componentBlue: Int, chroma: Double) {
+    fun add(hue: Float, saturation: Float, value: Float, chroma: Double) {
         mass += chroma
-        red += componentRed
-        green += componentGreen
-        blue += componentBlue
         count += 1
+        val radians = Math.toRadians(hue.toDouble())
+        sinSum += kotlin.math.sin(radians)
+        cosSum += kotlin.math.cos(radians)
+        satHist[shadeBucket(saturation)] += 1
+        valueHist[shadeBucket(value)] += 1
     }
 
-    fun color(): Color = Color(
-        (red / count).toInt(),
-        (green / count).toInt(),
-        (blue / count).toInt(),
-    )
+    fun hue(): Float {
+        val degrees = Math.toDegrees(kotlin.math.atan2(sinSum, cosSum))
+        return ((degrees % 360.0 + 360.0) % 360.0).toFloat()
+    }
+
+    fun medianSat(): Float = median(satHist)
+
+    fun medianValue(): Float = median(valueHist)
+
+    private fun median(hist: IntArray): Float {
+        val mid = count / 2
+        var seen = 0
+        for (index in hist.indices) {
+            seen += hist[index]
+            if (seen > mid) return (index + 0.5f) / hist.size
+        }
+        return 0f
+    }
 }
+
+private fun shadeBucket(channel: Float): Int =
+    (channel * ShadeBuckets).toInt().coerceIn(0, ShadeBuckets - 1)
 
 private fun android.graphics.Bitmap.meanColor(
     pixels: IntArray,
@@ -299,6 +381,8 @@ private fun android.graphics.Bitmap.meanColor(
 
 private const val HueBins = 18
 private const val HueStep = 20f
+private const val ShadeBuckets = 24
+private const val SimilarHue = 0.042f
 
 private fun Color.toWashTone(): Color {
     val hsv = FloatArray(3)
