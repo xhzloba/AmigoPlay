@@ -1,14 +1,8 @@
 package com.example.movie.presentation.detail
 
 import android.graphics.drawable.BitmapDrawable
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -58,7 +52,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -80,6 +73,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -149,8 +143,9 @@ import com.example.movie.presentation.shell.ShellIcons
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
@@ -160,7 +155,6 @@ import java.util.Locale
 private val ActionCircle = Color.White.copy(alpha = 0.16f)
 
 private val ActionIcons = listOf(
-    Icons.Filled.PlayArrow,
     Icons.Filled.CheckCircle,
     Icons.Filled.Share,
     Icons.Filled.List,
@@ -264,12 +258,19 @@ private fun DetailContent(
     val pagerState = rememberPagerState { backdrops.size.coerceAtLeast(1) }
     val scope = rememberCoroutineScope()
     var frame by remember(detail.id, backdrops) { mutableIntStateOf(0) }
-    LaunchedEffect(detail.id, backdrops, settings.autoBackdrop) {
-        if (settings.autoBackdrop.not() || backdrops.size < 2) return@LaunchedEffect
-        while (isActive) {
-            delay(5_000)
-            frame = (frame + 1) % backdrops.size
+    var frameReady by remember(detail.id, frame) { mutableStateOf(false) }
+    LaunchedEffect(detail.id, frame, backdrops, settings.autoBackdrop) {
+        if (!settings.autoBackdrop || backdrops.size < 2) return@LaunchedEffect
+        snapshotFlow { frameReady }.first { it }
+        val next = backdrops[(frame + 1) % backdrops.size]
+        val incoming = async {
+            context.imageLoader.execute(
+                ImageRequest.Builder(context).data(next).build(),
+            ) is SuccessResult
         }
+        delay(8_000)
+        incoming.await()
+        frame = (frame + 1) % backdrops.size
     }
     val shownBackdrop = if (backdrops.isEmpty()) {
         null
@@ -366,6 +367,18 @@ private fun DetailContent(
                             url = url,
                             height = heroHeight,
                             dim = if (colored) 0f else shade,
+                            onReady = {
+                                if (url == backdrops.getOrNull(frame)) frameReady = true
+                            },
+                            onError = {
+                                if (url != backdrops.getOrNull(frame)) return@BackdropStill
+                                scope.launch {
+                                    delay(1_000)
+                                    if (url == backdrops.getOrNull(frame)) {
+                                        frame = (frame + 1) % backdrops.size
+                                    }
+                                }
+                            },
                         )
                     }
                 }
@@ -668,10 +681,7 @@ private const val WatchLogoInkLeft = 29f / 754f
 
 @Composable
 private fun WatchCaption(start: Dp) {
-    val captions = listOf(
-        stringResource(R.string.watch_free),
-        stringResource(R.string.watch_catalog),
-    )
+    val text = stringResource(R.string.watch_free)
     val style = TextStyle(
         color = Color.White.copy(alpha = 0.72f),
         fontSize = 11.sp,
@@ -679,41 +689,17 @@ private fun WatchCaption(start: Dp) {
     )
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
-    var page by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (isActive) {
-            delay(2600)
-            page = (page + 1) % captions.size
-        }
-    }
-    AnimatedContent(
-        targetState = page,
+    val bearing = measurer.measure(text.take(1), style = style, maxLines = 1)
+        .getBoundingBox(0)
+        .left
+    Text(
+        text = text,
         modifier = Modifier
             .padding(start = start)
-            .fillMaxWidth(),
-        contentAlignment = Alignment.CenterStart,
-        transitionSpec = {
-            (fadeIn(tween(420, easing = FastOutSlowInEasing)) +
-                slideInVertically(tween(420, easing = FastOutSlowInEasing)) { it / 2 })
-                .togetherWith(
-                    fadeOut(tween(280)) + slideOutVertically(tween(280)) { -it / 2 },
-                )
-        },
-        label = "watchCaption",
-    ) { index ->
-        val text = captions[index]
-        val bearing = measurer.measure(text.take(1), style = style, maxLines = 1)
-            .getBoundingBox(0)
-            .left
-        Text(
-            text = text,
-            modifier = Modifier.offset(x = with(density) { -bearing.toDp() }),
-            style = style,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+            .offset(x = with(density) { -bearing.toDp() }),
+        style = style,
+        maxLines = 1,
+    )
 }
 
 @Composable
@@ -1133,12 +1119,16 @@ private fun BackdropStill(
     url: String,
     height: Dp,
     dim: Float,
+    onReady: () -> Unit = {},
+    onError: () -> Unit = {},
 ) {
     AsyncImage(
         model = url,
         contentDescription = null,
         contentScale = ContentScale.Crop,
         alignment = Alignment.TopCenter,
+        onSuccess = { onReady() },
+        onError = { onError() },
         modifier = Modifier
             .fillMaxWidth()
             .height(height)
