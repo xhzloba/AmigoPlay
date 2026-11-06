@@ -4,6 +4,7 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -208,6 +209,19 @@ private fun DetailContent(
 ) {
     val context = LocalContext.current
     var playingTrailer by remember { mutableStateOf<FranchiseTrailer?>(null) }
+    var franchisePage by remember(detail.id) { mutableStateOf<String?>(null) }
+    val pageVeil = remember { Animatable(0f) }
+    var pageShown by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(franchisePage) {
+        if (franchisePage != null) {
+            pageShown = franchisePage
+            pageVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        } else if (pageShown != null) {
+            pageVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+            pageShown = null
+        }
+    }
+    val pageAlpha = if (pageShown != null) pageVeil.value else 0f
     val favorites = LocalAppContainer.current.favorites
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
@@ -268,6 +282,7 @@ private fun DetailContent(
         if (backdrops.isNotEmpty()) {
             Box(
                 modifier = Modifier
+                    .graphicsLayer { alpha = 1f - pageAlpha }
                     .fillMaxWidth()
                     .height(heroHeight)
                     .graphicsLayer { alpha = backdropAlpha },
@@ -305,11 +320,12 @@ private fun DetailContent(
                     .align(Alignment.TopCenter)
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(top = 12.dp)
-                    .graphicsLayer { alpha = dotsAlpha },
+                    .graphicsLayer { alpha = dotsAlpha * (1f - pageAlpha) },
             )
         }
         Column(
             modifier = Modifier
+                .graphicsLayer { alpha = 1f - pageAlpha }
                 .fillMaxSize()
                 .verticalScroll(scroll)
                 .windowInsetsPadding(WindowInsets.navigationBars)
@@ -398,7 +414,12 @@ private fun DetailContent(
             }
             if (detail.franchise != null) {
                 Spacer(Modifier.height(28.dp))
-                FranchiseBlock(detail, onPlayTrailer = { playingTrailer = it })
+                FranchiseBlock(
+                    detail,
+                    onPlayTrailer = { playingTrailer = it },
+                    onOpenAbout = { franchisePage = "about" },
+                    onOpenFacts = { franchisePage = "facts" },
+                )
             }
             if (detail.similar.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
@@ -413,6 +434,25 @@ private fun DetailContent(
                 MovieStrip(detail.sequels, onOpenMovie, onMoviePeek)
             }
             Spacer(Modifier.height(28.dp))
+        }
+        val openedPage = pageShown
+        if (openedPage != null) {
+            val pageModifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = pageAlpha }
+            if (openedPage == "facts") {
+                FranchiseFactsPage(
+                    facts = detail.franchise?.facts.orEmpty(),
+                    onBack = { franchisePage = null },
+                    modifier = pageModifier,
+                )
+            } else {
+                FranchiseAboutPage(
+                    detail = detail,
+                    onBack = { franchisePage = null },
+                    modifier = pageModifier,
+                )
+            }
         }
         playingTrailer?.let { trailer ->
             TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
@@ -623,7 +663,7 @@ private fun CastRow(cast: List<CastMember>) {
                     fontSize = 12.sp,
                     lineHeight = 15.sp,
                     textAlign = TextAlign.Center,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }

@@ -27,6 +27,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -50,8 +53,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +70,10 @@ import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.SectionScrim
+import com.example.movie.presentation.home.components.BrandTopInset
+import com.example.movie.presentation.home.components.PosterGridInset
+import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.CinemaBlack
 import android.view.View
 import android.webkit.CookieManager
@@ -83,14 +92,17 @@ private val Panel = Color.White.copy(alpha = 0.16f)
 private val dateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("ru"))
 
 @Composable
-internal fun FranchiseBlock(detail: MovieDetail, onPlayTrailer: (FranchiseTrailer) -> Unit) {
+internal fun FranchiseBlock(
+    detail: MovieDetail,
+    onPlayTrailer: (FranchiseTrailer) -> Unit,
+    onOpenAbout: () -> Unit,
+    onOpenFacts: () -> Unit,
+) {
     val franchise = detail.franchise ?: return
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-        Text(
-            text = stringResource(if (franchise.series) R.string.franchise_about_series else R.string.franchise_about),
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
+        OpenTitle(
+            title = stringResource(if (franchise.series) R.string.franchise_about_series else R.string.franchise_about),
+            onOpen = onOpenAbout,
         )
         Spacer(Modifier.height(12.dp))
         val status = franchise.serialStatus
@@ -146,7 +158,7 @@ internal fun FranchiseBlock(detail: MovieDetail, onPlayTrailer: (FranchiseTraile
         }
         if (franchise.facts.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
-            Facts(franchise.facts)
+            Facts(franchise.facts, onOpenFacts)
         }
         if (franchise.seasons.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
@@ -396,17 +408,12 @@ private fun trailerPage(url: String): String {
 }
 
 @Composable
-private fun Facts(facts: List<String>) {
+private fun Facts(facts: List<String>, onOpen: () -> Unit) {
     var selected by remember(facts) { mutableStateOf<String?>(null) }
     val tick = rememberHapticTick()
     val row = rememberLazyListState()
     HapticOnChange(row) { row.firstVisibleItemIndex }
-    Text(
-        text = stringResource(R.string.franchise_facts),
-        color = Color.White,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
-    )
+    OpenTitle(title = stringResource(R.string.franchise_facts), onOpen = onOpen)
     Spacer(Modifier.height(12.dp))
     LazyRow(
         state = row,
@@ -607,6 +614,224 @@ private fun Seasons(franchise: Franchise) {
             }
         }
     }
+}
+
+@Composable
+private fun OpenTitle(title: String, onOpen: () -> Unit) {
+    val tick = rememberHapticTick()
+    Row(
+        modifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = {
+                tick?.invoke()
+                onOpen()
+            },
+        ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            imageVector = ShellIcons.chevron,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
+internal fun FranchiseAboutPage(detail: MovieDetail, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val franchise = detail.franchise
+    val title = stringResource(
+        if (franchise?.series == true) R.string.franchise_about_series else R.string.franchise_about,
+    )
+    val lines = aboutLines(detail)
+    StackPage(title = title, onBack = onBack, modifier = modifier) {
+        lines.forEach { line ->
+            Text(
+                text = line.label,
+                color = Label,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = line.value,
+                color = line.color,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+            )
+            Spacer(Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+internal fun FranchiseFactsPage(facts: List<String>, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    StackPage(
+        title = stringResource(R.string.franchise_facts),
+        onBack = onBack,
+        modifier = modifier,
+    ) {
+        facts.forEachIndexed { index, fact ->
+            Text(
+                text = fact,
+                color = Value,
+                fontSize = 16.sp,
+                lineHeight = 23.sp,
+            )
+            if (index != facts.lastIndex) {
+                Spacer(Modifier.height(16.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color.White.copy(alpha = 0.14f)),
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun StackPage(
+    title: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    BackHandler(onBack = onBack)
+    val scroll = rememberScrollState()
+    val density = LocalDensity.current
+    val scrim = with(density) { (scroll.value / 28.dp.toPx()).coerceIn(0f, 1f) }
+    Box(
+        modifier
+            .fillMaxSize()
+            .background(CinemaBlack)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {},
+            ),
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
+                .padding(top = BrandTopInset + 36.dp + 18.dp, bottom = 16.dp)
+                .padding(horizontal = 20.dp),
+        ) {
+            content()
+        }
+        SectionScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
+        PageBar(title = title, onBack = onBack, modifier = Modifier.align(Alignment.TopCenter))
+    }
+}
+
+@Composable
+private fun PageBar(title: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val tick = rememberHapticTick()
+    Box(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+            .padding(top = BrandTopInset)
+            .height(36.dp),
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 18.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 56.dp),
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = PosterGridInset - 7.dp)
+                .size(36.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        tick?.invoke()
+                        onBack()
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = ShellIcons.back,
+                contentDescription = stringResource(R.string.section_back),
+                tint = Color.White,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+private data class StackLine(val label: String, val value: String, val color: Color = Value)
+
+@Composable
+private fun aboutLines(detail: MovieDetail): List<StackLine> {
+    val franchise = detail.franchise ?: return emptyList()
+    val lines = mutableListOf<StackLine>()
+    fun add(label: String, value: String, color: Color = Value) {
+        if (value.isBlank() || value == "—") return
+        lines += StackLine(label, value, color)
+    }
+    val status = franchise.serialStatus
+    if (franchise.series && !status.isNullOrBlank()) {
+        val finished = status.equals("offline", ignoreCase = true)
+        add(
+            stringResource(R.string.franchise_status),
+            stringResource(if (finished) R.string.franchise_finished else R.string.franchise_airing),
+            if (finished) Color(0xFFFF453A) else Color(0xFF32D74B),
+        )
+    }
+    if (franchise.series && franchise.seasons.isNotEmpty()) {
+        add(
+            stringResource(R.string.franchise_seasons),
+            stringResource(seasonCountRes(franchise.seasons.size), franchise.seasons.size),
+        )
+    }
+    add(stringResource(R.string.franchise_director), franchise.directors.orDash(detail.director))
+    add(stringResource(R.string.franchise_writers), franchise.screenwriters.orDash())
+    add(stringResource(R.string.franchise_producers), franchise.producers.orDash())
+    add(stringResource(R.string.franchise_operator), franchise.operators.orDash())
+    add(stringResource(R.string.franchise_editor), franchise.editors.orDash())
+    add(stringResource(R.string.franchise_design), franchise.designers.orDash())
+    add(stringResource(R.string.franchise_genres), franchise.genres.orDash(detail.genres.joinToString(", ")))
+    add(stringResource(R.string.franchise_country), franchise.countries.orDash(detail.country))
+    add(stringResource(R.string.franchise_premiere), franchise.premiere.asDate())
+    franchise.slogan?.let { add(stringResource(R.string.franchise_slogan), "«$it»") }
+    franchise.premiereRu?.let { add(stringResource(R.string.franchise_premiere_ru), it.asDate()) }
+    franchise.mpaa?.let { add(stringResource(R.string.franchise_mpaa), it) }
+    franchise.budget?.let { add(stringResource(R.string.franchise_budget), it) }
+    franchise.feesWorld?.let { add(stringResource(R.string.franchise_fees_world), it) }
+    franchise.feesRus?.let { add(stringResource(R.string.franchise_fees_rus), it) }
+    if (franchise.dubActors.isNotEmpty()) {
+        add(stringResource(R.string.franchise_dub), franchise.dubActors.joinToString(", "))
+    }
+    if (franchise.voiceActing.isNotEmpty()) {
+        add(stringResource(R.string.franchise_voice), franchise.voiceActing.joinToString(", "))
+    }
+    return lines
 }
 
 private fun seasonCountRes(count: Int): Int {

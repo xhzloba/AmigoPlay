@@ -301,7 +301,7 @@ internal fun PosterGrid(
 }
 
 @Composable
-private fun SectionScrim(progress: Float, modifier: Modifier = Modifier) {
+internal fun SectionScrim(progress: Float, modifier: Modifier = Modifier) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     Box(
         modifier
