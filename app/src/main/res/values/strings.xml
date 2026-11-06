@@ -28,6 +28,11 @@
     <string name="menu_watched">Просмотрено</string>
     <string name="menu_unwatched">Не просмотрено</string>
     <string name="menu_list">Добавить в список</string>
+    <string name="action_later">Буду смотреть</string>
+    <string name="action_seen">Смотрел</string>
+    <string name="action_unseen">Не смотрел</string>
+    <string name="action_share">Поделиться</string>
+    <string name="action_more">Дополнительно</string>
     <string name="menu_comment">Комментарий</string>
     <string name="menu_open_detail">Перейти</string>
     <string name="runtime_hours_minutes">%1$dч %2$dм</string>

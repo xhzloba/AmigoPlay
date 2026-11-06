@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -77,6 +78,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -87,6 +89,9 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -152,14 +157,74 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import java.util.Locale
 
-private val ActionCircle = Color.White.copy(alpha = 0.16f)
+private val ActionCircle = Color.Black.copy(alpha = 0.16f)
 
-private val ActionIcons = listOf(
-    Icons.Filled.CheckCircle,
-    Icons.Filled.Share,
-    Icons.Filled.List,
-    Icons.Filled.MoreVert,
-)
+private val WatchedOutline: ImageVector = ImageVector.Builder(
+    name = "watchedOutline",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(
+        stroke = SolidColor(Color.Black),
+        strokeLineWidth = 1.7f,
+        strokeLineCap = StrokeCap.Round,
+        strokeLineJoin = StrokeJoin.Round,
+    ) {
+        moveTo(22f, 12f)
+        arcTo(10f, 10f, 0f, true, true, 2f, 12f)
+        arcTo(10f, 10f, 0f, true, true, 22f, 12f)
+        moveTo(7.6f, 12.2f)
+        lineTo(10.5f, 15.1f)
+        lineTo(16.4f, 8.8f)
+    }
+}.build()
+
+@Composable
+private fun WatchedButton(seen: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(ActionCircle)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (seen) Icons.Filled.CheckCircle else WatchedOutline,
+            contentDescription = stringResource(
+                if (seen) R.string.action_seen else R.string.action_unseen,
+            ),
+            tint = if (seen) Color.White else Color.White.copy(alpha = 0.72f),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
+private fun RowScope.ActionSlot(label: String, content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier.weight(1f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        content()
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.78f),
+            fontSize = 9.sp,
+            lineHeight = 11.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
 
 @Composable
 private fun RoundAction(icon: ImageVector) {
@@ -244,7 +309,9 @@ private fun DetailContent(
     }
     val pageAlpha = if (pageShown != null) pageVeil.value else 0f
     val favorites = LocalAppContainer.current.favorites
+    val watched = LocalAppContainer.current.watched
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
+    val watchedIds by watched.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack, CinemaBlack)
@@ -436,20 +503,39 @@ private fun DetailContent(
             Spacer(Modifier.height(22.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
-                BookmarkButton(
-                    saved = detail.id in savedIds,
-                    circled = true,
-                    circle = ActionCircle,
-                    onClick = {
-                        tick?.invoke()
-                        favorites.toggle(detail.toSaved())
-                    },
-                )
-                ActionIcons.forEach { icon ->
-                    RoundAction(icon)
+                val seen = detail.id in watchedIds
+                ActionSlot(stringResource(R.string.action_later)) {
+                    BookmarkButton(
+                        saved = detail.id in savedIds,
+                        circled = true,
+                        circle = ActionCircle,
+                        onClick = {
+                            tick?.invoke()
+                            favorites.toggle(detail.toSaved())
+                        },
+                    )
+                }
+                ActionSlot(
+                    stringResource(if (seen) R.string.action_seen else R.string.action_unseen),
+                ) {
+                    WatchedButton(
+                        seen = seen,
+                        onClick = {
+                            tick?.invoke()
+                            watched.toggle(detail.toSaved())
+                        },
+                    )
+                }
+                ActionSlot(stringResource(R.string.action_share)) {
+                    RoundAction(Icons.Filled.Share)
+                }
+                ActionSlot(stringResource(R.string.menu_list)) {
+                    RoundAction(Icons.Filled.List)
+                }
+                ActionSlot(stringResource(R.string.action_more)) {
+                    RoundAction(Icons.Filled.MoreVert)
                 }
             }
             if (detail.overview.isNotBlank()) {
@@ -748,9 +834,68 @@ private fun LogoOrTitle(detail: MovieDetail) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetaRow(detail: MovieDetail) {
+    val genres = detail.genres.joinToString()
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val metaStyle = TextStyle(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Normal)
+    val ageLabel = detail.age?.let { stringResource(R.string.age_badge, it) }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val gap = with(density) { 12.dp.roundToPx() }
+        val agePad = with(density) { 12.dp.roundToPx() }
+        var width = 0
+        var count = 0
+        ageLabel?.let { label ->
+            width += measurer.measure(
+                label,
+                style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+                maxLines = 1,
+            ).size.width + agePad
+            count++
+        }
+        detail.year?.let { year ->
+            width += measurer.measure(year.toString(), style = metaStyle, maxLines = 1).size.width
+            count++
+        }
+        detail.runtimeMinutes?.let { minutes ->
+            width += measurer.measure(minutes.asRuntime(), style = metaStyle, maxLines = 1).size.width
+            count++
+        }
+        val genreWidth = if (genres.isEmpty()) {
+            0
+        } else {
+            measurer.measure(genres, style = metaStyle, maxLines = 1).size.width
+        }
+        if (genres.isNotEmpty()) count++
+        val gaps = (count - 1).coerceAtLeast(0) * gap
+        val maxPx = with(density) { maxWidth.roundToPx() }
+        val inline = genres.isEmpty() || width + genreWidth + gaps <= maxPx
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            MetaFacts(detail, genres = if (inline) genres else "")
+            if (!inline) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = genres,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MetaFacts(detail: MovieDetail, genres: String) {
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
@@ -778,9 +923,8 @@ private fun MetaRow(detail: MovieDetail) {
         detail.runtimeMinutes?.let { minutes ->
             MetaText(minutes.asRuntime())
         }
-        detail.genres.forEachIndexed { index, genre ->
-            val label = if (index < detail.genres.lastIndex) "$genre," else genre
-            MetaText(label)
+        if (genres.isNotEmpty()) {
+            MetaText(genres)
         }
     }
 }
@@ -789,10 +933,11 @@ private fun MetaRow(detail: MovieDetail) {
 private fun MetaText(value: String) {
     Text(
         text = value,
-        color = Color.White.copy(alpha = 0.92f),
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
+        color = Color.White,
+        fontSize = 13.sp,
+        lineHeight = 16.sp,
         fontWeight = FontWeight.Normal,
+        textAlign = TextAlign.Center,
     )
 }
 
@@ -807,18 +952,18 @@ private fun RatingsRow(detail: MovieDetail) {
             ImdbScore(
                 score = score,
                 color = Color.White,
-                iconHeight = 18.dp,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
+                iconHeight = 15.dp,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
             )
         }
         detail.ratingKp?.let { score ->
             KpScore(
                 score = score,
                 color = Color.White,
-                iconSize = 18.dp,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
+                iconSize = 15.dp,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
             )
         }
     }
