@@ -98,6 +98,7 @@ import coil.request.SuccessResult
 import com.example.movie.R
 import com.example.movie.domain.model.CastMember
 import com.example.movie.domain.model.DataError
+import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.palette.PosterWash
@@ -206,6 +207,7 @@ private fun DetailContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var playingTrailer by remember { mutableStateOf<FranchiseTrailer?>(null) }
     val favorites = LocalAppContainer.current.favorites
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
@@ -388,6 +390,13 @@ private fun DetailContent(
                 Spacer(Modifier.height(22.dp))
                 Overview(text = detail.overview, width = textWidth)
             }
+            val trailers = detail.franchise?.trailers.orEmpty()
+            if (trailers.isNotEmpty()) {
+                Spacer(Modifier.height(28.dp))
+                SectionTitle(stringResource(R.string.franchise_trailers))
+                Spacer(Modifier.height(12.dp))
+                TrailerRow(trailers, onPlay = { playingTrailer = it })
+            }
             if (detail.cast.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
                 SectionTitle(stringResource(R.string.section_cast))
@@ -411,6 +420,9 @@ private fun DetailContent(
                 MovieStrip(detail.sequels, onOpenMovie, onMoviePeek)
             }
             Spacer(Modifier.height(28.dp))
+        }
+        playingTrailer?.let { trailer ->
+            TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
         }
     }
 }

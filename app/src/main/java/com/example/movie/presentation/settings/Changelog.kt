@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.45.0",
+            added = listOf(
+                "Под описанием трейлеры. Если их несколько — слайдер. Нажатие открывает плеер.",
+            ),
+        ),
+        Release(
             version = "1.44.0",
             added = listOf(
                 "В деталке блок франшизы. У фильма «О фильме», у сериала «О сериале»: съёмочная группа, слоган, премьеры, бюджет, сборы, дубляж и озвучка. У сериала под статусом число сезонов. Сезон раскрывается, у серии дата выхода.",

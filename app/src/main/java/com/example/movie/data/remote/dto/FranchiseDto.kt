@@ -32,6 +32,7 @@ internal data class FranchiseDto(
     @SerialName("actors_dubl") val actorsDubl: JsonElement? = null,
     val voiceActing: JsonElement? = null,
     val trivia: JsonElement? = null,
+    val trailers: JsonElement? = null,
     val facts: JsonElement? = null,
     @SerialName("shooting_photos") val shootingPhotos: JsonElement? = null,
     val seasons: JsonElement? = null,

@@ -59,6 +59,8 @@
     <string name="franchise_dub">Актёры дубляжа</string>
     <string name="franchise_voice">Озвучка</string>
     <string name="franchise_facts">Знаете ли вы что?</string>
+    <string name="franchise_trailers">Трейлеры</string>
+    <string name="franchise_trailer_season">Трейлер, сезон %1$d</string>
     <string name="franchise_seasons">Сезоны</string>
     <string name="franchise_season_one">%d сезон</string>
     <string name="franchise_season_few">%d сезона</string>

@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,11 +26,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,15 +55,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.movie.R
 import com.example.movie.domain.model.Franchise
+import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.CinemaBlack
+import android.view.View
+import android.webkit.CookieManager
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -170,6 +186,201 @@ private fun PhotoStrip(photos: List<String>) {
             )
         }
     }
+}
+
+@Composable
+internal fun TrailerRow(trailers: List<FranchiseTrailer>, onPlay: (FranchiseTrailer) -> Unit) {
+    val tick = rememberHapticTick()
+    val row = rememberLazyListState()
+    HapticOnChange(row) { row.firstVisibleItemIndex }
+    LazyRow(
+        state = row,
+        modifier = Modifier
+            .edgeToEdge(DetailInset)
+            .fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = DetailInset),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(trailers.size, key = { trailers[it].url }) { index ->
+            val trailer = trailers[index]
+            Column(Modifier.width(260.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Card)
+                        .pointerInput(trailer.url) {
+                            detectTapGestures(onTap = {
+                                tick?.invoke()
+                                onPlay(trailer)
+                            })
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (!trailer.posterUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = trailer.posterUrl,
+                            contentDescription = trailer.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.45f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+                val caption = trailer.season?.let { stringResource(R.string.franchise_trailer_season, it) }
+                    ?: trailer.name
+                if (caption.isNotBlank()) {
+                    Text(
+                        text = caption,
+                        color = Color(0xFFC7C7CC),
+                        fontSize = 13.sp,
+                        lineHeight = 16.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun TrailerPlayer(trailer: FranchiseTrailer, onDismiss: () -> Unit) {
+    val host = remember { arrayOfNulls<TrailerHost>(1) }
+    BackHandler {
+        if (host[0]?.exitFullscreen() == true) return@BackHandler
+        onDismiss()
+    }
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                TrailerHost(context, trailer.url).also { host[0] = it }
+            },
+            onRelease = {
+                it.release()
+                host[0] = null
+            },
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(end = 12.dp, top = 8.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.55f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = stringResource(R.string.section_back),
+                tint = Color.White,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+private class TrailerHost(context: android.content.Context, url: String) : FrameLayout(context) {
+    private val web = WebView(context)
+    private var custom: View? = null
+    private var customCallback: WebChromeClient.CustomViewCallback? = null
+
+    init {
+        setBackgroundColor(android.graphics.Color.BLACK)
+        web.setBackgroundColor(android.graphics.Color.BLACK)
+        web.settings.javaScriptEnabled = true
+        web.settings.domStorageEnabled = true
+        web.settings.mediaPlaybackRequiresUserGesture = false
+        web.settings.useWideViewPort = true
+        web.settings.loadWithOverviewMode = true
+        web.settings.userAgentString = web.settings.userAgentString.replace("; wv", "")
+        CookieManager.getInstance().setAcceptCookie(true)
+        CookieManager.getInstance().setAcceptThirdPartyCookies(web, true)
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                if (view == null) {
+                    callback?.onCustomViewHidden()
+                    return
+                }
+                hideFullscreen()
+                (view.parent as? android.view.ViewGroup)?.removeView(view)
+                custom = view
+                customCallback = callback
+                web.visibility = GONE
+                addView(view, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            }
+
+            override fun onHideCustomView() {
+                hideFullscreen()
+            }
+        }
+        web.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
+                if (!request.isForMainFrame) return false
+                val scheme = request.url.scheme.orEmpty()
+                if (scheme == "about" || scheme == "data" || scheme == "blob") return false
+                val host = request.url.host.orEmpty()
+                return !host.endsWith("nextembed.ws")
+            }
+        }
+        addView(web, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        val page = trailerPage(url)
+        web.loadDataWithBaseURL("https://api.nextembed.ws/", page, "text/html", "utf-8", null)
+    }
+
+    fun exitFullscreen(): Boolean {
+        val callback = customCallback ?: return false
+        callback.onCustomViewHidden()
+        return true
+    }
+
+    fun hideFullscreen() {
+        val view = custom ?: return
+        removeView(view)
+        custom = null
+        customCallback = null
+        web.visibility = VISIBLE
+    }
+
+    fun release() {
+        hideFullscreen()
+        removeView(web)
+        web.destroy()
+    }
+}
+
+private fun trailerPage(url: String): String {
+    val safe = url.replace("&", "&amp;").replace("\"", "&quot;")
+    return """
+        <!DOCTYPE html><html><head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <style>html,body{margin:0;height:100%;background:#000;overflow:hidden}iframe{position:fixed;inset:0;border:0;width:100%;height:100%}</style>
+        </head><body>
+        <iframe src="$safe" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>
+        </body></html>
+    """.trimIndent()
 }
 
 @Composable

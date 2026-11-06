@@ -5,6 +5,7 @@ import com.example.movie.data.remote.dto.TimelineDto
 import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.FranchiseEpisode
 import com.example.movie.domain.model.FranchiseSeason
+import com.example.movie.domain.model.FranchiseTrailer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -54,6 +55,15 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
         series = type.equals("serial", ignoreCase = true) || seasonList.isNotEmpty(),
         photos = shootingPhotos.names().filter { it.startsWith("http") },
         facts = (trivia ?: facts).names().map { it.stripTags() }.filter { it.isNotBlank() },
+        trailers = trailers.asObjects().mapNotNull { item ->
+            val url = item.string("iframe_url")?.takeIf { it.startsWith("http") } ?: return@mapNotNull null
+            FranchiseTrailer(
+                name = item.string("name").orEmpty(),
+                posterUrl = item.string("iframe_poster")?.takeIf { it.startsWith("http") },
+                url = url,
+                season = item["season"].asInt(),
+            )
+        },
         seasons = seasonList,
     )
 }

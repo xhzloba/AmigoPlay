@@ -22,7 +22,15 @@ data class Franchise(
     val series: Boolean = false,
     val photos: List<String> = emptyList(),
     val facts: List<String> = emptyList(),
+    val trailers: List<FranchiseTrailer> = emptyList(),
     val seasons: List<FranchiseSeason> = emptyList(),
+)
+
+data class FranchiseTrailer(
+    val name: String,
+    val posterUrl: String?,
+    val url: String,
+    val season: Int? = null,
 )
 
 data class FranchiseSeason(
