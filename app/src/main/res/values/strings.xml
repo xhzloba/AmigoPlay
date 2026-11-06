@@ -17,6 +17,8 @@
     <string name="catalog_genres">Жанры</string>
     <string name="poster_content_description">Постер «%1$s»</string>
     <string name="watch_now">Смотреть</string>
+    <string name="watch_free">смотри бесплатно</string>
+    <string name="watch_catalog">более 10 000 фильмов и сериалов онлайн</string>
     <string name="age_badge">%1$d+</string>
     <string name="peek_director">Режиссёр</string>
     <string name="menu_watch">Смотреть</string>

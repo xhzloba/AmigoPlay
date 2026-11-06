@@ -92,9 +92,12 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val Label = Color(0xFF8E8E93)
+private val AboutLabel = Color(0xFFD4D4DA)
+private val AboutValue = Color(0xFFE8E8ED)
 private val Value = Color(0xFFE8E8ED)
 private val Card = Color.White.copy(alpha = 0.06f)
 private val Panel = Color.White.copy(alpha = 0.16f)
+private val Plaque = Color.Black.copy(alpha = 0.32f)
 private val dateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("ru"))
 
 @Composable
@@ -178,7 +181,7 @@ internal fun FranchiseBlock(
 }
 
 @Composable
-private fun InfoLine(label: String, value: String, valueColor: Color = Value) {
+private fun InfoLine(label: String, value: String, valueColor: Color = AboutValue) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -187,7 +190,7 @@ private fun InfoLine(label: String, value: String, valueColor: Color = Value) {
     ) {
         Text(
             text = label,
-            color = Label,
+            color = AboutLabel,
             fontSize = 15.sp,
             lineHeight = 20.sp,
             modifier = Modifier.width(132.dp),
@@ -445,8 +448,8 @@ private fun Facts(facts: List<String>, onOpen: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .width(236.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Panel)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Plaque)
                     .pointerInput(fact) {
                         detectTapGestures(onTap = {
                             tick?.invoke()
@@ -682,8 +685,8 @@ private fun SiteBox(
         modifier = Modifier
             .width(112.dp)
             .height(108.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Panel)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Plaque)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = { open.value() })
             },
@@ -810,12 +813,18 @@ internal fun StackPage(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    scrolling: Boolean = true,
+    headerScrim: Float = 0f,
     content: @Composable () -> Unit,
 ) {
     BackHandler(onBack = onBack)
     val scroll = rememberScrollState()
     val density = LocalDensity.current
-    val scrim = with(density) { (scroll.value / 28.dp.toPx()).coerceIn(0f, 1f) }
+    val scrim = if (scrolling) {
+        with(density) { (scroll.value / 28.dp.toPx()).coerceIn(0f, 1f) }
+    } else {
+        headerScrim
+    }
     Box(
         modifier
             .fillMaxSize()
@@ -826,15 +835,19 @@ internal fun StackPage(
                 onClick = {},
             ),
     ) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(scroll)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
-                .padding(top = BrandTopInset + 36.dp + 18.dp, bottom = 16.dp)
-                .padding(horizontal = 20.dp),
-        ) {
-            content()
+        if (scrolling) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scroll)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical))
+                    .padding(top = BrandTopInset + 36.dp + 18.dp, bottom = 16.dp)
+                    .padding(horizontal = 20.dp),
+            ) {
+                content()
+            }
+        } else {
+            Box(Modifier.fillMaxSize()) { content() }
         }
         SectionScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
         PageBar(title = title, onBack = onBack, modifier = Modifier.align(Alignment.TopCenter))

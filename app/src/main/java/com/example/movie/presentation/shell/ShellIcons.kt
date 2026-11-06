@@ -7,12 +7,20 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 internal object ShellIcons {
-    val home: ImageVector = icon(filled = false) { house() }
-    val catalog: ImageVector = icon(filled = false) { grid() }
+    val home: ImageVector = filled(
+        "home",
+        "M23.9864 4.00009C24.3242 4.00009 24.6522 4.11294 24.9185 4.32071L45 20V39.636C44.9985 40.4312 44.5623 41.4377 44 42C43.4377 42.5623 42.4311 42.9985 41.6359 43H27V28H21V43H6.5C5.70485 42.9984 4.56226 42.682 4 42.1197C3.43774 41.5575 3.00163 40.7952 3 40V21L23.0544 4.32071C23.3207 4.11294 23.6487 4.00009 23.9864 4.00009ZM30 28V40H42V21.4314L24 7.40726L6 22V40L18 40V28C18.0008 27.2046 18.3171 26.442 18.8796 25.8796C19.442 25.3171 20.2046 25.0008 21 25H27C27.7954 25.0009 28.5579 25.3173 29.1203 25.8797C29.6827 26.4421 29.9991 27.2046 30 28Z",
+    )
+    val catalog: ImageVector = filled(
+        "catalog",
+        "M31.0012 13.7598C31.0546 13.3494 30.8569 12.9479 30.4999 12.7417C30.1428 12.5355 29.6963 12.5652 29.3675 12.8166L19.0718 20.6938C18.9639 20.7763 18.8699 20.8853 18.802 21.0031C18.734 21.1207 18.6901 21.2507 18.6725 21.3854L16.9985 34.2402C16.9452 34.6508 17.1428 35.0522 17.4999 35.2584C17.8569 35.4645 18.3035 35.435 18.6323 35.1835L28.928 27.3064C29.0358 27.2238 29.1298 27.1148 29.1977 26.9971C29.2656 26.8794 29.3097 26.7494 29.3273 26.6148L31.0012 13.7598ZM26.1649 25.25C25.4746 26.4458 23.9456 26.8554 22.7499 26.1651C21.5541 25.4747 21.1444 23.9458 21.8348 22.75C22.5252 21.5543 24.0541 21.1446 25.2499 21.835C26.4456 22.5253 26.8553 24.0543 26.1649 25.25Z",
+        "M45 24C45 35.598 35.598 45 24 45C12.402 45 3 35.598 3 24C3 12.402 12.402 3 24 3C35.598 3 45 12.402 45 24ZM42 24C42 33.9411 33.9411 42 24 42C14.0589 42 6 33.9411 6 24C6 14.0589 14.0589 6 24 6C33.9411 6 42 14.0589 42 24Z",
+    )
     val settings: ImageVector = sliders()
     val media: ImageVector = icon(filled = false) { media() }
     val search: ImageVector = icon(filled = false) { magnifier() }
@@ -24,6 +32,23 @@ internal object ShellIcons {
     val back: ImageVector = chevron(forward = false)
     val person: ImageVector = person()
 }
+
+private fun filled(name: String, vararg paths: String): ImageVector =
+    ImageVector.Builder(
+        name = name,
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 48f,
+        viewportHeight = 48f,
+    ).apply {
+        paths.forEach { data ->
+            addPath(
+                pathData = PathParser().parsePathString(data).toNodes(),
+                fill = SolidColor(Color.Black),
+                pathFillType = PathFillType.EvenOdd,
+            )
+        }
+    }.build()
 
 private fun icon(filled: Boolean, body: PathBuilder.() -> Unit): ImageVector =
     ImageVector.Builder(
@@ -43,27 +68,6 @@ private fun icon(filled: Boolean, body: PathBuilder.() -> Unit): ImageVector =
             pathBuilder = body,
         )
     }.build()
-
-private fun PathBuilder.house() {
-    moveTo(12f, 3.4f)
-    lineTo(3.4f, 11f)
-    lineTo(3.4f, 20.6f)
-    lineTo(20.6f, 20.6f)
-    lineTo(20.6f, 11f)
-    close()
-    moveTo(9.3f, 20.6f)
-    lineTo(9.3f, 13.8f)
-    lineTo(14.7f, 13.8f)
-    lineTo(14.7f, 20.6f)
-    close()
-}
-
-private fun PathBuilder.grid() {
-    roundRect(3.2f, 3.2f, 7.4f, 1.6f)
-    roundRect(13.4f, 3.2f, 7.4f, 1.6f)
-    roundRect(3.2f, 13.4f, 7.4f, 1.6f)
-    roundRect(13.4f, 13.4f, 7.4f, 1.6f)
-}
 
 private fun PathBuilder.media() {
     val left = 3.4f
@@ -173,21 +177,6 @@ private fun PathBuilder.magnifier() {
     close()
     moveTo(15.2f, 15.4f)
     lineTo(20.4f, 20.6f)
-}
-
-private fun PathBuilder.roundRect(left: Float, top: Float, size: Float, radius: Float) {
-    val right = left + size
-    val bottom = top + size
-    moveTo(left + radius, top)
-    lineTo(right - radius, top)
-    quadTo(right, top, right, top + radius)
-    lineTo(right, bottom - radius)
-    quadTo(right, bottom, right - radius, bottom)
-    lineTo(left + radius, bottom)
-    quadTo(left, bottom, left, bottom - radius)
-    lineTo(left, top + radius)
-    quadTo(left, top, left + radius, top)
-    close()
 }
 
 private fun genreTag(): ImageVector = ImageVector.Builder(

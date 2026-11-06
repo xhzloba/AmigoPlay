@@ -1,7 +1,13 @@
 package com.example.movie.presentation.detail
 
 import android.graphics.drawable.BitmapDrawable
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -9,6 +15,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.clickable
@@ -24,16 +31,20 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
@@ -59,13 +70,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.ui.theme.PlayBlue
 import com.example.movie.ui.theme.PosterShape
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
@@ -77,6 +91,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -87,6 +105,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -166,7 +185,6 @@ private fun RoundAction(icon: ImageVector) {
 }
 
 internal val DetailInset = 20.dp
-private const val BackdropPeek = 0.08f
 
 internal fun Modifier.edgeToEdge(inset: Dp): Modifier = layout { measurable, constraints ->
     val extra = inset.roundToPx()
@@ -222,6 +240,7 @@ private fun DetailContent(
     LaunchedEffect(franchisePage) {
         if (franchisePage != null) {
             pageShown = franchisePage
+            withFrameNanos { }
             pageVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
         } else if (pageShown != null) {
             pageVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
@@ -266,14 +285,14 @@ private fun DetailContent(
     val density = LocalDensity.current
     val shadeTravel = with(density) { 200.dp.toPx() }
     val shade = (scroll.value / shadeTravel).coerceIn(0f, 1f)
-    val backdropAlpha = 1f - shade * (1f - BackdropPeek)
+    val backdropAlpha = if (settings.extractColors) 1f - shade else 1f
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
                 drawRect(Color(0xFF121212))
                 drawPosterWash(target, washAlpha)
-                if (shade > 0f) {
+                if (shade > 0f && settings.extractColors) {
                     val ink = lerp(target.topLeft, target.topRight, 0.5f).sunk()
                     drawRect(
                         brush = Brush.verticalGradient(
@@ -305,6 +324,7 @@ private fun DetailContent(
                         BackdropStill(
                             url = backdrops[page],
                             height = heroHeight,
+                            dim = if (settings.extractColors) 0f else shade,
                         )
                     }
                 } else {
@@ -316,6 +336,7 @@ private fun DetailContent(
                         BackdropStill(
                             url = url,
                             height = heroHeight,
+                            dim = if (settings.extractColors) 0f else shade,
                         )
                     }
                 }
@@ -369,29 +390,7 @@ private fun DetailContent(
                 RatingsRow(detail)
             }
             Spacer(Modifier.height(22.dp))
-            Button(
-                onClick = {},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = stringResource(R.string.watch_now),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            WatchBar(target)
             Spacer(Modifier.height(22.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -480,54 +479,211 @@ private fun DetailContent(
 
 @Composable
 private fun CastPage(cast: List<CastMember>, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    val top = with(density) { WindowInsets.safeDrawing.getTop(this).toDp() }
+    val bottom = with(density) { WindowInsets.safeDrawing.getBottom(this).toDp() }
+    val listState = rememberLazyListState()
+    HapticOnChange(listState) { listState.firstVisibleItemIndex }
+    val headerScrim = with(density) {
+        if (listState.firstVisibleItemIndex > 0) 1f
+        else (listState.firstVisibleItemScrollOffset / 28.dp.toPx()).coerceIn(0f, 1f)
+    }
     StackPage(
         title = stringResource(R.string.section_cast),
         onBack = onBack,
         modifier = modifier,
+        scrolling = false,
+        headerScrim = headerScrim,
     ) {
-        Text(
-            text = stringResource(peopleCountRes(cast.size), cast.size),
-            color = Color.White.copy(alpha = 0.55f),
-            fontSize = 14.sp,
-            lineHeight = 18.sp,
-        )
-        Spacer(Modifier.height(8.dp))
-        cast.forEachIndexed { index, member ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PersonPhoto(url = member.photoUrl, name = member.name, size = CastAvatar)
-                Spacer(Modifier.width(CastGap))
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                end = 20.dp,
+                top = top + BrandTopInset + 36.dp + 18.dp,
+                bottom = bottom + 16.dp,
+            ),
+        ) {
+            item {
                 Text(
-                    text = member.name,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    lineHeight = 20.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    text = stringResource(peopleCountRes(cast.size), cast.size),
+                    color = Color.White.copy(alpha = 0.55f),
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
                 )
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    imageVector = ShellIcons.chevron,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
-                )
+                Spacer(Modifier.height(8.dp))
             }
-            if (index != cast.lastIndex) {
-                Box(
-                    Modifier
-                        .padding(start = CastAvatar + CastGap)
+            items(cast.size, key = { it }) { index ->
+                val member = cast[index]
+                Row(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .height(1.dp)
-                        .background(Color.White.copy(alpha = 0.08f)),
-                )
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    PersonPhoto(url = member.photoUrl, name = member.name, size = CastAvatar)
+                    Spacer(Modifier.width(CastGap))
+                    Text(
+                        text = member.name,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector = ShellIcons.chevron,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                if (index != cast.lastIndex) {
+                    Box(
+                        Modifier
+                            .padding(start = CastAvatar + CastGap)
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color.White.copy(alpha = 0.08f)),
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun WatchBar(wash: PosterWash) {
+    val play = wash.playColor()
+    val context = LocalContext.current
+    val logo = remember {
+        val options = android.graphics.BitmapFactory.Options().apply { inScaled = false }
+        val source = android.graphics.BitmapFactory.decodeResource(
+            context.resources,
+            R.drawable.amigoplay_logo,
+            options,
+        )
+        source.splitWatchLogo()
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.horizontalGradient(
+                    0f to Color.Black.copy(alpha = 0.38f),
+                    1f to Color.Black.copy(alpha = 0.10f),
+                ),
+            )
+            .padding(start = 16.dp, end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            val logoHeight = 26.dp
+            Box(
+                modifier = Modifier.height(logoHeight),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .aspectRatio(WatchLogoAspect, matchHeightConstraintsFirst = true),
+                ) {
+                    Canvas(Modifier.matchParentSize()) {
+                        drawImage(
+                            image = logo.amigo,
+                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                            filterQuality = FilterQuality.High,
+                            colorFilter = ColorFilter.tint(Color.White),
+                        )
+                    }
+                    Canvas(Modifier.matchParentSize()) {
+                        drawImage(
+                            image = logo.play,
+                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                            filterQuality = FilterQuality.High,
+                            colorFilter = ColorFilter.tint(play),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(2.dp))
+            WatchCaption(start = logoHeight * WatchLogoAspect * WatchLogoInkLeft)
+        }
+        Button(
+            onClick = {},
+            modifier = Modifier.height(44.dp),
+            shape = RoundedCornerShape(22.dp),
+            contentPadding = PaddingValues(horizontal = 18.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black,
+            ),
+        ) {
+            Text(
+                text = stringResource(R.string.watch_now),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private const val WatchLogoAspect = 754f / 186f
+private const val WatchLogoInkLeft = 29f / 754f
+
+@Composable
+private fun WatchCaption(start: Dp) {
+    val captions = listOf(
+        stringResource(R.string.watch_free),
+        stringResource(R.string.watch_catalog),
+    )
+    val style = TextStyle(
+        color = Color.White.copy(alpha = 0.72f),
+        fontSize = 11.sp,
+        lineHeight = 13.sp,
+    )
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    var page by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(2600)
+            page = (page + 1) % captions.size
+        }
+    }
+    AnimatedContent(
+        targetState = page,
+        modifier = Modifier
+            .padding(start = start)
+            .fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart,
+        transitionSpec = {
+            (fadeIn(tween(420, easing = FastOutSlowInEasing)) +
+                slideInVertically(tween(420, easing = FastOutSlowInEasing)) { it / 2 })
+                .togetherWith(
+                    fadeOut(tween(280)) + slideOutVertically(tween(280)) { -it / 2 },
+                )
+        },
+        label = "watchCaption",
+    ) { index ->
+        val text = captions[index]
+        val bearing = measurer.measure(text.take(1), style = style, maxLines = 1)
+            .getBoundingBox(0)
+            .left
+        Text(
+            text = text,
+            modifier = Modifier.offset(x = with(density) { -bearing.toDp() }),
+            style = style,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -947,6 +1103,7 @@ private fun Int.asRuntime(): String {
 private fun BackdropStill(
     url: String,
     height: Dp,
+    dim: Float,
 ) {
     AsyncImage(
         model = url,
@@ -969,6 +1126,12 @@ private fun BackdropStill(
                     ),
                     blendMode = BlendMode.DstIn,
                 )
+                if (dim > 0f) {
+                    drawRect(
+                        color = Color.Black.copy(alpha = 0.72f * dim),
+                        blendMode = BlendMode.SrcAtop,
+                    )
+                }
             },
     )
 }
@@ -1013,4 +1176,46 @@ private suspend fun android.content.Context.extractBackdrop(url: String): Poster
     val colors = withContext(Dispatchers.Default) { bitmap.posterWash() }
     if (bitmap !== source) bitmap.recycle()
     return colors
+}
+
+private fun PosterWash.playColor(): Color {
+    val hsv = FloatArray(3)
+    var bestSat = 0f
+    var best = PlayBlue
+    for (color in listOf(topLeft, topRight, bottomLeft, bottomRight)) {
+        android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+        if (hsv[1] <= bestSat) continue
+        bestSat = hsv[1]
+        hsv[1] = hsv[1].coerceIn(0.55f, 1f)
+        hsv[2] = hsv[2].coerceIn(0.72f, 0.95f)
+        best = Color(android.graphics.Color.HSVToColor(hsv))
+    }
+    return if (bestSat < 0.12f) PlayBlue else best
+}
+
+private data class WatchLogo(val amigo: ImageBitmap, val play: ImageBitmap)
+
+private fun android.graphics.Bitmap.splitWatchLogo(): WatchLogo {
+    val pixels = IntArray(width * height)
+    getPixels(pixels, 0, width, 0, 0, width, height)
+    val amigo = IntArray(pixels.size)
+    val play = IntArray(pixels.size)
+    for (index in pixels.indices) {
+        val color = pixels[index]
+        val alpha = color ushr 24
+        if (alpha < 8) continue
+        val red = (color shr 16) and 0xFF
+        val green = (color shr 8) and 0xFF
+        val blue = color and 0xFF
+        val mask = (alpha shl 24) or 0x00FFFFFF
+        if (blue > red + 12 && blue >= green) play[index] = mask else amigo[index] = mask
+    }
+    recycle()
+    return WatchLogo(amigo.toMask(width, height), play.toMask(width, height))
+}
+
+private fun IntArray.toMask(width: Int, height: Int): ImageBitmap {
+    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+    bitmap.setPixels(this, 0, width, 0, 0, width, height)
+    return bitmap.asImageBitmap()
 }
