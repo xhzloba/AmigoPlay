@@ -156,10 +156,10 @@ private fun RoundAction(icon: ImageVector) {
     }
 }
 
-private val DetailInset = 20.dp
+internal val DetailInset = 20.dp
 private const val BackdropPeek = 0.26f
 
-private fun Modifier.edgeToEdge(inset: Dp): Modifier = layout { measurable, constraints ->
+internal fun Modifier.edgeToEdge(inset: Dp): Modifier = layout { measurable, constraints ->
     val extra = inset.roundToPx()
     val width = constraints.maxWidth + extra * 2
     val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
@@ -394,6 +394,10 @@ private fun DetailContent(
                 Spacer(Modifier.height(12.dp))
                 CastRow(detail.cast)
             }
+            if (detail.franchise != null) {
+                Spacer(Modifier.height(28.dp))
+                FranchiseBlock(detail)
+            }
             if (detail.similar.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
                 SectionTitle(stringResource(R.string.section_similar))
@@ -585,17 +589,16 @@ private fun CastRow(cast: List<CastMember>) {
         state = listState,
         modifier = Modifier
             .edgeToEdge(DetailInset)
-            .fillMaxWidth()
-            .height(118.dp),
+            .fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = DetailInset),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         items(count = cast.size, key = { it }) { index ->
             val member = cast[index]
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(76.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(92.dp)) {
                 Box(
                     modifier = Modifier
-                        .size(76.dp)
+                        .size(92.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.12f)),
                 ) {

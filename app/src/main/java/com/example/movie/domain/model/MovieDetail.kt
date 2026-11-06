@@ -20,7 +20,10 @@ data class MovieDetail(
     val ratingImdb: Float?,
     val backdrops: List<String>,
     val type: String = "",
+    val director: String = "",
+    val country: String = "",
     val cast: List<CastMember> = emptyList(),
     val similar: List<Movie> = emptyList(),
     val sequels: List<Movie> = emptyList(),
+    val franchise: Franchise? = null,
 )

@@ -2,6 +2,7 @@ package com.example.movie.data.remote
 
 import com.example.movie.data.remote.dto.CatalogResponseDto
 import com.example.movie.data.remote.dto.MainResponseDto
+import com.example.movie.data.remote.dto.TimelineDto
 import com.example.movie.data.remote.dto.ViewResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -42,4 +43,12 @@ internal interface VokinoApi {
         @Path("id") id: String,
         @Query("token") token: String,
     ): ViewResponseDto
+
+    @GET("v2/timeline/watch")
+    suspend fun timeline(
+        @Query("ident") ident: String,
+        @Query("current") current: Int = 100,
+        @Query("time") time: Int = 100,
+        @Query("token") token: String,
+    ): TimelineDto
 }

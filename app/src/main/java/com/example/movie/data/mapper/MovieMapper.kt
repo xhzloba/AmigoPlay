@@ -103,6 +103,8 @@ internal fun MovieDetailsDto.toDetail(): MovieDetail {
         ratingImdb = ratingImdb.positiveRating(),
         backdrops = backdrops,
         type = type,
+        director = director.trim(),
+        country = country.trim(),
     )
 }
 

@@ -1,6 +1,7 @@
 package com.example.movie.domain.repository
 
 import com.example.movie.domain.model.CatalogQuery
+import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.domain.model.Shelf
@@ -17,4 +18,6 @@ interface MovieRepository {
     suspend fun search(name: String): Result<List<Movie>>
 
     suspend fun getMovie(id: String): Result<MovieDetail>
+
+    suspend fun franchise(id: String): Franchise?
 }

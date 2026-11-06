@@ -7,10 +7,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val vokinoToken = Properties().apply {
+val localSecrets = Properties().apply {
     val file = rootProject.file("vokino.properties")
     if (file.exists()) file.inputStream().use { load(it) }
-}.getProperty("VOKINO_TOKEN").orEmpty()
+}
+val vokinoToken = localSecrets.getProperty("VOKINO_TOKEN").orEmpty()
+val franchiseToken = localSecrets.getProperty("FRANCHISE_TOKEN").orEmpty()
 
 android {
     namespace = "com.example.movie"
@@ -22,13 +24,15 @@ android {
         applicationId = "com.example.movie"
         minSdk = 36
         targetSdk = 36
-        versionCode = 14300
-        versionName = "1.43.0"
+        versionCode = 14400
+        versionName = "1.44.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "VOKINO_BASE_URL", "\"https://api.vokino.pro/\"")
         buildConfigField("String", "VOKINO_TOKEN", "\"${vokinoToken.replace("\"", "\\\"")}\"")
+        buildConfigField("String", "FRANCHISE_BASE_URL", "\"https://api.bhcesh.me/\"")
+        buildConfigField("String", "FRANCHISE_TOKEN", "\"${franchiseToken.replace("\"", "\\\"")}\"")
     }
 
     buildTypes {

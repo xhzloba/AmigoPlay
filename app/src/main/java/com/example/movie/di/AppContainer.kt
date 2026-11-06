@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.example.movie.BuildConfig
 import com.example.movie.data.favorites.FavoriteStore
 import com.example.movie.data.favorites.WatchedStore
+import com.example.movie.data.remote.FranchiseApi
 import com.example.movie.data.remote.GithubApi
 import com.example.movie.data.remote.VokinoApi
 import com.example.movie.data.repository.MovieRepositoryImpl
@@ -13,6 +14,7 @@ import com.example.movie.data.search.SearchHistoryStore
 import com.example.movie.data.settings.UserSettingsStore
 import com.example.movie.data.update.ApkUpdateInstaller
 import com.example.movie.data.update.GithubUpdateRepository
+import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.UserSettingsRepository
 import com.example.movie.domain.usecase.CheckAppUpdateUseCase
 import com.example.movie.domain.usecase.GetHomeShelvesUseCase
@@ -54,9 +56,18 @@ class AppContainer(context: Context) {
         .build()
         .create(VokinoApi::class.java)
 
+    private val franchiseApi: FranchiseApi = Retrofit.Builder()
+        .baseUrl(BuildConfig.FRANCHISE_BASE_URL)
+        .client(client)
+        .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+        .build()
+        .create(FranchiseApi::class.java)
+
     private val movieRepository = MovieRepositoryImpl(
         api = api,
+        franchiseApi = franchiseApi,
         token = BuildConfig.VOKINO_TOKEN,
+        franchiseToken = BuildConfig.FRANCHISE_TOKEN,
     )
 
     val getHomeShelves: GetHomeShelvesUseCase = GetHomeShelvesUseCase(movieRepository)
@@ -70,6 +81,10 @@ class AppContainer(context: Context) {
     val searchMovies: SearchMoviesUseCase = SearchMoviesUseCase(movieRepository)
 
     val getMovieDetail: GetMovieDetailUseCase = GetMovieDetailUseCase(movieRepository)
+
+    val loadFranchise: suspend (String) -> Franchise? = { id ->
+        movieRepository.franchise(id)
+    }
 
     private val githubApi: GithubApi = Retrofit.Builder()
         .baseUrl("https://api.github.com/")

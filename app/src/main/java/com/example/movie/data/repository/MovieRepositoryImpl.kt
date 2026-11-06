@@ -1,13 +1,17 @@
 package com.example.movie.data.repository
 
+import com.example.movie.data.mapper.kpId
 import com.example.movie.data.mapper.toDomain
+import com.example.movie.data.mapper.toFranchise
 import com.example.movie.data.mapper.toMovieDetail
 import com.example.movie.data.mapper.toShelves
+import com.example.movie.data.remote.FranchiseApi
 import com.example.movie.data.remote.VokinoApi
 import com.example.movie.data.remote.dto.CatalogResponseDto
 import com.example.movie.data.remote.dto.ChannelDto
 import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.DataError
+import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.domain.model.Shelf
@@ -19,7 +23,9 @@ import java.io.IOException
 
 internal class MovieRepositoryImpl(
     private val api: VokinoApi,
+    private val franchiseApi: FranchiseApi,
     private val token: String,
+    private val franchiseToken: String,
 ) : MovieRepository {
     override suspend fun getShelves(): Result<List<Shelf>> = runApi {
         api.main(token).toShelves()
@@ -71,6 +77,14 @@ internal class MovieRepositoryImpl(
 
     override suspend fun getMovie(id: String): Result<MovieDetail> = runApi {
         api.view(id, token).toMovieDetail()
+    }
+
+    override suspend fun franchise(id: String): Franchise? = loadFranchise(id)
+
+    private suspend fun loadFranchise(id: String): Franchise? {
+        if (franchiseToken.isBlank()) return null
+        val kp = runCatching { api.timeline(ident = id, token = token).kpId() }.getOrNull() ?: return null
+        return runCatching { franchiseApi.details(franchiseToken, kp).toFranchise() }.getOrNull()
     }
 
     private fun CatalogResponseDto.requireChannels(): List<ChannelDto> {

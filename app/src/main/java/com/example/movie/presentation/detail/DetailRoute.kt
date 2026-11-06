@@ -20,6 +20,7 @@ fun DetailRoute(
         DetailViewModel(
             movieId = movieId,
             getMovieDetail = container.getMovieDetail,
+            loadFranchise = container.loadFranchise,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
