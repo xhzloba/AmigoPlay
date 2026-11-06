@@ -15,6 +15,8 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setExtractColors(enabled: Boolean) = Unit
 
+    override fun setExtractBackdrop(enabled: Boolean) = Unit
+
     override fun setShowLogos(enabled: Boolean) = Unit
 
     override fun setAutoBackdrop(enabled: Boolean) = Unit

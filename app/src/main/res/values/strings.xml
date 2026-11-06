@@ -115,7 +115,9 @@
     <string name="settings_interface">Интерфейс</string>
     <string name="settings_sensors">Сенсоры</string>
     <string name="settings_extract_colors">Цвета с обложки</string>
-    <string name="settings_extract_colors_hint">Ретушь в деталке берётся из постера. Выключено — заливка цветом фона.</string>
+    <string name="settings_extract_colors_hint">Ретушь в деталке берётся из постера. Включено — цвета с кадра выключаются. Оба выключены — цвет фона.</string>
+    <string name="settings_extract_backdrop">Цвета с кадра</string>
+    <string name="settings_extract_backdrop_hint">Ретушь берётся из текущего backdrop и меняется вместе с кадром. Включено — цвета с обложки выключаются.</string>
     <string name="settings_poster_titles">Названия под обложками</string>
     <string name="settings_poster_titles_hint">Название и год под постером. Длинное название обрезается.</string>
     <string name="settings_logos">Логотипы</string>

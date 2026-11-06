@@ -13,7 +13,19 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override val settings: StateFlow<UserSettings> = state.asStateFlow()
 
-    override fun setExtractColors(enabled: Boolean) = write { it.copy(extractColors = enabled) }
+    override fun setExtractColors(enabled: Boolean) = write {
+        it.copy(
+            extractColors = enabled,
+            extractBackdrop = if (enabled) false else it.extractBackdrop,
+        )
+    }
+
+    override fun setExtractBackdrop(enabled: Boolean) = write {
+        it.copy(
+            extractBackdrop = enabled,
+            extractColors = if (enabled) false else it.extractColors,
+        )
+    }
 
     override fun setShowLogos(enabled: Boolean) = write { it.copy(showLogos = enabled) }
 
@@ -29,6 +41,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         val next = transform(state.value)
         prefs.edit()
             .putBoolean(KEY_COLORS, next.extractColors)
+            .putBoolean(KEY_BACKDROP_COLORS, next.extractBackdrop)
             .putBoolean(KEY_LOGOS, next.showLogos)
             .putBoolean(KEY_BACKDROP, next.autoBackdrop)
             .putBoolean(KEY_HAPTIC, next.haptic)
@@ -40,6 +53,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     private fun read(): UserSettings = UserSettings(
         extractColors = prefs.getBoolean(KEY_COLORS, true),
+        extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
         haptic = prefs.getBoolean(KEY_HAPTIC, true),
@@ -50,6 +64,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
     private companion object {
         const val FILE = "user_settings"
         const val KEY_COLORS = "extract_colors"
+        const val KEY_BACKDROP_COLORS = "extract_backdrop"
         const val KEY_LOGOS = "show_logos"
         const val KEY_BACKDROP = "auto_backdrop"
         const val KEY_HAPTIC = "haptic"

@@ -2,6 +2,7 @@ package com.example.movie.presentation.detail
 
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -254,20 +255,10 @@ private fun DetailContent(
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack, CinemaBlack)
     val hidden = PosterWash(Color(0xFF121212), Color(0xFF121212), Color(0xFF121212), Color(0xFF121212))
-    var target by remember(detail.id) { mutableStateOf(if (settings.extractColors) hidden else flat) }
-    val reveal = remember(detail.id) { Animatable(if (settings.extractColors) 0f else 1f) }
-    LaunchedEffect(detail.id, detail.posterUrl, settings.extractColors) {
-        if (!settings.extractColors) {
-            target = flat
-            reveal.snapTo(1f)
-            return@LaunchedEffect
-        }
-        reveal.snapTo(0f)
-        val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
-        target = extracted
-        reveal.animateTo(1f, tween(durationMillis = 320))
-    }
-    val washAlpha = reveal.value
+    val colored = settings.extractColors || settings.extractBackdrop
+    var target by remember(detail.id) { mutableStateOf(if (colored) hidden else flat) }
+    var backdropWash by remember(detail.id) { mutableStateOf(hidden) }
+    val reveal = remember(detail.id) { Animatable(if (colored) 0f else 1f) }
     val backdrops = detail.backdrops
     val manualBackdrop = !settings.autoBackdrop && backdrops.size > 1
     val pagerState = rememberPagerState { backdrops.size.coerceAtLeast(1) }
@@ -280,20 +271,58 @@ private fun DetailContent(
             frame = (frame + 1) % backdrops.size
         }
     }
+    val shownBackdrop = if (backdrops.isEmpty()) {
+        null
+    } else {
+        backdrops[(if (manualBackdrop) pagerState.currentPage else frame).coerceIn(0, backdrops.lastIndex)]
+    }
+    val washCache = remember(detail.id) { HashMap<String, PosterWash>() }
+    LaunchedEffect(
+        detail.id,
+        detail.posterUrl,
+        shownBackdrop,
+        settings.extractColors,
+        settings.extractBackdrop,
+    ) {
+        when {
+            settings.extractColors -> {
+                reveal.snapTo(0f)
+                val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
+                target = extracted
+                reveal.animateTo(1f, tween(durationMillis = 320))
+            }
+            settings.extractBackdrop -> {
+                reveal.snapTo(1f)
+                val url = shownBackdrop
+                if (url == null) {
+                    backdropWash = flat
+                    return@LaunchedEffect
+                }
+                val extracted = washCache[url] ?: context.extractBackdrop(url, 320, 180)?.also { washCache[url] = it }
+                if (extracted != null) backdropWash = extracted
+            }
+            else -> {
+                target = flat
+                reveal.snapTo(1f)
+            }
+        }
+    }
+    val washAlpha = reveal.value
+    val paintWash = if (settings.extractBackdrop) animateWash(backdropWash) else target
     val scroll = rememberScrollState()
     LaunchedEffect(detail.id) { scroll.scrollTo(0) }
     val density = LocalDensity.current
     val shadeTravel = with(density) { 200.dp.toPx() }
     val shade = (scroll.value / shadeTravel).coerceIn(0f, 1f)
-    val backdropAlpha = if (settings.extractColors) 1f - shade else 1f
+    val backdropAlpha = if (colored) 1f - shade else 1f
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
                 drawRect(Color(0xFF121212))
-                drawPosterWash(target, washAlpha)
-                if (shade > 0f && settings.extractColors) {
-                    val ink = lerp(target.topLeft, target.topRight, 0.5f).sunk()
+                drawPosterWash(paintWash, washAlpha)
+                if (shade > 0f && colored) {
+                    val ink = lerp(paintWash.topLeft, paintWash.topRight, 0.5f).sunk()
                     drawRect(
                         brush = Brush.verticalGradient(
                             0f to ink.copy(alpha = 0.94f * shade),
@@ -324,7 +353,7 @@ private fun DetailContent(
                         BackdropStill(
                             url = backdrops[page],
                             height = heroHeight,
-                            dim = if (settings.extractColors) 0f else shade,
+                            dim = if (colored) 0f else shade,
                         )
                     }
                 } else {
@@ -336,7 +365,7 @@ private fun DetailContent(
                         BackdropStill(
                             url = url,
                             height = heroHeight,
-                            dim = if (settings.extractColors) 0f else shade,
+                            dim = if (colored) 0f else shade,
                         )
                     }
                 }
@@ -390,7 +419,7 @@ private fun DetailContent(
                 RatingsRow(detail)
             }
             Spacer(Modifier.height(22.dp))
-            WatchBar(target)
+            WatchBar(paintWash)
             Spacer(Modifier.height(22.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1159,12 +1188,26 @@ private fun BackdropDots(count: Int, index: Int, modifier: Modifier = Modifier) 
     }
 }
 
-private suspend fun android.content.Context.extractBackdrop(url: String): PosterWash? {
+@Composable
+private fun animateWash(target: PosterWash): PosterWash {
+    val spec = tween<Color>(durationMillis = 900, easing = FastOutSlowInEasing)
+    val topLeft by animateColorAsState(target.topLeft, spec, label = "washTl")
+    val topRight by animateColorAsState(target.topRight, spec, label = "washTr")
+    val bottomRight by animateColorAsState(target.bottomRight, spec, label = "washBr")
+    val bottomLeft by animateColorAsState(target.bottomLeft, spec, label = "washBl")
+    return PosterWash(topLeft, topRight, bottomRight, bottomLeft)
+}
+
+private suspend fun android.content.Context.extractBackdrop(
+    url: String,
+    width: Int = 160,
+    height: Int = 240,
+): PosterWash? {
     val result = imageLoader.execute(
         ImageRequest.Builder(this)
             .data(url)
             .allowHardware(false)
-            .size(160, 240)
+            .size(width, height)
             .build(),
     )
     val source = ((result as? SuccessResult)?.drawable as? BitmapDrawable)?.bitmap ?: return null
