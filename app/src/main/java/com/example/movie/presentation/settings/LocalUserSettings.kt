@@ -25,8 +25,6 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setHaptic(enabled: Boolean) = Unit
 
-    override fun setGyro(enabled: Boolean) = Unit
-
     override fun setShowPosterTitles(enabled: Boolean) = Unit
 
     override fun setLargePosters(enabled: Boolean) = Unit

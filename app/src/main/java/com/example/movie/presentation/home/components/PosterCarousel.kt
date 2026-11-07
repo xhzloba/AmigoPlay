@@ -2,10 +2,6 @@ package com.example.movie.presentation.home.components
 
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -44,7 +40,6 @@ import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -118,9 +113,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.absoluteValue
-import kotlin.math.atan2
-import kotlin.math.exp
-import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -138,73 +130,6 @@ private val DotsNudge = 16.dp
 private val LogoSlot = 52.dp
 
 private data class PosterPalette(val primary: Color, val secondary: Color)
-
-private class CoverTilt {
-    var side by mutableFloatStateOf(0f)
-}
-
-@Composable
-private fun rememberCoverTilt(): CoverTilt {
-    val context = LocalContext.current
-    val gyroOn by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val tilt = remember { CoverTilt() }
-    DisposableEffect(context, gyroOn.gyro) {
-        if (!gyroOn.gyro) {
-            tilt.side = 0f
-            onDispose { }
-        } else {
-        val manager = context.getSystemService(SensorManager::class.java)
-        val gyroscope = manager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        val rotation = manager?.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
-            ?: manager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-        if (manager == null || gyroscope == null || rotation == null) {
-            onDispose { }
-        } else {
-            val matrix = FloatArray(9)
-            var smoothedSide = 0f
-            var referenceHeading = Float.NaN
-            var lastNanos = 0L
-            val listener = object : SensorEventListener {
-                override fun onSensorChanged(event: SensorEvent) {
-                    if (event.sensor.type != rotation.type) return
-                    SensorManager.getRotationMatrixFromVector(matrix, event.values)
-                    val now = event.timestamp
-                    val dt = if (lastNanos == 0L) {
-                        0.016f
-                    } else {
-                        ((now - lastNanos) / 1_000_000_000f).coerceIn(0.001f, 0.05f)
-                    }
-                    lastNanos = now
-                    val up = matrix[7]
-                    val roll = atan2(-matrix[6], hypot(up, matrix[8]).coerceAtLeast(0.05f))
-                    val heading = atan2(matrix[2], matrix[5])
-                    if (referenceHeading.isNaN() && up > 0.45f) referenceHeading = heading
-                    val yaw = if (referenceHeading.isNaN()) 0f else wrapRadians(heading - referenceHeading)
-                    val upright = ((up - 0.15f) / 0.5f).coerceIn(0f, 1f)
-                    val lateral = if (roll.absoluteValue >= yaw.absoluteValue) roll else yaw
-                    val sideTarget = (lateral / 0.4f).coerceIn(-1f, 1f) * upright
-                    val alpha = 1f - exp(-dt / 0.28f)
-                    smoothedSide += (sideTarget - smoothedSide) * alpha
-                    if ((smoothedSide - tilt.side).absoluteValue > 0.004f) tilt.side = smoothedSide
-                }
-
-                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
-            }
-            manager.registerListener(listener, rotation, SensorManager.SENSOR_DELAY_GAME)
-            onDispose { manager.unregisterListener(listener) }
-        }
-        }
-    }
-    return tilt
-}
-
-private fun wrapRadians(angle: Float): Float {
-    val turn = (Math.PI * 2).toFloat()
-    var value = angle % turn
-    if (value > Math.PI) value -= turn
-    if (value < -Math.PI) value += turn
-    return value
-}
 
 @Composable
 fun PosterCarousel(
@@ -248,7 +173,6 @@ fun PosterCarousel(
         onPlayColor(color, capsule ?: color, playOffset.absoluteValue > 0.02f)
     }
     val active = movies.getOrNull(activeIndex)
-    val tilt = rememberCoverTilt()
     val tick = rememberHapticTick()
     HapticOnChange(pagerState) { pagerState.currentPage }
     HapticOnAppend(movies.map { it.id })
@@ -411,12 +335,10 @@ fun PosterCarousel(
                         .zIndex(2f - distance)
                         .graphicsLayer {
                             val clamped = distance.coerceIn(0f, 1f)
-                            val facing = 1f - clamped
                             val scale = lerp(1f, NeighborScale, clamped) * pressScale
                             scaleX = scale
                             scaleY = scale
-                            translationX = -pageOffset * size.width * NeighborShift +
-                                tilt.side * 10.dp.toPx() * facing
+                            translationX = -pageOffset * size.width * NeighborShift
                             alpha = if (distance <= 1.05f) 1f else lerp(1f, 0f, (distance - 1.05f).coerceIn(0f, 1f))
                         }
                         .clip(PosterShape)
@@ -484,7 +406,6 @@ fun PosterCarousel(
                 cardHeight = cardHeight,
                 appear = appear,
                 pageShift = pageShift,
-                tilt = tilt,
             )
             }
         }
@@ -902,7 +823,6 @@ private fun PosterReflection(
     cardHeight: androidx.compose.ui.unit.Dp,
     appear: Float,
     pageShift: Float,
-    tilt: CoverTilt,
 ) {
     val context = LocalContext.current
     var image by remember(movie?.id) { mutableStateOf<ImageBitmap?>(null) }
@@ -922,7 +842,6 @@ private fun PosterReflection(
     }
     val bitmap = image
     val clamped = pageShift.absoluteValue.coerceIn(0f, 1f)
-    val facing = 1f - clamped
     Box(
         modifier = Modifier
             .layout { measurable, constraints ->
@@ -942,8 +861,7 @@ private fun PosterReflection(
                 val scale = lerp(1f, NeighborScale, clamped)
                 scaleX = scale
                 scaleY = scale
-                translationX = pageShift * size.width * NeighborShift +
-                    tilt.side * 10.dp.toPx() * facing
+                translationX = pageShift * size.width * NeighborShift
                 alpha = appear
                 compositingStrategy = CompositingStrategy.Offscreen
             },

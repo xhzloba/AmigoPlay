@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.69.4",
+            fixed = listOf(
+                "«Главная», «Моё» и «Настройки» заезжают уже собранными. Страница не перерисовывается посреди анимации.",
+                "Гироскоп убран. Обложка не сдвигается от наклона, пункт исчез из «Сенсоров».",
+            ),
+        ),
+        Release(
             version = "1.69.3",
             fixed = listOf(
                 "Короткий свайп по главной и каталогу идёт так же ровно, как в полном списке. Листается только то, что на экране.",

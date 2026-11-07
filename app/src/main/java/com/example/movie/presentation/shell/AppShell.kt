@@ -42,9 +42,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
@@ -214,11 +216,11 @@ fun AppShell(
     var catalogShown by remember { mutableStateOf(tab == AppTab.Catalog) }
     var catalogMounted by remember { mutableStateOf(tab == AppTab.Catalog) }
     val catalogShift = remember { Animatable(if (tab == AppTab.Catalog) 0f else 1f) }
+    var restParked by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (!catalogMounted) {
-            withFrameNanos { }
-            catalogMounted = true
-        }
+        withFrameNanos { }
+        if (!catalogMounted) catalogMounted = true
+        restParked = true
     }
     LaunchedEffect(tab) {
         val move = tween<Float>(240, easing = FastOutSlowInEasing)
@@ -309,20 +311,33 @@ fun AppShell(
                 .onSizeChanged { stageWidth = it.width },
         ) {
             Box(Modifier.fillMaxSize()) {
-                val behind = baseBehind
-                if (behind != null) {
-                    key(behind) {
-                        TabBody(behind, Modifier.fillMaxSize())
+                for (which in listOf(AppTab.Home, AppTab.Favorites, AppTab.Settings)) {
+                    val front = which == base
+                    val under = which == baseBehind
+                    if (!front && !under && !restParked) continue
+                    key(which) {
+                        val fraction: () -> Float = when {
+                            front -> {
+                                { baseShift.value }
+                            }
+                            under -> {
+                                { 0f }
+                            }
+                            else -> {
+                                { 2f }
+                            }
+                        }
+                        val shown = front || under
+                        TabBody(
+                            which,
+                            Modifier
+                                .zIndex(if (front) 1f else 0f)
+                                .slideBy(fraction, stageWidth)
+                                .drawWithContent { if (shown) drawContent() }
+                                .fillMaxSize()
+                                .background(CinemaBlack),
+                        )
                     }
-                }
-                key(base) {
-                    TabBody(
-                        base,
-                        Modifier
-                            .slideBy({ baseShift.value }, stageWidth)
-                            .fillMaxSize()
-                            .background(CinemaBlack),
-                    )
                 }
             }
             if (catalogMounted) {

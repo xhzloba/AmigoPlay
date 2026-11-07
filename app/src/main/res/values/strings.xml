@@ -186,8 +186,6 @@
     <string name="settings_watch_glow_hint">При входе в деталку у «Смотреть» один раз проходит тонкая обводка цветом кадра. Снова только если зайти заново.</string>
     <string name="settings_haptic">Виброотклик</string>
     <string name="settings_haptic_hint">Короткий отклик при листании и открытии фильма.</string>
-    <string name="settings_gyro">Гироскоп</string>
-    <string name="settings_gyro_hint">Активная обложка сдвигается, когда наклоняешь телефон.</string>
     <string name="settings_about">О программе</string>
     <string name="settings_version">Версия</string>
     <string name="update_current">Актуальная</string>

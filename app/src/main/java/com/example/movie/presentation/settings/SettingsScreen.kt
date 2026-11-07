@@ -104,7 +104,6 @@ fun SettingsRoute() {
         onAutoBackdrop = repository::setAutoBackdrop,
         onWatchGlow = repository::setWatchGlow,
         onHaptic = repository::setHaptic,
-        onGyro = repository::setGyro,
     )
 }
 
@@ -120,7 +119,6 @@ private fun SettingsScreen(
     onAutoBackdrop: (Boolean) -> Unit,
     onWatchGlow: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
-    onGyro: (Boolean) -> Unit,
 ) {
     var sectionName by rememberSaveable { mutableStateOf(SettingsSection.Interface.name) }
     val section = SettingsSection.valueOf(sectionName)
@@ -206,13 +204,6 @@ private fun SettingsScreen(
                     hint = stringResource(R.string.settings_haptic_hint),
                     checked = settings.haptic,
                     onChecked = onHaptic,
-                )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_gyro),
-                    hint = stringResource(R.string.settings_gyro_hint),
-                    checked = settings.gyro,
-                    onChecked = onGyro,
                 )
             }
             SettingsSection.About -> AboutPage(Modifier.weight(1f).fillMaxWidth())

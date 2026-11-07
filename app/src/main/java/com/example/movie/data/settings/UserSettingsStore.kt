@@ -35,8 +35,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setHaptic(enabled: Boolean) = write { it.copy(haptic = enabled) }
 
-    override fun setGyro(enabled: Boolean) = write { it.copy(gyro = enabled) }
-
     override fun setShowPosterTitles(enabled: Boolean) = write { it.copy(showPosterTitles = enabled) }
 
     override fun setLargePosters(enabled: Boolean) = write { it.copy(largePosters = enabled) }
@@ -54,7 +52,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_BACKDROP, next.autoBackdrop)
             .putBoolean(KEY_WATCH_GLOW, next.watchGlow)
             .putBoolean(KEY_HAPTIC, next.haptic)
-            .putBoolean(KEY_GYRO, next.gyro)
             .putBoolean(KEY_POSTER_TITLES, next.showPosterTitles)
             .putBoolean(KEY_LARGE_POSTERS, next.largePosters)
             .putBoolean(KEY_PLAYER_LOGO, next.playerLogo)
@@ -70,7 +67,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
         watchGlow = prefs.getBoolean(KEY_WATCH_GLOW, false),
         haptic = prefs.getBoolean(KEY_HAPTIC, true),
-        gyro = prefs.getBoolean(KEY_GYRO, true),
         showPosterTitles = prefs.getBoolean(KEY_POSTER_TITLES, false),
         largePosters = prefs.getBoolean(KEY_LARGE_POSTERS, false),
         playerLogo = prefs.getBoolean(KEY_PLAYER_LOGO, true),
@@ -85,7 +81,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_BACKDROP = "auto_backdrop"
         const val KEY_WATCH_GLOW = "watch_glow"
         const val KEY_HAPTIC = "haptic"
-        const val KEY_GYRO = "gyro"
         const val KEY_POSTER_TITLES = "poster_titles"
         const val KEY_LARGE_POSTERS = "large_posters"
         const val KEY_PLAYER_LOGO = "player_logo"
