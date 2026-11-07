@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.68.4",
+            fixed = listOf(
+                "Слайдеры снова как в 1.68.2: полки, «Топ» и верхняя карусель. Плавный доезд ряда и проявление обложки на месте.",
+            ),
+        ),
+        Release(
             version = "1.68.2",
             fixed = listOf(
                 "Окна «Смотреть», «Продолжить» и «Что уже посмотрели» закрываются только верхней полоской или тапом вне окна. Список сезонов и серий прокручивается обычным свайпом.",
