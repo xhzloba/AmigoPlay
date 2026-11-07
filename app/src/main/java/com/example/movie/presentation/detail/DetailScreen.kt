@@ -139,6 +139,7 @@ import com.example.movie.presentation.palette.posterWash
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.episodeMarks
+import com.example.movie.domain.model.fullyWatched
 import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
@@ -554,7 +555,7 @@ private fun DetailContent(
                 resume = continued,
                 onWatch = {
                     tick?.invoke()
-                    if (continued != null && seasonList.isNotEmpty()) {
+                    if (seasonList.isNotEmpty()) {
                         episodesOpen = true
                     } else {
                         val id = watchId
@@ -699,9 +700,10 @@ private fun DetailContent(
                 logoUrl = detail.logoUrl,
                 startPositionMs = if (!pinned || sameSaved) saved?.positionMs ?: 0L else 0L,
                 onProgress = { position, duration, playedSeason, playedEpisode ->
-                    resumeStore.record(
-                        detail.toResume(request.franchiseId, position, duration, playedSeason, playedEpisode),
-                    )
+                    val item = detail.toResume(request.franchiseId, position, duration, playedSeason, playedEpisode)
+                    val seasons = detail.franchise?.seasons.orEmpty()
+                    val finished = resumeStore.record(item) { stored -> seasons.fullyWatched(stored.episodeMarks()) }
+                    if (finished) watched.add(detail.toSaved())
                 },
                 onDismiss = { watching = null },
             )

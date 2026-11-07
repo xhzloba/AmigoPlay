@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -54,12 +55,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
+import com.example.movie.domain.model.FranchiseSeason
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.episodeFinished
+import com.example.movie.domain.model.episodeMarks
+import com.example.movie.domain.model.fullyWatched
+import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.detail.WatchPlayer
 import com.example.movie.presentation.detail.resumeWatchUrl
 import com.example.movie.presentation.favorites.FavoritesScreen
 import com.example.movie.presentation.haptic.rememberHapticTick
+import kotlinx.coroutines.launch
 import com.example.movie.presentation.home.CatalogGenresPage
 import com.example.movie.presentation.home.CatalogListRoute
 import com.example.movie.presentation.home.CatalogScreen
@@ -389,20 +396,37 @@ fun AppShell(
         )
         val playing = resumePlayback
         if (playing != null) {
+            val scope = rememberCoroutineScope()
+            var aired by remember(playing.id) { mutableStateOf<List<FranchiseSeason>?>(null) }
             WatchPlayer(
                 url = resumeWatchUrl(playing.franchiseId, playing.season, playing.episode),
                 title = playing.title,
                 logoUrl = playing.logoUrl,
                 startPositionMs = playing.positionMs,
                 onProgress = { position, duration, season, episode ->
-                    container.resume.record(
-                        playing.copy(
-                            positionMs = position,
-                            durationMs = duration,
-                            season = season ?: playing.season,
-                            episode = episode ?: playing.episode,
-                        ),
+                    val next = playing.copy(
+                        positionMs = position,
+                        durationMs = duration,
+                        season = season ?: playing.season,
+                        episode = episode ?: playing.episode,
                     )
+                    val series = next.season != null && next.episode != null
+                    if (series && aired == null && episodeFinished(position, duration)) {
+                        aired = emptyList()
+                        scope.launch {
+                            val seasons = container.getMovieDetail(next.id).getOrNull()?.franchise?.seasons.orEmpty()
+                            aired = seasons
+                            val stored = container.resume.items.value.firstOrNull { it.id == next.id } ?: return@launch
+                            if (seasons.fullyWatched(stored.episodeMarks())) {
+                                container.watched.add(stored.toSaved())
+                                container.resume.forget(next.id)
+                            }
+                        }
+                    }
+                    val finished = container.resume.record(next) { stored ->
+                        aired.orEmpty().fullyWatched(stored.episodeMarks())
+                    }
+                    if (finished) container.watched.add(next.toSaved())
                 },
                 onDismiss = { resumePlayback = null },
             )

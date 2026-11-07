@@ -24,6 +24,15 @@ class WatchedStore(context: Context) {
         } else {
             listOf(item) + itemsState.value
         }
+        write(next)
+    }
+
+    fun add(item: SavedTitle) {
+        if (item.id.isBlank() || idsState.value.contains(item.id)) return
+        write(listOf(item) + itemsState.value)
+    }
+
+    private fun write(next: List<SavedTitle>) {
         prefs.edit().putString(KEY, json.encodeToString(next)).commit()
         itemsState.value = next
         idsState.value = next.map { it.id }.toSet()

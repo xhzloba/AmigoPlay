@@ -1,6 +1,7 @@
 package com.example.movie.domain.model
 
 import kotlinx.serialization.Serializable
+import java.time.LocalDate
 
 @Serializable
 data class ResumeItem(
@@ -41,6 +42,23 @@ data class EpisodeProgress(
 
 internal fun episodeFinished(positionMs: Long, durationMs: Long): Boolean =
     durationMs > 0L && (durationMs - positionMs < 20_000L || positionMs >= durationMs * 95 / 100)
+
+internal fun String?.isUnreleased(today: LocalDate = LocalDate.now()): Boolean {
+    val raw = this?.trim().orEmpty()
+    if (raw.isEmpty()) return false
+    val date = runCatching { LocalDate.parse(raw.take(10)) }.getOrNull() ?: return false
+    return date.isAfter(today)
+}
+
+internal fun List<FranchiseSeason>.fullyWatched(marks: List<EpisodeProgress>): Boolean {
+    val aired = flatMap { season ->
+        season.episodes.filterNot { it.release.isUnreleased() }.map { season.number to it.number }
+    }
+    if (aired.isEmpty()) return false
+    return aired.all { (season, episode) ->
+        marks.any { it.completed && it.season == season && it.episode == episode }
+    }
+}
 
 internal fun ResumeItem.episodeMarks(): List<EpisodeProgress> {
     val season = season ?: return marks

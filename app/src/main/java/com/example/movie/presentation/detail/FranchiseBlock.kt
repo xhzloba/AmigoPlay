@@ -8,6 +8,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -69,7 +71,14 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -95,9 +104,11 @@ import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.episodeMarks
+import com.example.movie.domain.model.isUnreleased
 import com.example.movie.domain.model.resumeClock
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.PlayBlue
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -619,6 +630,29 @@ private fun FactPopup(fact: String, onDismiss: () -> Unit) {
     }
 }
 
+private val HoldSheetScroll = object : NestedScrollConnection {
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
+        Offset(0f, available.y)
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
+        Velocity(0f, available.y)
+}
+
+private fun Modifier.holdSheet(): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Main)
+            val change = event.changes.firstOrNull() ?: break
+            if (!change.pressed) break
+            val delta = change.positionChange()
+            if (!change.isConsumed && abs(delta.y) > abs(delta.x)) {
+                change.consume()
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EpisodeSheet(
@@ -659,7 +693,7 @@ internal fun EpisodeSheet(
                     .background(Color.White.copy(alpha = 0.28f)),
             )
             Text(
-                text = stringResource(R.string.section_continue),
+                text = stringResource(if (resume != null) R.string.section_continue else R.string.franchise_seasons),
                 modifier = Modifier.padding(horizontal = 20.dp),
                 color = Color.White,
                 fontSize = 17.sp,
@@ -689,7 +723,8 @@ internal fun EpisodeSheet(
                     EpisodeBar(
                         fraction = resume.fraction,
                         modifier = Modifier.weight(1f),
-                        thickness = 2.dp,
+                        thickness = 4.dp,
+                        color = PlayBlue,
                     )
                     Text(
                         text = "$percent%  ·  ${resumeClock(resume.positionMs)}",
@@ -704,10 +739,20 @@ internal fun EpisodeSheet(
                 Modifier
                     .padding(top = 14.dp)
                     .heightIn(max = 460.dp)
+                    .nestedScroll(HoldSheetScroll)
+                    .holdSheet()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
-                seasons.forEach { season ->
+                seasons.forEachIndexed { index, season ->
+                    if (index > 0) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(Color.White.copy(alpha = 0.10f)),
+                        )
+                    }
                     val expanded = season.number == opened
                     val done = season.finished(marks)
                     val rotation by animateFloatAsState(
@@ -715,7 +760,7 @@ internal fun EpisodeSheet(
                         animationSpec = SeasonArrow,
                         label = "sheetSeason",
                     )
-                    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Column(Modifier.fillMaxWidth()) {
                         Row(
                             Modifier
                                 .fillMaxWidth()
@@ -730,6 +775,7 @@ internal fun EpisodeSheet(
                                 .padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            SeasonPoster(season.posterUrl)
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.franchise_season, season.number),
@@ -829,17 +875,7 @@ private fun Seasons(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (!season.posterUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = season.posterUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(width = 36.dp, height = 52.dp)
-                            .clip(RoundedCornerShape(6.dp)),
-                    )
-                    Spacer(Modifier.width(12.dp))
-                }
+                SeasonPoster(season.posterUrl)
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.franchise_season, season.number),
@@ -909,7 +945,7 @@ private fun EpisodeLine(
     onPlay: () -> Unit,
 ) {
     val done = mark?.completed == true
-    val upcoming = !done && episode.release.unreleased()
+    val upcoming = !done && episode.release.isUnreleased()
     val partial = mark != null && !done && mark.fraction > 0f
     val ink = when {
         upcoming -> Color.White.copy(alpha = 0.34f)
@@ -921,7 +957,7 @@ private fun EpisodeLine(
             .fillMaxWidth()
             .padding(bottom = 4.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (done) PlayBlue.copy(alpha = 0.10f) else Color.Transparent)
+            .background(if (done) PlayBlue.copy(alpha = 0.22f) else Color.Transparent)
             .clickable(
                 interactionSource = remember(season, episode.number) { MutableInteractionSource() },
                 indication = null,
@@ -993,6 +1029,20 @@ private fun EpisodeLine(
     }
 }
 
+@Composable
+private fun SeasonPoster(url: String?) {
+    if (url.isNullOrBlank()) return
+    AsyncImage(
+        model = url,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .size(width = 36.dp, height = 52.dp)
+            .clip(RoundedCornerShape(6.dp)),
+    )
+    Spacer(Modifier.width(12.dp))
+}
+
 private val MarkSlot = 18.dp
 private val SeasonChevron = 18.dp
 private val SeasonTween = tween<IntSize>(280, easing = FastOutSlowInEasing)
@@ -1000,19 +1050,24 @@ private val SeasonArrow = tween<Float>(280, easing = FastOutSlowInEasing)
 private val SeasonFade = tween<Float>(220, easing = FastOutSlowInEasing)
 
 @Composable
-private fun EpisodeBar(fraction: Float, modifier: Modifier = Modifier, thickness: Dp = 2.dp) {
+private fun EpisodeBar(
+    fraction: Float,
+    modifier: Modifier = Modifier,
+    thickness: Dp = 2.dp,
+    color: Color = Color.White,
+) {
     Box(
         modifier
             .fillMaxWidth()
             .height(thickness)
             .clip(RoundedCornerShape(thickness))
-            .background(Color.White.copy(alpha = 0.16f)),
+            .background(color.copy(alpha = 0.22f)),
     ) {
         Box(
             Modifier
                 .fillMaxWidth(fraction.coerceIn(0.04f, 1f))
                 .height(thickness)
-                .background(Color.White),
+                .background(color),
         )
     }
 }
@@ -1039,15 +1094,8 @@ private fun List<EpisodeProgress>.mark(season: Int, episode: Int): EpisodeProgre
     firstOrNull { it.season == season && it.episode == episode }
 
 private fun FranchiseSeason.finished(marks: List<EpisodeProgress>): Boolean {
-    val aired = episodes.filterNot { it.release.unreleased() }
+    val aired = episodes.filterNot { it.release.isUnreleased() }
     return aired.isNotEmpty() && aired.all { episode -> marks.mark(number, episode.number)?.completed == true }
-}
-
-private fun String?.unreleased(): Boolean {
-    val raw = this?.trim().orEmpty()
-    if (raw.isEmpty()) return false
-    val date = runCatching { LocalDate.parse(raw.take(10)) }.getOrNull() ?: return false
-    return date.isAfter(LocalDate.now())
 }
 
 @Composable

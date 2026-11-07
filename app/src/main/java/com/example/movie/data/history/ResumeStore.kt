@@ -25,14 +25,17 @@ class ResumeStore(context: Context) {
 
     val items: StateFlow<List<ResumeItem>> = itemsState.asStateFlow()
 
-    fun record(item: ResumeItem) {
-        if (item.id.isBlank() || item.franchiseId <= 0 || item.posterUrl.isNullOrBlank()) return
+    fun record(item: ResumeItem, seriesDone: (ResumeItem) -> Boolean = { false }): Boolean {
+        if (item.id.isBlank() || item.franchiseId <= 0 || item.posterUrl.isNullOrBlank()) return false
         val current = itemsState.value
         val previous = current.firstOrNull { it.id == item.id }
         val series = item.season != null && item.episode != null
         when (resumeWrite(item.positionMs, item.durationMs, series)) {
-            ResumeWrite.Ignore -> return
-            ResumeWrite.Drop -> write(current.filter { it.id != item.id })
+            ResumeWrite.Ignore -> return false
+            ResumeWrite.Drop -> {
+                write(current.filter { it.id != item.id })
+                return true
+            }
             ResumeWrite.Save, ResumeWrite.Complete -> {
                 val completed = episodeFinished(item.positionMs, item.durationMs)
                 val stored = item.copy(
@@ -44,9 +47,17 @@ class ResumeStore(context: Context) {
                     marks = mergeMarks(previous?.marks.orEmpty(), item, completed),
                     updatedAt = System.currentTimeMillis(),
                 )
-                write((listOf(stored) + current.filter { it.id != item.id }).take(CAP))
+                val finished = seriesDone(stored)
+                val rest = current.filter { it.id != item.id }
+                write(if (finished) rest else (listOf(stored) + rest).take(CAP))
+                return finished
             }
         }
+    }
+
+    fun forget(id: String) {
+        if (id.isBlank()) return
+        write(itemsState.value.filter { it.id != id })
     }
 
     private fun mergeMarks(previous: List<EpisodeProgress>, item: ResumeItem, completed: Boolean): List<EpisodeProgress> {
