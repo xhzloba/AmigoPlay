@@ -109,13 +109,7 @@ fun CatalogScreen(
     val topInset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val failed = state.shelves.all { it.ready && it.movies.isEmpty() }
     val rails = state.shelves.filterNot { it.ready && it.movies.isEmpty() }
-    val refreshOffset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
-        BrandTopInset + 88.dp
     PageRefresh(
-        refreshing = state.refreshing,
-        onRefresh = viewModel::refresh,
-        indicatorOffset = refreshOffset,
-        enabled = !failed,
         modifier = modifier.fillMaxSize(),
     ) {
     Box(Modifier.fillMaxSize()) {

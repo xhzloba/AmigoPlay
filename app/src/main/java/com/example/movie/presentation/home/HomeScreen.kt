@@ -11,12 +11,15 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -27,8 +30,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,9 +38,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
@@ -48,17 +49,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.coroutineScope
@@ -108,7 +114,6 @@ fun HomeScreen(
     onClearRecent: () -> Unit,
     onOpenSection: (HomeSection) -> Unit = {},
     onPlayResume: (String) -> Unit = {},
-    onRefresh: () -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
     presentSearch: Boolean = true,
     modifier: Modifier = Modifier,
@@ -153,14 +158,8 @@ fun HomeScreen(
     }
     val cover = if (searchCover) veil.value else 0f
     SideEffect { onSearchCover(cover) }
-    val refreshOffset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
-        BrandTopInset + 88.dp
     Box(modifier = modifier.fillMaxSize()) {
         PageRefresh(
-            refreshing = state.refreshing,
-            onRefresh = onRefresh,
-            indicatorOffset = refreshOffset,
-            enabled = state.shelves.isNotEmpty() && !state.searchOpen,
             modifier = Modifier
                 .fillMaxSize()
                 .then(
@@ -236,18 +235,23 @@ fun HomeScreen(
                 )
             }
         } else {
+            var scroll by remember { mutableFloatStateOf(0f) }
+            var maxScroll by remember { mutableFloatStateOf(0f) }
+            var viewport by remember { mutableIntStateOf(0) }
+            var contentHeight by remember { mutableIntStateOf(0) }
+            val pageScroll = rememberScrollableState { delta ->
+                val next = (scroll - delta).coerceIn(0f, maxScroll)
+                val used = next - scroll
+                scroll = next
+                -used
+            }
             val density = LocalDensity.current
             val scrimDistance = with(density) { 28.dp.toPx() }
             val parkDistance = with(density) { 12.dp.toPx() }
             var brandHeight by remember { mutableIntStateOf(0) }
             val playBlend = remember { androidx.compose.animation.core.Animatable(0f) }
-            val listState = rememberLazyListState()
-            val topInset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
             LaunchedEffect(parkDistance) {
-                snapshotFlow {
-                    listState.firstVisibleItemIndex > 0 ||
-                        listState.firstVisibleItemScrollOffset >= parkDistance
-                }
+                snapshotFlow { scroll >= parkDistance }
                     .distinctUntilChanged()
                     .collect { away ->
                         playBlend.animateTo(
@@ -262,16 +266,33 @@ fun HomeScreen(
                     .weight(1f)
                     .fillMaxWidth(),
             ) {
-            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = topInset + BrandTopInset + brandReserve + 12.dp,
-                    bottom = HomeBottomClearance,
-                ),
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .scrollable(
+                        state = pageScroll,
+                        orientation = Orientation.Vertical,
+                        overscrollEffect = null,
+                        flingBehavior = ScrollableDefaults.flingBehavior(),
+                        bringIntoViewSpec = NoBringIntoView,
+                    )
+                    .clipToBounds()
+                    .onSizeChanged {
+                        viewport = it.height
+                        maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
+                    },
             ) {
-                item(key = "tabs") {
+                Box(
+                    modifier = Modifier
+                        .scrollContent({ scroll }) { full ->
+                            contentHeight = full
+                            maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
+                        }
+                        .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                        .padding(top = BrandTopInset),
+                ) {
+                Column(Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.height(brandReserve + 12.dp))
                     CategoryTabs(
                         shelves = state.shelves,
                         selectedId = state.selectedId,
@@ -283,11 +304,11 @@ fun HomeScreen(
                         mustache = logo.mustache,
                         onMenuSettled = logo::onSettled,
                         showBrand = false,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .zIndex(1f),
                     )
                     Spacer(Modifier.height(16.dp))
-                }
-                item(key = "hero") {
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
                         PosterSkeleton(Modifier.fillMaxWidth())
                     } else {
@@ -303,9 +324,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                }
-                if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
-                    item(key = "recommendations") {
+                    if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
                             movies = state.recommendations,
@@ -317,9 +336,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                }
-                if (state.history.isNotEmpty()) {
-                    item(key = "history") {
+                    if (state.history.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
                             movies = state.history.take(HistoryRailSize),
@@ -332,9 +349,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                }
-                if (state.resume.isNotEmpty()) {
-                    item(key = "continue") {
+                    if (state.resume.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         val rail = state.resume.take(HistoryRailSize)
                         RecommendationRail(
@@ -350,9 +365,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                }
-                if (state.favorites.isNotEmpty()) {
-                    item(key = "favorites") {
+                    if (state.favorites.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
                             movies = state.favorites.take(HistoryRailSize),
@@ -369,9 +382,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                }
-                if (state.watched.isNotEmpty()) {
-                    item(key = "watched") {
+                    if (state.watched.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
                             movies = state.watched.take(HistoryRailSize),
@@ -388,9 +399,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                }
-                if (!state.watchingReady || state.watching.isNotEmpty()) {
-                    item(key = "watching") {
+                    if (!state.watchingReady || state.watching.isNotEmpty()) {
                         Spacer(Modifier.height(CatalogGap))
                         RecommendationRail(
                             movies = state.watching,
@@ -402,9 +411,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                }
-                if (!state.bestReady || state.best.isNotEmpty()) {
-                    item(key = "best") {
+                    if (!state.bestReady || state.best.isNotEmpty()) {
                         Spacer(Modifier.height(CatalogGap))
                         RecommendationRail(
                             movies = state.best,
@@ -416,17 +423,12 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    Spacer(Modifier.height(HomeBottomClearance))
+                }
                 }
             }
-            }
             BrandScrim(
-                progress = {
-                    if (listState.firstVisibleItemIndex > 0) {
-                        1f
-                    } else {
-                        (listState.firstVisibleItemScrollOffset / scrimDistance).coerceIn(0f, 1f)
-                    }
-                },
+                progress = { (scroll / scrimDistance).coerceIn(0f, 1f) },
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             BrandRow(
@@ -463,6 +465,26 @@ fun HomeScreen(
         }
     }
 }
+
+private object NoBringIntoView : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = 0f
+}
+
+private fun Modifier.scrollContent(scroll: () -> Float, onHeight: (Int) -> Unit): Modifier =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(
+            constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity),
+        )
+        onHeight(placeable.height)
+        val height = if (constraints.maxHeight == Constraints.Infinity) {
+            placeable.height
+        } else {
+            constraints.maxHeight
+        }
+        layout(placeable.width, height) {
+            placeable.place(0, -scroll().roundToInt())
+        }
+    }
 
 @Composable
 private fun BrandScrim(progress: () -> Float, modifier: Modifier = Modifier) {
