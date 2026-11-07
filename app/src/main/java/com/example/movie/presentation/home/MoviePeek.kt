@@ -382,8 +382,17 @@ private fun MenuHeading(movie: Movie) {
             overflow = TextOverflow.Ellipsis,
         )
     }
+    var kp by remember(movie.id) { mutableStateOf(movie.ratingKp) }
+    var imdb by remember(movie.id) { mutableStateOf(movie.ratingImdb) }
+    LaunchedEffect(movie.id) {
+        if (kp != null || imdb != null) return@LaunchedEffect
+        val detail = container.getMovieDetail(movie.id).getOrNull() ?: return@LaunchedEffect
+        kp = detail.ratingKp
+        imdb = detail.ratingImdb
+        container.resume.fillRatings(movie.id, detail.ratingKp, detail.ratingImdb)
+    }
     val facts = movie.menuFacts()
-    if (facts.isBlank() && movie.ratingKp == null && movie.ratingImdb == null) return
+    if (facts.isBlank() && kp == null && imdb == null) return
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -403,7 +412,7 @@ private fun MenuHeading(movie: Movie) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        movie.ratingKp?.let { score ->
+        kp?.let { score ->
             Spacer(Modifier.width(10.dp))
             KpScore(
                 score = score,
@@ -413,7 +422,7 @@ private fun MenuHeading(movie: Movie) {
                 fontWeight = FontWeight.Normal,
             )
         }
-        movie.ratingImdb?.let { score ->
+        imdb?.let { score ->
             Spacer(Modifier.width(10.dp))
             ImdbScore(
                 score = score,
@@ -507,7 +516,23 @@ private fun OverviewPopup(
     onOpen: () -> Unit,
 ) {
     val tick = rememberHapticTick()
-    val text = movie.overview.ifBlank { stringResource(R.string.menu_overview_empty) }
+    val container = LocalAppContainer.current
+    var loaded by remember(movie.id) { mutableStateOf(movie.overview.trim()) }
+    var pending by remember(movie.id) { mutableStateOf(loaded.isEmpty()) }
+    LaunchedEffect(movie.id) {
+        if (loaded.isNotEmpty()) return@LaunchedEffect
+        val overview = container.getMovieDetail(movie.id).getOrNull()?.overview?.trim().orEmpty()
+        if (overview.isNotEmpty()) {
+            loaded = overview
+            container.resume.fillOverview(movie.id, overview)
+        }
+        pending = false
+    }
+    val text = when {
+        pending -> ""
+        loaded.isEmpty() -> stringResource(R.string.menu_overview_empty)
+        else -> loaded
+    }
     AnimatedVisibility(
         visible = true,
         enter = PeekEnter,

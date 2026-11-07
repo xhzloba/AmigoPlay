@@ -90,6 +90,7 @@ fun SectionRoute(
     onBack: () -> Unit,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onHideBar: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val container = LocalAppContainer.current
@@ -101,6 +102,8 @@ fun SectionRoute(
             getTopMovies = container.getTopMovies,
             viewHistory = container.viewHistory,
             resume = container.resume,
+            favorites = container.favorites,
+            watched = container.watched,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -112,6 +115,7 @@ fun SectionRoute(
         onRetry = viewModel::retry,
         onMovieClick = onMovieClick,
         onMoviePeek = onMoviePeek,
+        onHideBar = onHideBar,
         onClear = if (section == HomeSection.History) {
             {
                 viewModel.clearHistory()
@@ -134,12 +138,27 @@ internal fun SectionPage(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onClear: (() -> Unit)? = null,
+    onHideBar: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val grid = rememberLazyGridState()
     val density = LocalDensity.current
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
-    val pageBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
+    val pageBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 88.dp
+    LaunchedEffect(grid) {
+        var anchorIndex = 0
+        var anchorOffset = 0
+        snapshotFlow { grid.firstVisibleItemIndex to grid.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                val delta = if (index != anchorIndex) (index - anchorIndex) * 240 else offset - anchorOffset
+                val atTop = index == 0 && offset <= 4
+                if (atTop || kotlin.math.abs(delta) > 28) {
+                    onHideBar(!atTop && delta > 0)
+                    anchorIndex = index
+                    anchorOffset = offset
+                }
+            }
+    }
     val header = top + BrandTopInset + 36.dp + 18.dp
     val scrim = if (grid.firstVisibleItemIndex > 0) {
         1f

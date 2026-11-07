@@ -314,25 +314,19 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    val showResume = state.resume.isNotEmpty()
-                    if (showResume) {
+                    if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
-                        val rail = state.resume.take(HistoryRailSize)
                         RecommendationRail(
-                            movies = rail.map { it.toMovie() },
-                            onMovieClick = onPlayResume,
+                            movies = state.recommendations,
+                            onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
-                            title = stringResource(R.string.section_continue),
-                            onOpen = { onOpenSection(HomeSection.Continue) },
+                            title = stringResource(R.string.section_recommendations),
+                            onOpen = { onOpenSection(HomeSection.Recommendations) },
                             onSettled = logo::onSettled,
-                            stickToStart = true,
-                            progressOf = { movie -> rail.firstOrNull { it.id == movie.id }?.fraction },
-                            captionOf = { movie -> rail.firstOrNull { it.id == movie.id }?.progressCaption() },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    val showHistory = state.history.isNotEmpty()
-                    if (showHistory) {
+                    if (state.history.isNotEmpty()) {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
                             movies = state.history.take(HistoryRailSize),
@@ -349,15 +343,53 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
-                    if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
-                        Spacer(Modifier.height(if (showHistory) CatalogGap else 24.dp))
+                    if (state.resume.isNotEmpty()) {
+                        Spacer(Modifier.height(24.dp))
+                        val rail = state.resume.take(HistoryRailSize)
                         RecommendationRail(
-                            movies = state.recommendations,
+                            movies = rail.map { it.toMovie() },
+                            onMovieClick = onPlayResume,
+                            onMoviePeek = onMoviePeek,
+                            title = stringResource(R.string.section_continue),
+                            onOpen = { onOpenSection(HomeSection.Continue) },
+                            onSettled = logo::onSettled,
+                            stickToStart = true,
+                            progressOf = { movie -> rail.firstOrNull { it.id == movie.id }?.fraction },
+                            captionOf = { movie -> rail.firstOrNull { it.id == movie.id }?.progressCaption() },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (state.favorites.isNotEmpty()) {
+                        Spacer(Modifier.height(24.dp))
+                        RecommendationRail(
+                            movies = state.favorites.take(HistoryRailSize),
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
-                            title = stringResource(R.string.section_recommendations),
-                            onOpen = { onOpenSection(HomeSection.Recommendations) },
+                            title = stringResource(R.string.section_favorites),
+                            onOpen = if (state.favorites.size >= HistoryRailSize) {
+                                { onOpenSection(HomeSection.Favorites) }
+                            } else {
+                                null
+                            },
                             onSettled = logo::onSettled,
+                            stickToStart = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    if (state.watched.isNotEmpty()) {
+                        Spacer(Modifier.height(24.dp))
+                        RecommendationRail(
+                            movies = state.watched.take(HistoryRailSize),
+                            onMovieClick = onMovieClick,
+                            onMoviePeek = onMoviePeek,
+                            title = stringResource(R.string.section_watched),
+                            onOpen = if (state.watched.size >= HistoryRailSize) {
+                                { onOpenSection(HomeSection.Watched) }
+                            } else {
+                                null
+                            },
+                            onSettled = logo::onSettled,
+                            stickToStart = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

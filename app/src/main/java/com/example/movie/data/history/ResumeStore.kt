@@ -42,6 +42,9 @@ class ResumeStore(context: Context) {
                     posterUrl = item.posterUrl ?: previous?.posterUrl,
                     logoUrl = if (item.logoUrl.isNullOrBlank()) previous?.logoUrl else item.logoUrl,
                     genres = item.genres.ifBlank { previous?.genres.orEmpty() },
+                    overview = item.overview.ifBlank { previous?.overview.orEmpty() },
+                    ratingKp = item.ratingKp ?: previous?.ratingKp,
+                    ratingImdb = item.ratingImdb ?: previous?.ratingImdb,
                     year = item.year ?: previous?.year,
                     positionMs = if (completed) item.durationMs else item.positionMs,
                     marks = mergeMarks(previous?.marks.orEmpty(), item, completed),
@@ -53,6 +56,25 @@ class ResumeStore(context: Context) {
                 return finished
             }
         }
+    }
+
+    fun fillOverview(id: String, overview: String) {
+        val text = overview.trim()
+        if (id.isBlank() || text.isEmpty()) return
+        val current = itemsState.value
+        val index = current.indexOfFirst { it.id == id }
+        if (index < 0 || current[index].overview.isNotBlank()) return
+        write(current.toMutableList().also { it[index] = it[index].copy(overview = text) })
+    }
+
+    fun fillRatings(id: String, ratingKp: Float?, ratingImdb: Float?) {
+        if (id.isBlank() || (ratingKp == null && ratingImdb == null)) return
+        val current = itemsState.value
+        val index = current.indexOfFirst { it.id == id }
+        if (index < 0) return
+        val item = current[index]
+        if (item.ratingKp != null || item.ratingImdb != null) return
+        write(current.toMutableList().also { it[index] = item.copy(ratingKp = ratingKp, ratingImdb = ratingImdb) })
     }
 
     fun forget(id: String) {

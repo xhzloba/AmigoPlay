@@ -11,6 +11,8 @@ data class HomeUiState(
     val movies: List<Movie> = emptyList(),
     val resume: List<ResumeItem> = emptyList(),
     val history: List<Movie> = emptyList(),
+    val favorites: List<Movie> = emptyList(),
+    val watched: List<Movie> = emptyList(),
     val recommendations: List<Movie> = emptyList(),
     val recommendationsReady: Boolean = false,
     val watching: List<Movie> = emptyList(),

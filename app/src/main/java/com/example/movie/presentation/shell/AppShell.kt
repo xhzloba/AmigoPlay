@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -40,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
@@ -120,6 +124,8 @@ fun AppShell(
             searchHistory = container.searchHistory,
             viewHistory = container.viewHistory,
             resume = container.resume,
+            favorites = container.favorites,
+            watched = container.watched,
         )
     }
     val homeState by homeViewModel.state.collectAsStateWithLifecycle()
@@ -148,6 +154,8 @@ fun AppShell(
         ?.takeIf { tab == AppTab.Home }
     val sectionVeil = remember { Animatable(0f) }
     var sectionShown by remember { mutableStateOf<HomeSection?>(null) }
+    var barHidden by remember { mutableStateOf(false) }
+    var barHeight by remember { mutableIntStateOf(0) }
     LaunchedEffect(section) {
         if (section != null) {
             sectionShown = section
@@ -298,6 +306,7 @@ fun AppShell(
                 onBack = { sectionName = null },
                 onMovieClick = if (shown == HomeSection.Continue) playResume else onMovieClick,
                 onMoviePeek = { peek = it },
+                onHideBar = { barHidden = it },
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = sectionAlpha },
@@ -333,6 +342,7 @@ fun AppShell(
                     onBack = { catalogListKey = null },
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
+                    onHideBar = { barHidden = it },
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer { alpha = listVeil.value },
@@ -347,6 +357,7 @@ fun AppShell(
                         onBack = { catalogListKey = null },
                         onMovieClick = onMovieClick,
                         onMoviePeek = { peek = it },
+                        onHideBar = { barHidden = it },
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer { alpha = listVeil.value },
@@ -355,13 +366,26 @@ fun AppShell(
             }
         }
         val searchDim = if (tab == AppTab.Catalog) searchVeil.value else searchCover
-        val barAlpha = (1f - searchDim) * (1f - sectionAlpha) * (1f - listAlpha) * (1f - genresAlpha)
+        val barAlpha = (1f - searchDim) * (1f - genresAlpha)
+        val listOpen = sectionShown != null || listShown != null
+        LaunchedEffect(sectionShown, listShown) { barHidden = false }
+        val hide by animateFloatAsState(
+            targetValue = if (barHidden && listOpen) 1f else 0f,
+            animationSpec = tween(220),
+            label = "barHide",
+        )
         if (barAlpha > 0.02f) {
+            val fromHome = sectionShown != null
             AppBottomBar(
-                selected = tab,
-                onSelect = { next -> onTabChange(next.name) },
+                selected = if (fromHome) null else tab,
+                onSelect = { next ->
+                    if (fromHome && next == AppTab.Home) sectionName = null
+                    else onTabChange(next.name)
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    .onSizeChanged { barHeight = it.height }
+                    .offset { IntOffset(0, (barHeight * hide).toInt()) }
                     .graphicsLayer { alpha = barAlpha },
             )
         }

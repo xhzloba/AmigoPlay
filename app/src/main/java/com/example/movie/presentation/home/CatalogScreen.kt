@@ -270,6 +270,7 @@ internal fun CatalogListRoute(
     onBack: () -> Unit,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onHideBar: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val container = LocalAppContainer.current
@@ -288,6 +289,7 @@ internal fun CatalogListRoute(
         onRetry = viewModel::retry,
         onMovieClick = onMovieClick,
         onMoviePeek = onMoviePeek,
+        onHideBar = onHideBar,
         modifier = modifier,
     )
 }

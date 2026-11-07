@@ -4,6 +4,8 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.movie.R
+import com.example.movie.data.favorites.FavoriteStore
+import com.example.movie.data.favorites.WatchedStore
 import com.example.movie.data.history.ResumeStore
 import com.example.movie.data.history.ViewHistoryStore
 import com.example.movie.domain.model.CatalogQuery
@@ -26,10 +28,15 @@ enum class HomeSection(@StringRes val title: Int) {
     Best(R.string.section_best),
     History(R.string.section_history),
     Continue(R.string.section_continue),
+    Favorites(R.string.section_favorites),
+    Watched(R.string.section_watched),
     ;
 
     val paged: Boolean
         get() = this == Watching || this == Best
+
+    val stored: Boolean
+        get() = this == History || this == Continue || this == Favorites || this == Watched
 }
 
 data class PosterMark(val fraction: Float, val caption: String)
@@ -50,12 +57,14 @@ class SectionViewModel(
     private val getTopMovies: GetTopMoviesUseCase,
     private val viewHistory: ViewHistoryStore,
     private val resume: ResumeStore,
+    private val favorites: FavoriteStore,
+    private val watched: WatchedStore,
 ) : ViewModel() {
     private val seen = mutableSetOf<String>()
     private var page = 0
     private var busy = false
     private val _state = MutableStateFlow(
-        if (section == HomeSection.History || section == HomeSection.Continue) {
+        if (section.stored) {
             SectionUiState(loading = false, end = true)
         } else {
             SectionUiState()
@@ -84,6 +93,26 @@ class SectionViewModel(
                         marks = saved.associate { item ->
                             item.id to PosterMark(item.fraction, item.progressCaption())
                         },
+                    )
+                }
+            }
+        } else if (section == HomeSection.Favorites) {
+            viewModelScope.launch {
+                favorites.items.collect { saved ->
+                    _state.value = SectionUiState(
+                        movies = saved.map { it.toMovie() },
+                        loading = false,
+                        end = true,
+                    )
+                }
+            }
+        } else if (section == HomeSection.Watched) {
+            viewModelScope.launch {
+                watched.items.collect { saved ->
+                    _state.value = SectionUiState(
+                        movies = saved.map { it.toMovie() },
+                        loading = false,
+                        end = true,
                     )
                 }
             }
@@ -141,6 +170,7 @@ class SectionViewModel(
         HomeSection.Top -> getTopMovies()
         HomeSection.Watching -> getShelfMovies(CatalogQuery(sort = "watching"), page = page)
         HomeSection.Best -> getShelfMovies(CatalogQuery(sort = "rating", type = "movie"), page = page)
-        HomeSection.History, HomeSection.Continue -> Result.success(emptyList())
+        HomeSection.History, HomeSection.Continue, HomeSection.Favorites, HomeSection.Watched ->
+            Result.success(emptyList())
     }
 }
