@@ -48,11 +48,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -71,13 +68,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -108,6 +100,7 @@ import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.PlayBlue
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.SectionScrim
@@ -628,15 +621,6 @@ private fun FactPopup(fact: String, onDismiss: () -> Unit) {
     }
 }
 
-private val HoldSheetScroll = object : NestedScrollConnection {
-    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
-        Offset(0f, available.y)
-
-    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
-        Velocity(0f, available.y)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EpisodeSheet(
     seasons: List<FranchiseSeason>,
@@ -646,33 +630,13 @@ internal fun EpisodeSheet(
     onDismiss: () -> Unit,
 ) {
     val tick = rememberHapticTick()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var opened by remember(seasons) { mutableStateOf<Int?>(null) }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = CinemaBlack,
-        contentColor = Color.White,
-        scrimColor = Color(0xFF3A3A3E).copy(alpha = 0.86f),
-        dragHandle = null,
-        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
-        tonalElevation = 0.dp,
-    ) {
+    HandleSheet(onDismiss = onDismiss) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
                 .padding(bottom = 8.dp),
         ) {
-            Box(
-                Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 8.dp, bottom = 12.dp)
-                    .width(32.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.28f)),
-            )
             Text(
                 text = stringResource(if (resume != null) R.string.section_continue else R.string.franchise_seasons),
                 modifier = Modifier.padding(horizontal = 20.dp),
@@ -720,7 +684,6 @@ internal fun EpisodeSheet(
                 Modifier
                     .padding(top = 14.dp)
                     .heightIn(max = 460.dp)
-                    .nestedScroll(HoldSheetScroll)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {

@@ -1,24 +1,17 @@
 package com.example.movie.presentation.home
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,10 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,13 +33,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -64,38 +47,10 @@ import com.example.movie.domain.model.airedDone
 import com.example.movie.domain.model.combineMarks
 import com.example.movie.domain.model.episodeMarks
 import com.example.movie.domain.model.toSaved
+import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.haptic.rememberHapticTick
-import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.PlayBlue
-import kotlin.math.abs
-
-private val SheetShape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
-
-private val HoldSheetScroll = object : NestedScrollConnection {
-    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
-        Offset(0f, available.y)
-
-    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
-        Velocity(0f, available.y)
-}
-
-private fun Modifier.holdSheet(): Modifier = pointerInput(Unit) {
-    awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false)
-        while (true) {
-            val event = awaitPointerEvent(PointerEventPass.Main)
-            val change = event.changes.firstOrNull() ?: break
-            if (!change.pressed) break
-            val delta = change.positionChange()
-            if (!change.isConsumed && abs(delta.y) > abs(delta.x)) {
-                change.consume()
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SeasonWatchSheet(
     movie: Movie,
@@ -109,7 +64,6 @@ internal fun SeasonWatchSheet(
     val resume by resumeStore.items.collectAsStateWithLifecycle()
     val kept by resumeStore.kept.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var attempt by remember { mutableIntStateOf(0) }
     var seasons by remember { mutableStateOf(knownSeasons.takeIf { it.isNotEmpty() }) }
     var failed by remember { mutableStateOf(false) }
@@ -140,31 +94,13 @@ internal fun SeasonWatchSheet(
     }
     val numbers = loaded?.map { it.number }.orEmpty()
     val all = numbers.isNotEmpty() && numbers.all { it in picked }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = CinemaBlack,
-        contentColor = Color.White,
-        scrimColor = Color(0xFF3A3A3E).copy(alpha = 0.86f),
-        dragHandle = null,
-        shape = SheetShape,
-        tonalElevation = 0.dp,
-    ) {
+    HandleSheet(onDismiss = onDismiss) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                Modifier
-                    .padding(top = 8.dp, bottom = 14.dp)
-                    .width(32.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.28f)),
-            )
             Text(
                 text = stringResource(R.string.watch_seasons_title),
                 modifier = Modifier.padding(horizontal = 22.dp),
@@ -210,8 +146,6 @@ internal fun SeasonWatchSheet(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(max = 420.dp)
-                            .nestedScroll(HoldSheetScroll)
-                            .holdSheet()
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 8.dp),
                     ) {
