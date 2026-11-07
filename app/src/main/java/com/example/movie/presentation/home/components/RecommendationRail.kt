@@ -50,6 +50,7 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.rememberRowSlop
+import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
@@ -226,10 +227,11 @@ private fun RecommendationPager(
             state = listState,
             contentPadding = PaddingValues(start = RailStart, end = end),
             horizontalArrangement = Arrangement.spacedBy(PosterGap),
-            flingBehavior = flingBehavior,
+            userScrollEnabled = false,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(rowHeight),
+                .height(rowHeight)
+                .sideScroll(listState, flingBehavior),
         ) {
             itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
                 CompositionLocalProvider(LocalViewConfiguration provides finger) {

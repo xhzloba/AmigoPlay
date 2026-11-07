@@ -139,7 +139,6 @@
     <string name="kind_movie">Фильм</string>
     <string name="kind_series">Сериал</string>
     <string name="kind_anime">Аниме</string>
-    <string name="section_top">Топ 250 фильмов</string>
     <string name="section_best">Лучшее</string>
     <string name="search">Поиск</string>
     <string name="search_hint">Поиск в AmigoPlay</string>
@@ -179,7 +178,7 @@
     <string name="settings_watched_badge">Галочка просмотренного</string>
     <string name="settings_watched_badge_hint">На обложке в слайдерах, каталоге и полном списке. Синяя галочка с ободком цвета фона, если фильм или сериал просмотрен.</string>
     <string name="settings_logos">Логотипы</string>
-    <string name="settings_logos_hint">На главном слайдере, в «Топ 250» и в деталке. Выключено — показывается название.</string>
+    <string name="settings_logos_hint">На главном слайдере и в деталке. Выключено — показывается название.</string>
     <string name="settings_backdrop_auto">Автокадры</string>
     <string name="settings_backdrop_auto_hint">В деталке backdrop сам листается. Выключено — точки сверху, кадры свайпом.</string>
     <string name="settings_watch_glow">Свечение плашки</string>

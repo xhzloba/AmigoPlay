@@ -8,7 +8,6 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.usecase.GetHomeShelvesUseCase
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
-import com.example.movie.domain.usecase.GetTopMoviesUseCase
 import com.example.movie.data.favorites.FavoriteStore
 import com.example.movie.data.favorites.WatchedStore
 import com.example.movie.data.history.ResumeStore
@@ -30,7 +29,6 @@ class HomeViewModel(
     private val getHomeShelves: GetHomeShelvesUseCase,
     private val getShelfMovies: GetShelfMoviesUseCase,
     private val getRecommendations: GetRecommendationsUseCase,
-    private val getTopMovies: GetTopMoviesUseCase,
     private val searchMovies: SearchMoviesUseCase,
     private val searchHistory: SearchHistoryStore,
     private val viewHistory: ViewHistoryStore,
@@ -68,7 +66,6 @@ class HomeViewModel(
         viewModelScope.launch { loadShelves() }
         viewModelScope.launch { loadRecommendations(keep = false) }
         viewModelScope.launch { loadWatching(keep = false) }
-        viewModelScope.launch { loadTop(keep = false) }
         viewModelScope.launch { loadBest(keep = false) }
     }
 
@@ -81,7 +78,6 @@ class HomeViewModel(
                 coroutineScope {
                     launch { loadRecommendations(keep = true) }
                     launch { loadWatching(keep = true) }
-                    launch { loadTop(keep = true) }
                     launch { loadBest(keep = true) }
                     launch {
                         if (_state.value.shelves.isEmpty() || _state.value.selectedId == null) {
@@ -174,9 +170,6 @@ class HomeViewModel(
             if (!_state.value.watchingReady || _state.value.watching.isEmpty()) {
                 loadWatching(keep = false)
             }
-            if (!_state.value.topReady || _state.value.top.isEmpty()) {
-                loadTop(keep = false)
-            }
             if (!_state.value.bestReady || _state.value.best.isEmpty()) {
                 loadBest(keep = false)
             }
@@ -215,20 +208,6 @@ class HomeViewModel(
             .onFailure {
                 if (keep && _state.value.watching.isNotEmpty()) return@onFailure
                 _state.update { it.copy(watching = emptyList(), watchingReady = true) }
-            }
-    }
-
-    private suspend fun loadTop(keep: Boolean) {
-        if (!keep && _state.value.top.isEmpty()) {
-            _state.update { it.copy(topReady = false) }
-        }
-        getTopMovies()
-            .onSuccess { movies ->
-                _state.update { it.copy(top = movies, topReady = true) }
-            }
-            .onFailure {
-                if (keep && _state.value.top.isNotEmpty()) return@onFailure
-                _state.update { it.copy(top = emptyList(), topReady = true) }
             }
     }
 

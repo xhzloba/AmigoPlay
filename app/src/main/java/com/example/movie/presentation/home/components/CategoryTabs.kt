@@ -11,6 +11,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -75,6 +76,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import com.example.movie.R
 import com.example.movie.domain.model.Shelf
+import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.shell.ShellIcons
@@ -175,10 +177,13 @@ internal fun CategoryTabs(
                 BrandRow(play = play.value, onSearch = onSearch, hat = hat, mustache = mustache)
                 Spacer(Modifier.height(12.dp))
             }
+            val chipFling = ScrollableDefaults.flingBehavior()
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(start = HomeContentInset),
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
+                userScrollEnabled = false,
+                modifier = Modifier.sideScroll(listState, chipFling),
             ) {
                 items(shelves, key = { it.id }) { shelf ->
                     ShelfCapsule(

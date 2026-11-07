@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -98,6 +99,7 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.rememberRowSlop
+import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
@@ -294,15 +296,18 @@ fun PosterCarousel(
                 val finger = LocalViewConfiguration.current
                 val rowTouch = rememberRowSlop()
                 CompositionLocalProvider(LocalViewConfiguration provides rowTouch) {
+                val pageFling = PagerDefaults.flingBehavior(state = pagerState)
                 HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(horizontal = sidePadding),
                 pageSize = PageSize.Fixed(fittedWidth),
                 pageSpacing = 0.dp,
                 beyondViewportPageCount = 2,
+                userScrollEnabled = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(cardHeight),
+                    .height(cardHeight)
+                    .sideScroll(pagerState, pageFling),
                 key = { page ->
                     val movie = movies[page % movies.size]
                     "${movie.id}-$page"

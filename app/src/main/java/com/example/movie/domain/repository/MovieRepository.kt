@@ -13,8 +13,6 @@ interface MovieRepository {
 
     suspend fun getRecommendations(): Result<List<Movie>>
 
-    suspend fun getTopMovies(): Result<List<Movie>>
-
     suspend fun search(name: String): Result<List<Movie>>
 
     suspend fun getMovie(id: String): Result<MovieDetail>

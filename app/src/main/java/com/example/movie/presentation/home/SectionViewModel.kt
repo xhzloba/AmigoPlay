@@ -15,7 +15,6 @@ import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
-import com.example.movie.domain.usecase.GetTopMoviesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +23,6 @@ import kotlinx.coroutines.launch
 enum class HomeSection(@StringRes val title: Int) {
     Recommendations(R.string.section_recommendations),
     Watching(R.string.section_watching),
-    Top(R.string.section_top),
     Best(R.string.section_best),
     History(R.string.section_history),
     Continue(R.string.section_continue),
@@ -54,7 +52,6 @@ class SectionViewModel(
     private val section: HomeSection,
     private val getShelfMovies: GetShelfMoviesUseCase,
     private val getRecommendations: GetRecommendationsUseCase,
-    private val getTopMovies: GetTopMoviesUseCase,
     private val viewHistory: ViewHistoryStore,
     private val resume: ResumeStore,
     private val favorites: FavoriteStore,
@@ -167,7 +164,6 @@ class SectionViewModel(
 
     private suspend fun fetch(page: Int) = when (section) {
         HomeSection.Recommendations -> getRecommendations()
-        HomeSection.Top -> getTopMovies()
         HomeSection.Watching -> getShelfMovies(CatalogQuery(sort = "watching"), page = page)
         HomeSection.Best -> getShelfMovies(CatalogQuery(sort = "rating", type = "movie"), page = page)
         HomeSection.History, HomeSection.Continue, HomeSection.Favorites, HomeSection.Watched ->

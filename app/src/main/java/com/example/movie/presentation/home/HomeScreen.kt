@@ -78,7 +78,6 @@ import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
-import com.example.movie.presentation.home.components.TopRankStage
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
@@ -400,20 +399,6 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (!state.topReady || state.top.isNotEmpty()) {
-                    item(key = "top") {
-                        Spacer(Modifier.height(CatalogGap))
-                        TopRankStage(
-                            movies = state.top,
-                            onMovieClick = onMovieClick,
-                            onMoviePeek = onMoviePeek,
-                            title = stringResource(R.string.section_top),
-                            onOpen = { onOpenSection(HomeSection.Top) },
-                            onSettled = logo::onSettled,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
                 if (!state.bestReady || state.best.isNotEmpty()) {
                     item(key = "best") {
                         Spacer(Modifier.height(CatalogGap))
@@ -544,13 +529,6 @@ private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
             onMovieClick = {},
             onMoviePeek = {},
             title = stringResource(R.string.section_watching),
-        )
-        Spacer(Modifier.height(CatalogGap))
-        TopRankStage(
-            movies = emptyList(),
-            onMovieClick = {},
-            onMoviePeek = {},
-            title = stringResource(R.string.section_top),
         )
         Spacer(Modifier.height(CatalogGap))
         RecommendationRail(

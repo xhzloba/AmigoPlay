@@ -100,7 +100,6 @@ fun SectionRoute(
             section = section,
             getShelfMovies = container.getShelfMovies,
             getRecommendations = container.getRecommendations,
-            getTopMovies = container.getTopMovies,
             viewHistory = container.viewHistory,
             resume = container.resume,
             favorites = container.favorites,

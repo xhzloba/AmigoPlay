@@ -124,7 +124,6 @@ fun AppShell(
             getHomeShelves = container.getHomeShelves,
             getShelfMovies = container.getShelfMovies,
             getRecommendations = container.getRecommendations,
-            getTopMovies = container.getTopMovies,
             searchMovies = container.searchMovies,
             searchHistory = container.searchHistory,
             viewHistory = container.viewHistory,

@@ -57,15 +57,6 @@ internal class MovieRepositoryImpl(
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
     }
 
-    override suspend fun getTopMovies(): Result<List<Movie>> = runApi {
-        api.compilation(TopMoviesId, token)
-            .requireChannels()
-            .map { it.toDomain() }
-            .filter { it.id.isNotBlank() && it.title.isNotBlank() }
-            .distinctBy { it.id }
-            .take(TopMoviesLimit)
-    }
-
     override suspend fun search(name: String): Result<List<Movie>> = runApi {
         api.search(name, token)
             .requireChannels()
@@ -106,9 +97,4 @@ internal class MovieRepositoryImpl(
         } catch (_: Exception) {
             Result.failure(DataError.Unknown())
         }
-
-    private companion object {
-        const val TopMoviesId = "66fa5fc9dd606aae9ea0a9dc"
-        const val TopMoviesLimit = 250
-    }
 }
