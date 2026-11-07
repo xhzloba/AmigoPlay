@@ -39,10 +39,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
@@ -204,7 +207,7 @@ private fun RecommendationPager(
             decayAnimationSpec = decay,
             snapAnimationSpec = spring(
                 dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessLow,
+                stiffness = Spring.StiffnessHigh,
             ),
         )
     }
@@ -212,6 +215,10 @@ private fun RecommendationPager(
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
     val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val posterWidthPx = with(density) { PosterWidth.roundToPx() }
+    val posterHeightPx = with(density) { posterHeight.roundToPx() }
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val end = (maxWidth - PosterWidth - RailStart).coerceAtLeast(RailStart)
         LazyRow(
@@ -223,20 +230,37 @@ private fun RecommendationPager(
                 .fillMaxWidth()
                 .height(rowHeight),
         ) {
-            itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
+            itemsIndexed(
+                movies,
+                key = { _, movie -> movie.id },
+                contentType = { _, _ -> "poster" },
+            ) { _, movie ->
                 var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
                 var pressed by remember(movie.id) { mutableStateOf(false) }
                 val pressScale = rememberPressScale(pressed)
                 val wave = remember(movie.id) { PosterWave() }
+                val request = remember(movie.posterUrl, posterWidthPx, posterHeightPx) {
+                    ImageRequest.Builder(context)
+                        .data(movie.posterUrl)
+                        .size(posterWidthPx, posterHeightPx)
+                        .crossfade(false)
+                        .build()
+                }
                 Column(Modifier.width(PosterWidth)) {
                     Box(
                         Modifier
                             .width(PosterWidth)
                             .height(posterHeight)
-                            .graphicsLayer {
-                                scaleX = pressScale
-                                scaleY = pressScale
-                            },
+                            .then(
+                                if (pressScale == 1f) {
+                                    Modifier
+                                } else {
+                                    Modifier.graphicsLayer {
+                                        scaleX = pressScale
+                                        scaleY = pressScale
+                                    }
+                                },
+                            ),
                     ) {
                         Box(
                             Modifier
@@ -245,7 +269,7 @@ private fun RecommendationPager(
                                 .background(Color.White.copy(alpha = 0.08f)),
                         ) {
                         AsyncImage(
-                            model = movie.posterUrl,
+                            model = request,
                             contentDescription = stringResource(R.string.poster_content_description, movie.title),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier

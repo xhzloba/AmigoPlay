@@ -195,11 +195,14 @@ internal fun Modifier.holdToPeek(
                 val originFinger = fingerOnScreen(window, down)
                 val started = System.nanoTime()
                 val pressToken = ++pressEpoch
-                waves[0]?.press(origin)
-                presser[0].invoke(true)
                 val buzz = launch {
                     delay(BuzzMillis)
                     motor[0]?.start()
+                }
+                val arm = launch {
+                    delay(36)
+                    waves[0]?.press(origin)
+                    presser[0].invoke(true)
                 }
                 var draggedAway = false
                 var releaseDelay = 0L
@@ -211,7 +214,10 @@ internal fun Modifier.holdToPeek(
                             val change = event.changes.firstOrNull { it.id == down.id }
                             val dragged = change != null &&
                                 (fingerOnScreen(window, change) - originFinger).getDistance() > slop
-                            if (dragged || change == null) return@withTimeoutOrNull false
+                            if (dragged || change == null) {
+                                arm.cancel()
+                                return@withTimeoutOrNull false
+                            }
                             if (!change.pressed) {
                                 change.consume()
                                 return@withTimeoutOrNull true
@@ -237,6 +243,7 @@ internal fun Modifier.holdToPeek(
                         }
                     }
                 } finally {
+                    arm.cancel()
                     buzz.cancel()
                     motor[0]?.stop()
                     if (draggedAway) waves[0]?.kill() else waves[0]?.release()
