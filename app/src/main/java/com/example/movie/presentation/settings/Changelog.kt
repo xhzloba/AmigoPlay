@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.69.8",
+            fixed = listOf(
+                "Полка и верхняя обложка снова листаются сразу. У края обложка тянется за палец и встаёт обратно.",
+            ),
+        ),
+        Release(
             version = "1.69.7",
             fixed = listOf(
                 "Мелкий скролл по верху главной идёт ровнее. Обложка, полки и вкладки сдвигаются уже нарисованными, без перерисовки на каждом кадре.",

@@ -8,9 +8,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.platform.LocalViewConfiguration
-import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -141,27 +138,6 @@ internal fun Modifier.posterWave(wave: PosterWave, light: Boolean = false): Modi
             radius = r,
             center = origin,
         )
-    }
-}
-
-internal val LocalRawTouch = staticCompositionLocalOf<ViewConfiguration?> { null }
-
-@Composable
-internal fun rememberEagerListTouch(): ViewConfiguration {
-    val current = LocalViewConfiguration.current
-    return remember(current) {
-        object : ViewConfiguration by current {
-            override val touchSlop: Float = current.touchSlop * 0.28f
-        }
-    }
-}
-
-@Composable
-fun rememberRowSlop(base: ViewConfiguration = LocalViewConfiguration.current): ViewConfiguration {
-    return remember(base) {
-        object : ViewConfiguration by base {
-            override val touchSlop: Float = base.touchSlop * 2.4f
-        }
     }
 }
 

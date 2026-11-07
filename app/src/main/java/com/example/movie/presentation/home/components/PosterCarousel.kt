@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -76,7 +75,6 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -98,9 +96,6 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
-import com.example.movie.presentation.home.LocalRawTouch
-import com.example.movie.presentation.home.rememberRowSlop
-import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
@@ -294,27 +289,20 @@ fun PosterCarousel(
                             )
                         },
                 )
-                val finger = LocalRawTouch.current ?: LocalViewConfiguration.current
-                val rowTouch = rememberRowSlop(finger)
-                CompositionLocalProvider(LocalViewConfiguration provides rowTouch) {
-                val pageFling = PagerDefaults.flingBehavior(state = pagerState)
                 HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(horizontal = sidePadding),
                 pageSize = PageSize.Fixed(fittedWidth),
                 pageSpacing = 0.dp,
                 beyondViewportPageCount = 2,
-                userScrollEnabled = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(cardHeight)
-                    .sideScroll(pagerState, pageFling),
+                    .height(cardHeight),
                 key = { page ->
                     val movie = movies[page % movies.size]
                     "${movie.id}-$page"
                 },
             ) { page ->
-                CompositionLocalProvider(LocalViewConfiguration provides finger) {
                 val movie = movies[page % movies.size]
                 val pageOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
                 val distance = pageOffset.absoluteValue
@@ -398,8 +386,6 @@ fun PosterCarousel(
                         )
                     }
                 }
-                }
-            }
             }
             }
             val pageShift = pagerState.currentPageOffsetFraction

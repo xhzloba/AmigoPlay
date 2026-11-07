@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -36,7 +35,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -49,9 +47,6 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
-import com.example.movie.presentation.home.LocalRawTouch
-import com.example.movie.presentation.home.rememberRowSlop
-import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
@@ -219,23 +214,18 @@ private fun RecommendationPager(
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
     val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
-    val finger = LocalRawTouch.current ?: LocalViewConfiguration.current
-    val rowTouch = rememberRowSlop(finger)
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val end = (maxWidth - posterWidth - RailStart).coerceAtLeast(RailStart)
-        CompositionLocalProvider(LocalViewConfiguration provides rowTouch) {
         LazyRow(
             state = listState,
             contentPadding = PaddingValues(start = RailStart, end = end),
             horizontalArrangement = Arrangement.spacedBy(PosterGap),
-            userScrollEnabled = false,
+            flingBehavior = flingBehavior,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(rowHeight)
-                .sideScroll(listState, flingBehavior),
+                .height(rowHeight),
         ) {
             itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
-                CompositionLocalProvider(LocalViewConfiguration provides finger) {
                 var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
                 var pressed by remember(movie.id) { mutableStateOf(false) }
                 val pressScale = rememberPressScale(pressed)
@@ -292,9 +282,7 @@ private fun RecommendationPager(
                     Spacer(Modifier.height(WatchedBadgeHang))
                     if (showTitles) PosterCaption(movie.title, movie.year)
                 }
-                }
             }
-        }
         }
     }
 }

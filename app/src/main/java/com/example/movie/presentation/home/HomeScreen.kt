@@ -33,7 +33,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,7 +50,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -254,15 +252,11 @@ fun HomeScreen(
                     }
             }
             val brandReserve = if (brandHeight == 0) 40.dp else with(density) { brandHeight.toDp() }
-            val systemTouch = LocalViewConfiguration.current
-            val listTouch = rememberEagerListTouch()
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
             ) {
-            CompositionLocalProvider(LocalRawTouch provides systemTouch) {
-            CompositionLocalProvider(LocalViewConfiguration provides listTouch) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -417,8 +411,6 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-            }
             }
             BrandScrim(
                 progress = {

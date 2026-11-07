@@ -12,7 +12,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -37,7 +36,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +59,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -80,8 +77,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import com.example.movie.R
 import com.example.movie.domain.model.Shelf
-import com.example.movie.presentation.home.LocalRawTouch
-import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.shell.ShellIcons
@@ -182,15 +177,10 @@ internal fun CategoryTabs(
                 BrandRow(play = play.value, onSearch = onSearch, hat = hat, mustache = mustache)
                 Spacer(Modifier.height(12.dp))
             }
-            val chipFling = ScrollableDefaults.flingBehavior()
-            val chipTouch = LocalRawTouch.current ?: LocalViewConfiguration.current
-            CompositionLocalProvider(LocalViewConfiguration provides chipTouch) {
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(start = HomeContentInset),
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
-                userScrollEnabled = false,
-                modifier = Modifier.sideScroll(listState, chipFling),
             ) {
                 items(shelves, key = { it.id }) { shelf ->
                     ShelfCapsule(
@@ -201,7 +191,6 @@ internal fun CategoryTabs(
                     )
                 }
                 item(key = "tail") { Spacer(Modifier.width(side)) }
-            }
             }
         }
     }
