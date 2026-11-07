@@ -53,6 +53,13 @@ internal fun String?.isUnreleased(today: LocalDate = LocalDate.now()): Boolean {
     return date.isAfter(today)
 }
 
+internal fun FranchiseSeason.airedDone(marks: List<EpisodeProgress>): Boolean {
+    val aired = episodes.filterNot { it.release.isUnreleased() }
+    return aired.isNotEmpty() && aired.all { episode ->
+        marks.any { it.completed && it.season == number && it.episode == episode.number }
+    }
+}
+
 internal fun List<FranchiseSeason>.fullyWatched(marks: List<EpisodeProgress>): Boolean {
     val aired = flatMap { season ->
         season.episodes.filterNot { it.release.isUnreleased() }.map { season.number to it.number }
@@ -61,6 +68,13 @@ internal fun List<FranchiseSeason>.fullyWatched(marks: List<EpisodeProgress>): B
     return aired.all { (season, episode) ->
         marks.any { it.completed && it.season == season && it.episode == episode }
     }
+}
+
+internal fun combineMarks(primary: List<EpisodeProgress>, extra: List<EpisodeProgress>): List<EpisodeProgress> {
+    if (extra.isEmpty()) return primary
+    if (primary.isEmpty()) return extra
+    val keys = primary.map { it.season to it.episode }.toSet()
+    return primary + extra.filterNot { (it.season to it.episode) in keys }
 }
 
 internal fun ResumeItem.episodeMarks(): List<EpisodeProgress> {

@@ -119,6 +119,12 @@
     <string name="franchise_season_few">%d сезона</string>
     <string name="franchise_season_many">%d сезонов</string>
     <string name="franchise_season">Сезон %1$d</string>
+    <string name="watch_seasons_title">Что уже посмотрели</string>
+    <string name="watch_seasons_all">Весь сериал</string>
+    <string name="watch_seasons_done">Готово</string>
+    <string name="watch_seasons_reset">Сбросить всё</string>
+    <string name="watch_seasons_failed">Не удалось загрузить сезоны</string>
+    <string name="watch_seasons_retry">Повторить</string>
     <string name="franchise_episodes">%1$d эпизодов</string>
     <string name="franchise_episode">Эпизод %1$d</string>
     <string name="section_similar">Похожие</string>

@@ -103,7 +103,6 @@ import com.example.movie.domain.model.FranchiseSeason
 import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.domain.model.ResumeItem
-import com.example.movie.domain.model.episodeMarks
 import com.example.movie.domain.model.isUnreleased
 import com.example.movie.domain.model.resumeClock
 import com.example.movie.ui.theme.CinemaBlack
@@ -658,10 +657,10 @@ private fun Modifier.holdSheet(): Modifier = pointerInput(Unit) {
 internal fun EpisodeSheet(
     seasons: List<FranchiseSeason>,
     resume: ResumeItem?,
+    marks: List<EpisodeProgress>,
     onPlay: (Int, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val marks = resume?.episodeMarks().orEmpty()
     val tick = rememberHapticTick()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var opened by remember(seasons, resume?.season) {

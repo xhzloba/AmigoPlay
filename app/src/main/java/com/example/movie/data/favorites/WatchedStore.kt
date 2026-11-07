@@ -32,6 +32,11 @@ class WatchedStore(context: Context) {
         write(listOf(item) + itemsState.value)
     }
 
+    fun remove(id: String) {
+        if (id.isBlank() || !idsState.value.contains(id)) return
+        write(itemsState.value.filterNot { it.id == id })
+    }
+
     private fun write(next: List<SavedTitle>) {
         prefs.edit().putString(KEY, json.encodeToString(next)).commit()
         itemsState.value = next

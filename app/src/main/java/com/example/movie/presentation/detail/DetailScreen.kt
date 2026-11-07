@@ -138,9 +138,11 @@ import com.example.movie.presentation.palette.PosterWash
 import com.example.movie.presentation.palette.posterWash
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.combineMarks
 import com.example.movie.domain.model.episodeMarks
 import com.example.movie.domain.model.fullyWatched
 import com.example.movie.domain.model.progressCaption
+import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
@@ -154,6 +156,7 @@ import com.example.movie.presentation.home.components.PosterCaptionBlock
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.SeasonWatchSheet
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
@@ -315,6 +318,7 @@ private fun DetailContent(
     var playingTrailer by remember { mutableStateOf<FranchiseTrailer?>(null) }
     var watching by remember(detail.id) { mutableStateOf<WatchRequest?>(null) }
     var episodesOpen by remember(detail.id) { mutableStateOf(false) }
+    var seasonWatch by remember(detail.id) { mutableStateOf(false) }
     var watchRequested by remember(detail.id) { mutableStateOf(false) }
     var franchisePage by remember(detail.id) { mutableStateOf<String?>(null) }
     val pageVeil = remember { Animatable(0f) }
@@ -334,6 +338,9 @@ private fun DetailContent(
     val watched = LocalAppContainer.current.watched
     val resumeStore = LocalAppContainer.current.resume
     val resumeItems by resumeStore.items.collectAsStateWithLifecycle()
+    val keptMarks by resumeStore.kept.collectAsStateWithLifecycle()
+    val continued = resumeItems.firstOrNull { it.id == detail.id }
+    val progressMarks = combineMarks(continued?.episodeMarks().orEmpty(), keptMarks[detail.id].orEmpty())
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val watchedIds by watched.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
@@ -546,7 +553,6 @@ private fun DetailContent(
                 watchRequested = false
                 watching = WatchRequest(id)
             }
-            val continued = resumeItems.firstOrNull { it.id == detail.id }
             val seasonList = detail.franchise?.seasons.orEmpty()
             WatchBar(
                 wash = paintWash,
@@ -587,8 +593,21 @@ private fun DetailContent(
                         seen = seen,
                         onClick = {
                             tick?.invoke()
-                            if (!seen) resumeStore.forget(detail.id)
-                            watched.toggle(detail.toSaved())
+                            val series = seasonList.isNotEmpty() ||
+                                detail.franchise?.series == true ||
+                                detail.type == "serial" ||
+                                detail.type == "multserial"
+                            when {
+                                series -> seasonWatch = true
+                                seen -> {
+                                    resumeStore.clearMarks(detail.id)
+                                    watched.toggle(detail.toSaved())
+                                }
+                                else -> {
+                                    resumeStore.forget(detail.id)
+                                    watched.toggle(detail.toSaved())
+                                }
+                            }
                         },
                     )
                 }
@@ -624,7 +643,7 @@ private fun DetailContent(
                         val id = detail.franchise?.id ?: return@FranchiseBlock
                         watching = WatchRequest(id, season, episode)
                     },
-                    marks = continued?.episodeMarks().orEmpty(),
+                    marks = progressMarks,
                     onOpenAbout = { franchisePage = "about" },
                     onOpenFacts = { franchisePage = "facts" },
                 )
@@ -668,12 +687,20 @@ private fun DetailContent(
                 )
             }
         }
+        if (seasonWatch) {
+            SeasonWatchSheet(
+                movie = detail.toSaved().toMovie(),
+                knownSeasons = detail.franchise?.seasons.orEmpty(),
+                onDismiss = { seasonWatch = false },
+            )
+        }
         if (episodesOpen) {
             val franchise = detail.franchise
             if (franchise != null && franchise.seasons.isNotEmpty()) {
                 EpisodeSheet(
                     seasons = franchise.seasons,
                     resume = resumeItems.firstOrNull { it.id == detail.id },
+                    marks = progressMarks,
                     onPlay = { season, episode ->
                         episodesOpen = false
                         val id = franchise.id ?: return@EpisodeSheet

@@ -71,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
 import coil.compose.AsyncImage
+import com.example.movie.domain.model.ContentKind
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.resumeClock
@@ -94,6 +95,7 @@ private val RowInk = Color(0xFFE8E8EC)
 private enum class PeekPage {
     Menu,
     Summary,
+    Seasons,
 }
 
 internal val PeekEnter =
@@ -132,6 +134,14 @@ internal fun MoviePeek(
                 suppressDismiss = true
                 page = PeekPage.Summary
             },
+            onPickSeasons = {
+                suppressDismiss = true
+                page = PeekPage.Seasons
+            },
+        )
+        PeekPage.Seasons -> SeasonWatchSheet(
+            movie = shown,
+            onDismiss = onDismiss,
         )
         PeekPage.Summary -> OverviewPopup(
             movie = shown,
@@ -149,6 +159,7 @@ private fun MovieMenu(
     onWatch: () -> Unit,
     onContinue: (() -> Unit)?,
     onSummary: () -> Unit,
+    onPickSeasons: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val favorites = LocalAppContainer.current.favorites
@@ -230,9 +241,19 @@ private fun MovieMenu(
                 marked = seen,
                 onClick = {
                     tick?.invoke()
-                    if (!seen) resumeStore.forget(movie.id)
-                    watched.toggle(movie.toSaved())
-                    onDismiss()
+                    when {
+                        movie.seriesTitle() || seriesContinue(movie, continued) -> onPickSeasons()
+                        seen -> {
+                            resumeStore.clearMarks(movie.id)
+                            watched.toggle(movie.toSaved())
+                            onDismiss()
+                        }
+                        else -> {
+                            resumeStore.forget(movie.id)
+                            watched.toggle(movie.toSaved())
+                            onDismiss()
+                        }
+                    }
                 },
             )
             MenuRow(
@@ -452,6 +473,16 @@ private fun MenuLogoSkeleton() {
             .clip(RoundedCornerShape(6.dp))
             .background(Color.White.copy(alpha = pulse)),
     )
+}
+
+private fun Movie.seriesTitle(): Boolean =
+    kind == ContentKind.Series || type == "serial" || type == "multserial"
+
+private fun seriesContinue(movie: Movie, item: ResumeItem?): Boolean {
+    if (item == null) return false
+    if (item.season != null) return true
+    if (item.type == "serial" || item.type == "multserial") return true
+    return movie.kind == ContentKind.Series || movie.type == "serial" || movie.type == "multserial"
 }
 
 private fun Movie.menuFacts(): String {
