@@ -691,6 +691,7 @@ private fun DetailContent(
             SeasonWatchSheet(
                 movie = detail.toSaved().toMovie(),
                 knownSeasons = detail.franchise?.seasons.orEmpty(),
+                franchiseId = detail.franchise?.id,
                 onDismiss = { seasonWatch = false },
             )
         }

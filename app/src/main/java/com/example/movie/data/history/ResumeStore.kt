@@ -105,7 +105,12 @@ class ResumeStore(context: Context) {
         forget(id)
     }
 
-    fun watchSeasons(id: String, seasons: List<FranchiseSeason>, selected: Set<Int>): Boolean {
+    fun watchSeasons(
+        id: String,
+        seasons: List<FranchiseSeason>,
+        selected: Set<Int>,
+        seed: ResumeItem? = null,
+    ): Boolean {
         if (id.isBlank() || selected.isEmpty() || seasons.isEmpty()) return false
         val current = itemsState.value
         val previous = current.firstOrNull { it.id == id }
@@ -114,27 +119,39 @@ class ResumeStore(context: Context) {
         val pickedAll = seasons.all { it.number in selected }
         val done = pickedAll || seasons.fullyWatched(merged)
         keepMarks(id, merged)
-        if (previous == null) return done
         if (done) {
-            write(current.filter { it.id != id })
+            if (previous != null) write(current.filter { it.id != id })
             return true
         }
-        val seasonReset = previous.season != null && previous.season !in selected
-        val hereDone = previous.season != null && previous.episode != null &&
-            merged.any { it.completed && it.season == previous.season && it.episode == previous.episode }
-        val next = if (seasonReset || hereDone) nextOpen(seasons, merged) else null
-        val updated = if (next == null) {
-            previous.copy(marks = merged, updatedAt = System.currentTimeMillis())
-        } else {
-            previous.copy(
-                marks = merged,
+        val next = nextOpen(seasons, merged) ?: run {
+            if (previous != null) write(current.filter { it.id != id })
+            return true
+        }
+        val now = System.currentTimeMillis()
+        if (previous == null) {
+            val poster = seed?.posterUrl
+            if (seed == null || seed.franchiseId <= 0 || poster.isNullOrBlank()) return false
+            val created = seed.copy(
+                id = id,
                 season = next.first,
                 episode = next.second,
                 positionMs = 0L,
                 durationMs = 0L,
-                updatedAt = System.currentTimeMillis(),
+                marks = merged,
+                updatedAt = now,
             )
+            write((listOf(created) + current.filter { it.id != id }).take(CAP))
+            return false
         }
+        val same = previous.season == next.first && previous.episode == next.second
+        val updated = previous.copy(
+            marks = merged,
+            season = next.first,
+            episode = next.second,
+            positionMs = if (same) previous.positionMs else 0L,
+            durationMs = if (same) previous.durationMs else 0L,
+            updatedAt = now,
+        )
         write(current.map { if (it.id == id) updated else it })
         return false
     }

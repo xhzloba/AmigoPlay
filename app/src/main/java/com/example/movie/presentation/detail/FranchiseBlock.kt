@@ -663,9 +663,7 @@ internal fun EpisodeSheet(
 ) {
     val tick = rememberHapticTick()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var opened by remember(seasons, resume?.season) {
-        mutableStateOf(resume?.season ?: seasons.firstOrNull()?.number)
-    }
+    var opened by remember(seasons) { mutableStateOf<Int?>(null) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
