@@ -24,6 +24,7 @@
     <string name="player_quality_auto">Авто</string>
     <string name="player_audio">Озвучка</string>
     <string name="player_subtitles">Субтитры</string>
+    <string name="player_logo">Логотип</string>
     <string name="player_subtitles_off">Выключить</string>
     <string name="player_speed">Скорость</string>
     <string name="player_speed_normal">Обычная</string>

@@ -12,7 +12,7 @@ internal fun audioCodeIndex(label: String?): Int? =
     label?.let { audioCode.find(it) }?.groupValues?.get(1)?.toIntOrNull()
 
 internal fun audioTrackLabel(label: String?, language: String?, index: Int, names: List<String>): String {
-    val code = audioCodeIndex(label)
+    val code = audioCodeIndex(label) ?: audioCodeIndex(language)
     if (code != null) names.getOrNull(code)?.let { return it }
     return namedTrackLabel(label, language, index)
 }

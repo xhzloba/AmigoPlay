@@ -24,6 +24,8 @@ class TrackLabelsTest {
         val names = listOf("Кубик в кубе", "Рус. Дублированный", "LostFilm")
         assertEquals("Кубик в кубе", audioTrackLabel("rus0", "ru", 4, names))
         assertEquals("LostFilm", audioTrackLabel("rus2", "ru", 0, names))
+        assertEquals("Кубик в кубе", audioTrackLabel(null, "ru0", 4, names))
+        assertEquals("LostFilm", audioTrackLabel(null, "ru2", 0, names))
         assertEquals("Русский", audioTrackLabel(null, "ru", 0, names))
     }
 }

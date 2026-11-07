@@ -78,6 +78,7 @@ internal fun PlayerMenu(
     brightness: Float?,
     autoNext: Boolean,
     underCamera: Boolean,
+    showLogo: Boolean,
     audioNames: List<String>,
     audioOrder: List<Int>,
     onPage: (PlayerPage) -> Unit,
@@ -90,6 +91,7 @@ internal fun PlayerMenu(
     onBrightness: (Float?) -> Unit,
     onAutoNext: (Boolean) -> Unit,
     onUnderCamera: (Boolean) -> Unit,
+    onShowLogo: (Boolean) -> Unit,
 ) {
     val video = remember(tracks) { rows(tracks, C.TRACK_TYPE_VIDEO) }
     val audio = remember(tracks, audioNames, audioOrder) {
@@ -166,6 +168,10 @@ internal fun PlayerMenu(
                         stringResource(R.string.player_under_camera),
                         stringResource(if (underCamera) R.string.player_on else R.string.player_off),
                     ) { onUnderCamera(!underCamera) }
+                    NavRow(
+                        stringResource(R.string.player_logo),
+                        stringResource(if (showLogo) R.string.player_on else R.string.player_off),
+                    ) { onShowLogo(!showLogo) }
                     if (episodes.size > 1) {
                         NavRow(
                             stringResource(R.string.player_auto_next),
@@ -323,10 +329,34 @@ private fun rows(
         if (previous == null || row.group.isTrackSelected(row.index)) unique[row.label] = row
     }
     return unique.values.sortedBy { row ->
-        val code = audioCodeIndex(row.group.getTrackFormat(row.index).label)
+        val format = row.group.getTrackFormat(row.index)
+        val code = audioCodeIndex(format.label) ?: audioCodeIndex(format.language)
         val position = code?.let { audioOrder.indexOf(it) } ?: -1
         if (position >= 0) position else code ?: Int.MAX_VALUE
     }
+}
+
+internal data class TrackCaption(val quality: String?, val audio: String?, val subtitles: String?)
+
+@OptIn(UnstableApi::class)
+internal fun trackCaption(
+    player: ExoPlayer,
+    tracks: Tracks,
+    audioNames: List<String>,
+    audioOrder: List<Int>,
+): TrackCaption {
+    val video = rows(tracks, C.TRACK_TYPE_VIDEO)
+    val quality = video.firstOrNull { overrideIndex(player, it.group) == it.index }?.label
+    val audio = rows(tracks, C.TRACK_TYPE_AUDIO, audioNames, audioOrder)
+        .firstOrNull { it.group.isTrackSelected(it.index) }
+        ?.label
+    val subsOff = C.TRACK_TYPE_TEXT in player.trackSelectionParameters.disabledTrackTypes
+    val subtitles = if (subsOff) {
+        null
+    } else {
+        rows(tracks, C.TRACK_TYPE_TEXT).firstOrNull { it.group.isTrackSelected(it.index) }?.label
+    }
+    return TrackCaption(quality, audio, subtitles)
 }
 
 @Composable

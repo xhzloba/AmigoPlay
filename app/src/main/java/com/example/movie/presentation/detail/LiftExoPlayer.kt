@@ -36,8 +36,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,7 +102,10 @@ import com.example.movie.data.player.WatchPlayback
 import com.example.movie.data.player.WatchStream
 import com.example.movie.data.player.fallbackManifest
 import com.example.movie.data.player.preferRicherManifest
+import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.presentation.shell.ShellIcons
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import dev.chrisbanes.haze.HazeDefaults
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
@@ -114,9 +118,11 @@ import kotlinx.coroutines.withContext
 
 @OptIn(UnstableApi::class)
 @Composable
-internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: () -> Unit) {
+internal fun LiftExoPlayer(playback: WatchPlayback, title: String, logoUrl: String?, onDismiss: () -> Unit) {
     val view = LocalView.current
     val activity = view.context.hostActivity()
+    val settingsRepository = LocalUserSettings.current
+    val settings by settingsRepository.settings.collectAsStateWithLifecycle()
     val delayProcessor = remember { AudioDelayProcessor() }
     var current by remember(playback) { mutableStateOf(playback.stream) }
     val player = remember(playback) {
@@ -372,6 +378,8 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
             ) {
                 TopBar(
                     title = title,
+                    logoUrl = logoUrl,
+                    showLogo = settings.playerLogo,
                     episode = episode,
                     onBack = onDismiss,
                     onLock = { locked = true },
@@ -397,6 +405,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                     onAudio = { open(PlayerPage.Audio, settings = false) },
                     onEpisodes = { open(PlayerPage.Episodes, settings = false) },
                     onSubtitles = { open(PlayerPage.Subtitles, settings = false) },
+                    caption = trackCaption(player, tracks, current.audioNames, current.audioOrder),
                 )
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -452,6 +461,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                 brightness = brightness,
                 autoNext = autoNext,
                 underCamera = underCamera,
+                showLogo = settings.playerLogo,
                 audioNames = current.audioNames,
                 audioOrder = current.audioOrder,
                 onPage = { page = it },
@@ -470,6 +480,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                 onBrightness = { brightness = it },
                 onAutoNext = { autoNext = it },
                 onUnderCamera = { underCamera = it },
+                onShowLogo = settingsRepository::setPlayerLogo,
             )
         }
     }
@@ -505,6 +516,8 @@ private fun Activity.enterPip() {
 @Composable
 private fun TopBar(
     title: String,
+    logoUrl: String?,
+    showLogo: Boolean,
     episode: WatchEpisode?,
     onBack: () -> Unit,
     onLock: () -> Unit,
@@ -512,26 +525,25 @@ private fun TopBar(
     onSettings: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-        PlayerGlyph(R.drawable.ic_player_back, stringResource(R.string.player_exit), Modifier.size(48.dp), onBack)
+        Box(
+            Modifier
+                .size(48.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onBack,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = ShellIcons.back,
+                contentDescription = stringResource(R.string.player_exit),
+                tint = Color.White,
+                modifier = Modifier.size(24.dp),
+            )
+        }
         Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    imageVector = ShellIcons.chevron,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+            TitleMark(title = title, logoUrl = logoUrl, showLogo = showLogo)
             if (episode != null) {
                 Text(
                     text = stringResource(R.string.player_episode, episode.season, episode.episode),
@@ -695,10 +707,35 @@ private fun SeekButton(haze: HazeState, rewind: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
+private fun TitleMark(title: String, logoUrl: String?, showLogo: Boolean) {
+    var failed by remember(logoUrl) { mutableStateOf(logoUrl.isNullOrBlank()) }
+    if (showLogo && !failed) {
+        AsyncImage(
+            model = logoUrl,
+            contentDescription = title,
+            contentScale = ContentScale.Fit,
+            alignment = Alignment.CenterStart,
+            onError = { failed = true },
+            modifier = Modifier.height(18.dp).widthIn(max = 112.dp),
+        )
+    } else {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun BottomBar(
     position: Long,
     duration: Long,
     hasEpisodes: Boolean,
+    caption: TrackCaption,
     onScrub: (Long) -> Unit,
     onScrubFinished: () -> Unit,
     onQuality: () -> Unit,
@@ -718,29 +755,52 @@ private fun BottomBar(
             )
             TimeText(duration)
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Action(R.drawable.ic_player_quality, stringResource(R.string.player_quality), onQuality)
-            Action(R.drawable.ic_player_audio, stringResource(R.string.player_audio), onAudio)
-            if (hasEpisodes) Action(R.drawable.ic_player_episodes, stringResource(R.string.player_episodes), onEpisodes)
-            Action(R.drawable.ic_player_subs, stringResource(R.string.player_subtitles), onSubtitles)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            Action(
+                R.drawable.ic_player_quality,
+                caption.quality ?: stringResource(R.string.player_quality_auto),
+                onQuality,
+            )
+            Action(
+                R.drawable.ic_player_audio,
+                caption.audio ?: stringResource(R.string.player_audio),
+                onAudio,
+            )
+            if (hasEpisodes) {
+                Action(R.drawable.ic_player_episodes, stringResource(R.string.player_episodes), onEpisodes)
+            }
+            Action(
+                R.drawable.ic_player_subs,
+                caption.subtitles ?: stringResource(R.string.player_subtitles),
+                onSubtitles,
+            )
         }
     }
 }
 
 @Composable
 private fun Action(icon: Int, label: String, onClick: () -> Unit) {
-    Column(
+    Row(
         modifier = Modifier
+            .widthIn(max = 148.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(painter = painterResource(icon), contentDescription = label, tint = Color.White, modifier = Modifier.size(24.dp))
-        Text(text = label, color = Color.White, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+        Icon(painter = painterResource(icon), contentDescription = label, tint = Color.White, modifier = Modifier.size(22.dp))
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 6.dp),
+        )
     }
 }
 

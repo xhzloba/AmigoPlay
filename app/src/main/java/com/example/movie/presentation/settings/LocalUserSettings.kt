@@ -28,4 +28,6 @@ private object DefaultUserSettings : UserSettingsRepository {
     override fun setGyro(enabled: Boolean) = Unit
 
     override fun setShowPosterTitles(enabled: Boolean) = Unit
+
+    override fun setPlayerLogo(enabled: Boolean) = Unit
 }

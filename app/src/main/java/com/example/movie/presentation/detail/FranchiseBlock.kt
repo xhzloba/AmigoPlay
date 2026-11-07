@@ -307,7 +307,7 @@ internal fun liftWatchUrl(id: Int): String =
     "https://embed.liftw.ws/embed/movie/$id?host=lift.com&imp2=a7579fe91a3b6593c0b2f4bdb69fae4e6e539ff0a39a988f90a280e97fd43718&t2=1794007180&ht=5f79777865aa38c62bbc232817687bfdd3003a8e2dabebba331258f181643072&imp3=9125fe15854f815949c15971ca44fd92cf9abddf40a233ebcc375e358119b86a"
 
 @Composable
-internal fun WatchPlayer(url: String, title: String, onDismiss: () -> Unit) {
+internal fun WatchPlayer(url: String, title: String, logoUrl: String?, onDismiss: () -> Unit) {
     var playback by remember(url) { mutableStateOf<WatchPlayback?>(null) }
     var embed by remember(url) { mutableStateOf(false) }
     LaunchedEffect(url) {
@@ -319,7 +319,7 @@ internal fun WatchPlayer(url: String, title: String, onDismiss: () -> Unit) {
     val direct = playback
     when {
         embed -> EmbedPlayer(url = url, direct = true, allowedHostSuffix = null, onDismiss = onDismiss)
-        direct != null -> LiftExoPlayer(playback = direct, title = title, onDismiss = onDismiss)
+        direct != null -> LiftExoPlayer(playback = direct, title = title, logoUrl = logoUrl, onDismiss = onDismiss)
         else -> Box(
             modifier = Modifier.fillMaxSize().background(Color.Black),
             contentAlignment = Alignment.Center,

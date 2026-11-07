@@ -39,6 +39,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setShowPosterTitles(enabled: Boolean) = write { it.copy(showPosterTitles = enabled) }
 
+    override fun setPlayerLogo(enabled: Boolean) = write { it.copy(playerLogo = enabled) }
+
     private fun write(transform: (UserSettings) -> UserSettings) {
         val next = transform(state.value)
         prefs.edit()
@@ -50,6 +52,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_HAPTIC, next.haptic)
             .putBoolean(KEY_GYRO, next.gyro)
             .putBoolean(KEY_POSTER_TITLES, next.showPosterTitles)
+            .putBoolean(KEY_PLAYER_LOGO, next.playerLogo)
             .commit()
         state.value = next
     }
@@ -63,6 +66,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         haptic = prefs.getBoolean(KEY_HAPTIC, true),
         gyro = prefs.getBoolean(KEY_GYRO, true),
         showPosterTitles = prefs.getBoolean(KEY_POSTER_TITLES, false),
+        playerLogo = prefs.getBoolean(KEY_PLAYER_LOGO, true),
     )
 
     private companion object {
@@ -75,5 +79,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_HAPTIC = "haptic"
         const val KEY_GYRO = "gyro"
         const val KEY_POSTER_TITLES = "poster_titles"
+        const val KEY_PLAYER_LOGO = "player_logo"
     }
 }

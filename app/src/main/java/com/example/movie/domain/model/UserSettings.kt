@@ -11,6 +11,7 @@ data class UserSettings(
     val haptic: Boolean = true,
     val gyro: Boolean = true,
     val showPosterTitles: Boolean = false,
+    val playerLogo: Boolean = true,
 )
 
 interface UserSettingsRepository {
@@ -31,4 +32,6 @@ interface UserSettingsRepository {
     fun setGyro(enabled: Boolean)
 
     fun setShowPosterTitles(enabled: Boolean)
+
+    fun setPlayerLogo(enabled: Boolean)
 }
