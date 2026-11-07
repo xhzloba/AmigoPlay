@@ -73,6 +73,8 @@ import com.example.movie.domain.model.ContentKind
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
+import com.example.movie.domain.model.progressCaption
+import com.example.movie.domain.model.toMovie
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandRow
 import com.example.movie.presentation.home.components.BrandTopInset
@@ -110,6 +112,7 @@ fun HomeScreen(
     onCloseSearch: () -> Unit,
     onClearRecent: () -> Unit,
     onOpenSection: (HomeSection) -> Unit = {},
+    onPlayResume: (String) -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
     presentSearch: Boolean = true,
     modifier: Modifier = Modifier,
@@ -308,6 +311,23 @@ fun HomeScreen(
                                 if (next != playRequest) playRequest = next
                             },
                             onSettled = logo::onSettled,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    val showResume = state.resume.isNotEmpty()
+                    if (showResume) {
+                        Spacer(Modifier.height(24.dp))
+                        val rail = state.resume.take(HistoryRailSize)
+                        RecommendationRail(
+                            movies = rail.map { it.toMovie() },
+                            onMovieClick = onPlayResume,
+                            onMoviePeek = onMoviePeek,
+                            title = stringResource(R.string.section_continue),
+                            onOpen = { onOpenSection(HomeSection.Continue) },
+                            onSettled = logo::onSettled,
+                            stickToStart = true,
+                            progressOf = { movie -> rail.firstOrNull { it.id == movie.id }?.fraction },
+                            captionOf = { movie -> rail.firstOrNull { it.id == movie.id }?.progressCaption() },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

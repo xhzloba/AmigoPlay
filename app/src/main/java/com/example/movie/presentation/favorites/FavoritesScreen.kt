@@ -93,13 +93,16 @@ import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.SavedTitle
+import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toMovie
+import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
+import com.example.movie.presentation.home.components.WatchProgress
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.components.BrandWordmark
 import com.example.movie.presentation.home.components.MenuSombreroEffect
@@ -157,14 +160,17 @@ private enum class FavoriteTab(@StringRes val label: Int, val type: String?, val
 internal fun FavoritesScreen(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onPlayResume: (String) -> Unit = {},
 ) {
     val container = LocalAppContainer.current
     val favorites by container.favorites.items.collectAsStateWithLifecycle()
     val watched by container.watched.items.collectAsStateWithLifecycle()
+    val resume by container.resume.items.collectAsStateWithLifecycle()
     var libraryName by rememberSaveable { mutableStateOf(LibrarySection.Favorites.name) }
     val library = LibrarySection.entries.firstOrNull { it.name == libraryName } ?: LibrarySection.Favorites
     val items = when (library) {
         LibrarySection.Favorites -> favorites
+        LibrarySection.Continue -> resume.map { it.toSaved() }
         LibrarySection.Watched -> watched
         LibrarySection.Actors -> emptyList()
     }
@@ -271,9 +277,12 @@ internal fun FavoritesScreen(
                     )
                 }
                 items(shown, key = { it.id }) { item ->
+                    val mark = if (library == LibrarySection.Continue) resume.firstOrNull { it.id == item.id } else null
                     FavoritePoster(
                         item = item,
-                        onMovieClick = onMovieClick,
+                        progress = mark?.fraction,
+                        caption = mark?.progressCaption(),
+                        onMovieClick = if (library == LibrarySection.Continue) onPlayResume else onMovieClick,
                         onMoviePeek = onMoviePeek,
                     )
                 }
@@ -378,6 +387,7 @@ private fun LibraryScrim(progress: Float, modifier: Modifier = Modifier) {
 
 private enum class LibrarySection(@StringRes val label: Int) {
     Favorites(R.string.nav_favorites),
+    Continue(R.string.section_continue),
     Watched(R.string.favorites_watched),
     Actors(R.string.favorites_actors),
 }
@@ -732,6 +742,8 @@ private fun LazyListState.passedTab(): Int {
 private fun FavoritePoster(
     item: SavedTitle,
     badge: String? = null,
+    progress: Float? = null,
+    caption: String? = null,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
 ) {
@@ -743,32 +755,44 @@ private fun FavoritePoster(
     val showTitles = posterTitlesOn()
     Column {
         Box {
-        AsyncImage(
-            model = item.posterUrl,
-            contentDescription = stringResource(R.string.poster_content_description, item.title),
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f / 1.46f)
-                .graphicsLayer {
-                    scaleX = pressScale
-                    scaleY = pressScale
-                }
-                .clip(PosterShape)
-                .background(Color.White.copy(alpha = 0.06f))
-                .posterWave(wave)
-                .holdToPeek(
-                    onPeek = { onMoviePeek(item.toMovie()) },
-                    onProgress = { holdProgress = it },
-                    onPressed = { pressed = it },
-                    onClick = {
-                        tick?.invoke()
-                        onMovieClick(item.id)
-                    },
-                    wave = wave,
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f / 1.46f)
+                    .graphicsLayer {
+                        scaleX = pressScale
+                        scaleY = pressScale
+                    }
+                    .clip(PosterShape)
+                    .background(Color.White.copy(alpha = 0.06f)),
+            ) {
+                AsyncImage(
+                    model = item.posterUrl,
+                    contentDescription = stringResource(R.string.poster_content_description, item.title),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .posterWave(wave)
+                        .holdToPeek(
+                            onPeek = { onMoviePeek(item.toMovie()) },
+                            onProgress = { holdProgress = it },
+                            onPressed = { pressed = it },
+                            onClick = {
+                                tick?.invoke()
+                                onMovieClick(item.id)
+                            },
+                            wave = wave,
+                        )
+                        .holdCue(holdProgress),
                 )
-                .holdCue(holdProgress),
-        )
+                if (progress != null || !caption.isNullOrBlank()) {
+                    WatchProgress(
+                        fraction = progress ?: 0f,
+                        caption = caption,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
+            }
             if (badge != null) {
                 Text(
                     text = badge,

@@ -118,7 +118,14 @@ import kotlinx.coroutines.withContext
 
 @OptIn(UnstableApi::class)
 @Composable
-internal fun LiftExoPlayer(playback: WatchPlayback, title: String, logoUrl: String?, onDismiss: () -> Unit) {
+internal fun LiftExoPlayer(
+    playback: WatchPlayback,
+    title: String,
+    logoUrl: String?,
+    startPositionMs: Long = 0L,
+    onProgress: (Long, Long, Int?, Int?) -> Unit = { _, _, _, _ -> },
+    onDismiss: () -> Unit,
+) {
     val view = LocalView.current
     val activity = view.context.hostActivity()
     val settingsRepository = LocalUserSettings.current
@@ -161,6 +168,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, logoUrl: Stri
             .build()
             .apply { playWhenReady = true }
     }
+    var pendingStart by remember(playback) { mutableLongStateOf(startPositionMs) }
     LaunchedEffect(current.url, current.kind, current.manifestPicked, current.alternateUrl) {
         if (!current.manifestPicked && current.alternateUrl != null) {
             val picked = withContext(Dispatchers.IO) { current.preferRicherManifest() }
@@ -182,6 +190,11 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, logoUrl: Stri
             .build()
         player.prepare()
         player.playWhenReady = true
+        val jump = pendingStart
+        if (jump > 1_000L) {
+            player.seekTo(jump)
+            pendingStart = 0L
+        }
     }
     var tracks by remember(player) { mutableStateOf(player.currentTracks) }
     var page by remember(player) { mutableStateOf<PlayerPage?>(null) }
@@ -208,12 +221,18 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, logoUrl: Stri
             var auto = false
             var episodes: List<WatchEpisode> = emptyList()
             var stream: WatchStream = playback.stream
+            var season: Int? = null
+            var episode: Int? = null
+            var emit: (Long, Long, Int?, Int?) -> Unit = { _, _, _, _ -> }
         }
     }
     follow.index = episodeIndex
     follow.auto = autoNext
     follow.episodes = playback.episodes
     follow.stream = current
+    follow.season = episode?.season
+    follow.episode = episode?.episode
+    follow.emit = onProgress
     val haze = rememberHazeState()
     DisposableEffect(activity) {
         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -272,15 +291,24 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, logoUrl: Stri
         }
         player.addListener(listener)
         onDispose {
+            val played = player.currentPosition
+            val length = player.duration
+            if (length > 0L && played > 0L) follow.emit(played, length, follow.season, follow.episode)
             player.removeListener(listener)
             player.release()
         }
     }
     LaunchedEffect(current.url) {
+        var reported = 0L
         while (true) {
             if (!scrubbing) {
                 position = player.currentPosition.coerceAtLeast(0L)
                 duration = player.duration.takeIf { it > 0 } ?: 0L
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (duration > 0L && position > 0L && now - reported >= 5_000L) {
+                    reported = now
+                    follow.emit(position, duration, follow.season, follow.episode)
+                }
             }
             delay(250)
         }

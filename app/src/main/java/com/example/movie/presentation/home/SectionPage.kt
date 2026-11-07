@@ -67,6 +67,7 @@ import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionSkeleton
+import com.example.movie.presentation.home.components.WatchProgress
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
@@ -96,6 +97,7 @@ fun SectionRoute(
             getRecommendations = container.getRecommendations,
             getTopMovies = container.getTopMovies,
             viewHistory = container.viewHistory,
+            resume = container.resume,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -167,6 +169,7 @@ internal fun SectionPage(
                 onRetry = onRetry,
                 onMovieClick = onMovieClick,
                 onMoviePeek = onMoviePeek,
+                marks = state.marks,
             )
         }
         SectionScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
@@ -266,6 +269,7 @@ internal fun PosterGrid(
     onRetry: () -> Unit,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    marks: Map<String, PosterMark> = emptyMap(),
 ) {
     HapticOnAppend(movies.map { it.id })
     LaunchedEffect(state, movies.size, end, error, placeholder) {
@@ -289,7 +293,7 @@ internal fun PosterGrid(
             if (placeholder) {
                 SkeletonPoster()
             } else {
-                PosterCell(movies[index], onMovieClick, onMoviePeek)
+                PosterCell(movies[index], onMovieClick, onMoviePeek, marks[movies[index].id])
             }
         }
         if (!placeholder && (loadingMore || error != null)) {
@@ -347,6 +351,7 @@ private fun PosterCell(
     movie: Movie,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    mark: PosterMark? = null,
 ) {
     val tick = rememberHapticTick()
     var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
@@ -355,11 +360,8 @@ private fun PosterCell(
     val wave = remember(movie.id) { PosterWave() }
     val showTitles = posterTitlesOn()
     Column {
-        AsyncImage(
-            model = movie.posterUrl,
-            contentDescription = stringResource(R.string.poster_content_description, movie.title),
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
+        Box(
+            Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f / PosterAspect)
                 .graphicsLayer {
@@ -367,20 +369,35 @@ private fun PosterCell(
                     scaleY = pressScale
                 }
                 .clip(PosterShape)
-                .background(Color.White.copy(alpha = 0.08f))
-                .posterWave(wave)
-                .holdToPeek(
-                    onPeek = { onMoviePeek(movie) },
-                    onProgress = { holdProgress = it },
-                    onPressed = { pressed = it },
-                    onClick = {
-                        tick?.invoke()
-                        onMovieClick(movie.id)
-                    },
-                    wave = wave,
+                .background(Color.White.copy(alpha = 0.08f)),
+        ) {
+            AsyncImage(
+                model = movie.posterUrl,
+                contentDescription = stringResource(R.string.poster_content_description, movie.title),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .matchParentSize()
+                    .posterWave(wave)
+                    .holdToPeek(
+                        onPeek = { onMoviePeek(movie) },
+                        onProgress = { holdProgress = it },
+                        onPressed = { pressed = it },
+                        onClick = {
+                            tick?.invoke()
+                            onMovieClick(movie.id)
+                        },
+                        wave = wave,
+                    )
+                    .holdCue(holdProgress),
+            )
+            if (mark != null) {
+                WatchProgress(
+                    fraction = mark.fraction,
+                    caption = mark.caption,
+                    modifier = Modifier.align(Alignment.BottomCenter),
                 )
-                .holdCue(holdProgress),
-        )
+            }
+        }
         if (showTitles) PosterCaption(movie.title, movie.year)
     }
 }

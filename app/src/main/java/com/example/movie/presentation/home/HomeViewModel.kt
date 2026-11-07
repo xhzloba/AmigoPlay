@@ -9,6 +9,7 @@ import com.example.movie.domain.usecase.GetHomeShelvesUseCase
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
 import com.example.movie.domain.usecase.GetTopMoviesUseCase
+import com.example.movie.data.history.ResumeStore
 import com.example.movie.data.history.ViewHistoryStore
 import com.example.movie.data.search.SearchHistoryStore
 import com.example.movie.domain.model.toMovie
@@ -29,6 +30,7 @@ class HomeViewModel(
     private val searchMovies: SearchMoviesUseCase,
     private val searchHistory: SearchHistoryStore,
     private val viewHistory: ViewHistoryStore,
+    private val resume: ResumeStore,
 ) : ViewModel() {
     private val cache = mutableMapOf<String, List<Movie>>()
     private var moviesJob: Job? = null
@@ -40,6 +42,11 @@ class HomeViewModel(
         viewModelScope.launch {
             viewHistory.items.collect { saved ->
                 _state.value = _state.value.copy(history = saved.map { it.toMovie() })
+            }
+        }
+        viewModelScope.launch {
+            resume.items.collect { saved ->
+                _state.value = _state.value.copy(resume = saved)
             }
         }
         loadShelves()

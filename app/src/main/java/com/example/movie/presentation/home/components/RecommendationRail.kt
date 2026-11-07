@@ -117,6 +117,8 @@ internal fun RecommendationRail(
     onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit = {},
     stickToStart: Boolean = false,
+    progressOf: (Movie) -> Float? = { null },
+    captionOf: (Movie) -> String? = { null },
 ) {
     HapticOnAppend(movies.map { it.id })
     Column(modifier = modifier.fillMaxWidth()) {
@@ -133,6 +135,8 @@ internal fun RecommendationRail(
                 onMoviePeek = onMoviePeek,
                 onSettled = onSettled,
                 stickToStart = stickToStart,
+                progressOf = progressOf,
+                captionOf = captionOf,
             )
         }
     }
@@ -180,6 +184,8 @@ private fun RecommendationPager(
     onMoviePeek: (Movie) -> Unit,
     onSettled: () -> Unit,
     stickToStart: Boolean = false,
+    progressOf: (Movie) -> Float? = { null },
+    captionOf: (Movie) -> String? = { null },
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -222,11 +228,8 @@ private fun RecommendationPager(
                 val pressScale = rememberPressScale(pressed)
                 val wave = remember(movie.id) { PosterWave() }
                 Column(Modifier.width(PosterWidth)) {
-                    AsyncImage(
-                        model = movie.posterUrl,
-                        contentDescription = stringResource(R.string.poster_content_description, movie.title),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
+                    Box(
+                        Modifier
                             .width(PosterWidth)
                             .height(posterHeight)
                             .graphicsLayer {
@@ -234,20 +237,37 @@ private fun RecommendationPager(
                                 scaleY = pressScale
                             }
                             .clip(PosterShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .posterWave(wave)
-                            .holdToPeek(
-                                onPeek = { onMoviePeek(movie) },
-                                onProgress = { holdProgress = it },
-                                onPressed = { pressed = it },
-                                onClick = {
-                                    tick?.invoke()
-                                    onMovieClick(movie.id)
-                                },
-                                wave = wave,
+                            .background(Color.White.copy(alpha = 0.08f)),
+                    ) {
+                        AsyncImage(
+                            model = movie.posterUrl,
+                            contentDescription = stringResource(R.string.poster_content_description, movie.title),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .matchParentSize()
+                                .posterWave(wave)
+                                .holdToPeek(
+                                    onPeek = { onMoviePeek(movie) },
+                                    onProgress = { holdProgress = it },
+                                    onPressed = { pressed = it },
+                                    onClick = {
+                                        tick?.invoke()
+                                        onMovieClick(movie.id)
+                                    },
+                                    wave = wave,
+                                )
+                                .holdCue(holdProgress),
+                        )
+                        val fraction = progressOf(movie)
+                        val caption = captionOf(movie)
+                        if (fraction != null || !caption.isNullOrBlank()) {
+                            WatchProgress(
+                                fraction = fraction ?: 0f,
+                                caption = caption,
+                                modifier = Modifier.align(Alignment.BottomCenter),
                             )
-                            .holdCue(holdProgress),
-                    )
+                        }
+                    }
                     if (showTitles) PosterCaption(movie.title, movie.year)
                 }
             }

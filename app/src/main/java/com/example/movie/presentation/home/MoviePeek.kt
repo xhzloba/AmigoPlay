@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,12 +27,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,11 +66,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
 import coil.compose.AsyncImage
 import com.example.movie.domain.model.Movie
+import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.resumeClock
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkFilled
 import com.example.movie.presentation.common.BookmarkOutline
@@ -105,6 +111,7 @@ internal fun MoviePeek(
     movie: Movie?,
     onDismiss: () -> Unit,
     onOpen: (String) -> Unit,
+    onContinue: ((String) -> Unit)? = null,
 ) {
     var page by remember { mutableStateOf(PeekPage.Menu) }
     var suppressDismiss by remember { mutableStateOf(false) }
@@ -120,6 +127,7 @@ internal fun MoviePeek(
                 if (!suppressDismiss) onDismiss()
             },
             onWatch = { onOpen(shown.id) },
+            onContinue = onContinue?.let { continueWatch -> { continueWatch(shown.id) } },
             onSummary = {
                 suppressDismiss = true
                 page = PeekPage.Summary
@@ -139,6 +147,7 @@ private fun MovieMenu(
     movie: Movie,
     onDismiss: () -> Unit,
     onWatch: () -> Unit,
+    onContinue: (() -> Unit)?,
     onSummary: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -148,6 +157,8 @@ private fun MovieMenu(
     val watchedIds by watched.ids.collectAsStateWithLifecycle()
     val saved = movie.id in savedIds
     val seen = movie.id in watchedIds
+    val resume by LocalAppContainer.current.resume.items.collectAsStateWithLifecycle()
+    val continued = resume.firstOrNull { it.id == movie.id }
     val tick = rememberHapticTick()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -180,13 +191,19 @@ private fun MovieMenu(
                     .background(Color.White.copy(alpha = 0.28f)),
             )
             MenuHeading(movie)
-            Spacer(Modifier.height(6.dp))
+            if (continued != null) {
+                Spacer(Modifier.height(14.dp))
+                ResumeMenuProgress(continued)
+                Spacer(Modifier.height(8.dp))
+            } else {
+                Spacer(Modifier.height(6.dp))
+            }
             MenuRow(
                 icon = PlayIcon,
-                label = stringResource(R.string.menu_watch),
+                label = stringResource(if (continued == null) R.string.menu_watch else R.string.section_continue),
                 onClick = {
                     tick?.invoke()
-                    onWatch()
+                    if (continued != null && onContinue != null) onContinue() else onWatch()
                 },
             )
             MenuRow(
@@ -225,6 +242,74 @@ private fun MovieMenu(
                 icon = CommentIcon,
                 label = stringResource(R.string.menu_comment),
                 enabled = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ResumeMenuProgress(item: ResumeItem) {
+    val percent = if (item.fraction > 0f) {
+        (item.fraction * 100f).roundToInt().coerceIn(1, 99)
+    } else {
+        0
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "$percent%",
+                color = Color.White,
+                fontSize = 15.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = resumeClock(item.positionMs),
+                color = CinemaMuted,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
+                maxLines = 1,
+            )
+        }
+        if (item.season != null && item.episode != null) {
+            Text(
+                text = stringResource(R.string.player_episode, item.season, item.episode),
+                modifier = Modifier.padding(top = 4.dp),
+                color = CinemaMuted,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
+                maxLines = 1,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        BoxWithConstraints(Modifier.fillMaxWidth().height(14.dp)) {
+            val fraction = item.fraction.coerceIn(0f, 1f)
+            val thumb = 8.dp
+            val travel = (maxWidth - thumb) * fraction
+            Box(
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.28f)),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .width(travel + thumb / 2)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.CenterStart)
+                    .offset(x = travel)
+                    .size(thumb)
+                    .clip(CircleShape)
+                    .background(Color.White),
             )
         }
     }

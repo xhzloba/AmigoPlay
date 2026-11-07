@@ -17,6 +17,7 @@
     <string name="catalog_genres">Жанры</string>
     <string name="poster_content_description">Постер «%1$s»</string>
     <string name="watch_now">Смотреть</string>
+    <string name="watch_resume">Продолжить</string>
     <string name="player_settings">Настройки</string>
     <string name="player_episodes">Серии</string>
     <string name="player_episode">Сезон %1$d · Серия %2$d</string>
@@ -124,6 +125,7 @@
     <string name="section_sequels">Сиквелы и приквелы</string>
     <string name="section_back">Назад</string>
     <string name="section_recommendations">Возможно, вам понравится</string>
+    <string name="section_continue">Продолжить просмотр</string>
     <string name="section_history">История просмотров</string>
     <string name="section_watching">Сейчас смотрят</string>
     <string name="kind_movie">Фильм</string>

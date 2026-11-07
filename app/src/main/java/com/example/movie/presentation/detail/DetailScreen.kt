@@ -137,6 +137,9 @@ import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.palette.PosterWash
 import com.example.movie.presentation.palette.posterWash
 import com.example.movie.di.LocalAppContainer
+import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.progressCaption
+import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
 import com.example.movie.presentation.common.ImdbScore
@@ -320,6 +323,8 @@ private fun DetailContent(
     val pageAlpha = if (pageShown != null) pageVeil.value else 0f
     val favorites = LocalAppContainer.current.favorites
     val watched = LocalAppContainer.current.watched
+    val resumeStore = LocalAppContainer.current.resume
+    val resumeItems by resumeStore.items.collectAsStateWithLifecycle()
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val watchedIds by watched.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
@@ -536,6 +541,7 @@ private fun DetailContent(
                 wash = paintWash,
                 glow = if (settings.watchGlow) watchGlow else null,
                 glowKey = detail.id,
+                resume = resumeItems.firstOrNull { it.id == detail.id },
                 onWatch = {
                     tick?.invoke()
                     val id = watchId
@@ -644,8 +650,21 @@ private fun DetailContent(
         playingTrailer?.let { trailer ->
             TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
         }
+        val savedResume = remember(detail.id, watching) {
+            watching?.let { resumeStore.items.value.firstOrNull { item -> item.id == detail.id } }
+        }
         watching?.let { id ->
-            WatchPlayer(url = liftWatchUrl(id), title = detail.title, logoUrl = detail.logoUrl, onDismiss = { watching = null })
+            val saved = savedResume
+            WatchPlayer(
+                url = resumeWatchUrl(id, saved?.season, saved?.episode),
+                title = detail.title,
+                logoUrl = detail.logoUrl,
+                startPositionMs = saved?.positionMs ?: 0L,
+                onProgress = { position, duration, season, episode ->
+                    resumeStore.record(detail.toResume(id, position, duration, season, episode))
+                },
+                onDismiss = { watching = null },
+            )
         }
     }
 }
@@ -733,6 +752,7 @@ private fun WatchBar(
     wash: PosterWash,
     glow: Color?,
     glowKey: String,
+    resume: ResumeItem?,
     onWatch: () -> Unit,
 ) {
     val play = wash.playColor()
@@ -758,10 +778,11 @@ private fun WatchBar(
         )
         source.splitWatchLogo()
     }
+    val barHeight = if (resume == null) 72.dp else 84.dp
     Box(
         Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(barHeight)
             .drawWithContent {
                 drawContent()
                 if (glow != null && borderAlpha > 0.01f && borderReveal > 0f) {
@@ -773,7 +794,7 @@ private fun WatchBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(barHeight)
             .clip(RoundedCornerShape(18.dp))
             .background(
                 Brush.horizontalGradient(
@@ -785,7 +806,7 @@ private fun WatchBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            val logoHeight = 26.dp
+            val logoHeight = if (resume == null) 26.dp else 22.dp
             Box(
                 modifier = Modifier.height(logoHeight),
                 contentAlignment = Alignment.CenterStart,
@@ -813,21 +834,27 @@ private fun WatchBar(
                     }
                 }
             }
-            Spacer(Modifier.height(2.dp))
-            WatchCaption(start = logoHeight * WatchLogoAspect * WatchLogoInkLeft)
+            val ink = logoHeight * WatchLogoAspect * WatchLogoInkLeft
+            if (resume == null) {
+                Spacer(Modifier.height(2.dp))
+                WatchCaption(start = ink)
+            } else {
+                Spacer(Modifier.height(6.dp))
+                ResumeCaption(item = resume, start = ink)
+            }
         }
         Button(
             onClick = onWatch,
             modifier = Modifier.height(44.dp),
             shape = RoundedCornerShape(22.dp),
-            contentPadding = PaddingValues(horizontal = 18.dp),
+            contentPadding = PaddingValues(horizontal = if (resume == null) 18.dp else 14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = Color.Black,
             ),
         ) {
             Text(
-                text = stringResource(R.string.watch_now),
+                text = stringResource(if (resume == null) R.string.watch_now else R.string.watch_resume),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -886,6 +913,52 @@ private fun WatchCaption(start: Dp) {
         style = style,
         maxLines = 1,
     )
+}
+
+@Composable
+private fun ResumeCaption(item: ResumeItem, start: Dp) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = start, end = 12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.section_continue),
+            color = Color.White.copy(alpha = 0.72f),
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(3.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = item.progressCaption(),
+                color = Color.White,
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.28f)),
+            ) {
+                if (item.fraction > 0f) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth(item.fraction.coerceIn(0.04f, 1f))
+                            .height(3.dp)
+                            .background(Color.White),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable

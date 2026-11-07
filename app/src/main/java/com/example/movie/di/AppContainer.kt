@@ -9,6 +9,7 @@ import com.example.movie.data.remote.FranchiseApi
 import com.example.movie.data.remote.GithubApi
 import com.example.movie.data.remote.VokinoApi
 import com.example.movie.data.repository.MovieRepositoryImpl
+import com.example.movie.data.history.ResumeStore
 import com.example.movie.data.history.ViewHistoryStore
 import com.example.movie.data.search.SearchHistoryStore
 import com.example.movie.data.settings.UserSettingsStore
@@ -36,6 +37,7 @@ class AppContainer(context: Context) {
     val watched = WatchedStore(context)
     val searchHistory = SearchHistoryStore(context)
     val viewHistory = ViewHistoryStore(context)
+    val resume = ResumeStore(context)
     private val json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true

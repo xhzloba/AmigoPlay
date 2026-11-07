@@ -55,6 +55,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
+import com.example.movie.domain.model.ResumeItem
+import com.example.movie.presentation.detail.WatchPlayer
+import com.example.movie.presentation.detail.resumeWatchUrl
 import com.example.movie.presentation.favorites.FavoritesScreen
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.CatalogGenresPage
@@ -109,6 +112,7 @@ fun AppShell(
             searchMovies = container.searchMovies,
             searchHistory = container.searchHistory,
             viewHistory = container.viewHistory,
+            resume = container.resume,
         )
     }
     val homeState by homeViewModel.state.collectAsStateWithLifecycle()
@@ -126,6 +130,11 @@ fun AppShell(
         }
     }
     var peek by remember { mutableStateOf<Movie?>(null) }
+    var resumePlayback by remember { mutableStateOf<ResumeItem?>(null) }
+    val playResume: (String) -> Unit = { id ->
+        val item = container.resume.items.value.firstOrNull { it.id == id }
+        if (item != null) resumePlayback = item
+    }
     var sectionName by rememberSaveable { mutableStateOf<String?>(null) }
     var searchCover by remember { mutableFloatStateOf(0f) }
     val section = sectionName?.let { runCatching { HomeSection.valueOf(it) }.getOrNull() }
@@ -204,7 +213,7 @@ fun AppShell(
         if (peek != null) keyboard?.hide()
     }
     BackHandler(
-        enabled = handleBack && (peek != null || sectionShown != null || tab != AppTab.Home),
+        enabled = handleBack && resumePlayback == null && (peek != null || sectionShown != null || tab != AppTab.Home),
     ) {
         when {
             peek != null -> peek = null
@@ -233,6 +242,7 @@ fun AppShell(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
                     onOpenSection = { sectionName = it.name },
+                    onPlayResume = playResume,
                     onSearchCover = { searchCover = it },
                     presentSearch = tab == AppTab.Home,
                     session = session,
@@ -241,6 +251,7 @@ fun AppShell(
                 AppTab.Favorites -> FavoritesScreen(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
+                    onPlayResume = playResume,
                 )
                 AppTab.Settings -> SettingsRoute()
             }
@@ -278,7 +289,7 @@ fun AppShell(
             SectionRoute(
                 section = shown,
                 onBack = { sectionName = null },
-                onMovieClick = onMovieClick,
+                onMovieClick = if (shown == HomeSection.Continue) playResume else onMovieClick,
                 onMoviePeek = { peek = it },
                 modifier = Modifier
                     .fillMaxSize()
@@ -371,7 +382,31 @@ fun AppShell(
                 peek = null
                 onMovieClick(id)
             },
+            onContinue = { id ->
+                peek = null
+                playResume(id)
+            },
         )
+        val playing = resumePlayback
+        if (playing != null) {
+            WatchPlayer(
+                url = resumeWatchUrl(playing.franchiseId, playing.season, playing.episode),
+                title = playing.title,
+                logoUrl = playing.logoUrl,
+                startPositionMs = playing.positionMs,
+                onProgress = { position, duration, season, episode ->
+                    container.resume.record(
+                        playing.copy(
+                            positionMs = position,
+                            durationMs = duration,
+                            season = season ?: playing.season,
+                            episode = episode ?: playing.episode,
+                        ),
+                    )
+                },
+                onDismiss = { resumePlayback = null },
+            )
+        }
     }
 }
 

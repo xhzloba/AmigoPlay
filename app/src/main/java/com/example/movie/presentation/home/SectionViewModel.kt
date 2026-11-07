@@ -4,10 +4,12 @@ import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.movie.R
+import com.example.movie.data.history.ResumeStore
 import com.example.movie.data.history.ViewHistoryStore
 import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
+import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
 import com.example.movie.domain.usecase.GetShelfMoviesUseCase
@@ -23,11 +25,14 @@ enum class HomeSection(@StringRes val title: Int) {
     Top(R.string.section_top),
     Best(R.string.section_best),
     History(R.string.section_history),
+    Continue(R.string.section_continue),
     ;
 
     val paged: Boolean
         get() = this == Watching || this == Best
 }
+
+data class PosterMark(val fraction: Float, val caption: String)
 
 data class SectionUiState(
     val movies: List<Movie> = emptyList(),
@@ -35,6 +40,7 @@ data class SectionUiState(
     val loadingMore: Boolean = false,
     val end: Boolean = false,
     val error: DataError? = null,
+    val marks: Map<String, PosterMark> = emptyMap(),
 )
 
 class SectionViewModel(
@@ -43,12 +49,17 @@ class SectionViewModel(
     private val getRecommendations: GetRecommendationsUseCase,
     private val getTopMovies: GetTopMoviesUseCase,
     private val viewHistory: ViewHistoryStore,
+    private val resume: ResumeStore,
 ) : ViewModel() {
     private val seen = mutableSetOf<String>()
     private var page = 0
     private var busy = false
     private val _state = MutableStateFlow(
-        if (section == HomeSection.History) SectionUiState(loading = false, end = true) else SectionUiState(),
+        if (section == HomeSection.History || section == HomeSection.Continue) {
+            SectionUiState(loading = false, end = true)
+        } else {
+            SectionUiState()
+        },
     )
     val state: StateFlow<SectionUiState> = _state.asStateFlow()
 
@@ -60,6 +71,19 @@ class SectionViewModel(
                         movies = saved.map { it.toMovie() },
                         loading = false,
                         end = true,
+                    )
+                }
+            }
+        } else if (section == HomeSection.Continue) {
+            viewModelScope.launch {
+                resume.items.collect { saved ->
+                    _state.value = SectionUiState(
+                        movies = saved.map { it.toMovie() },
+                        loading = false,
+                        end = true,
+                        marks = saved.associate { item ->
+                            item.id to PosterMark(item.fraction, item.progressCaption())
+                        },
                     )
                 }
             }
@@ -117,6 +141,6 @@ class SectionViewModel(
         HomeSection.Top -> getTopMovies()
         HomeSection.Watching -> getShelfMovies(CatalogQuery(sort = "watching"), page = page)
         HomeSection.Best -> getShelfMovies(CatalogQuery(sort = "rating", type = "movie"), page = page)
-        HomeSection.History -> Result.success(emptyList())
+        HomeSection.History, HomeSection.Continue -> Result.success(emptyList())
     }
 }

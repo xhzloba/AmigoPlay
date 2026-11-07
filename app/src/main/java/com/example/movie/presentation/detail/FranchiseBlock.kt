@@ -306,10 +306,24 @@ internal fun TrailerRow(trailers: List<FranchiseTrailer>, onPlay: (FranchiseTrai
 internal fun liftWatchUrl(id: Int): String =
     "https://embed.liftw.ws/embed/movie/$id?host=lift.com&imp2=a7579fe91a3b6593c0b2f4bdb69fae4e6e539ff0a39a988f90a280e97fd43718&t2=1794007180&ht=5f79777865aa38c62bbc232817687bfdd3003a8e2dabebba331258f181643072&imp3=9125fe15854f815949c15971ca44fd92cf9abddf40a233ebcc375e358119b86a"
 
+internal fun resumeWatchUrl(franchiseId: Int, season: Int?, episode: Int?): String {
+    val base = liftWatchUrl(franchiseId)
+    if (season == null || episode == null) return base
+    return "$base&season=$season&episode=$episode"
+}
+
 @Composable
-internal fun WatchPlayer(url: String, title: String, logoUrl: String?, onDismiss: () -> Unit) {
+internal fun WatchPlayer(
+    url: String,
+    title: String,
+    logoUrl: String?,
+    startPositionMs: Long = 0L,
+    onProgress: (Long, Long, Int?, Int?) -> Unit = { _, _, _, _ -> },
+    onDismiss: () -> Unit,
+) {
     var playback by remember(url) { mutableStateOf<WatchPlayback?>(null) }
     var embed by remember(url) { mutableStateOf(false) }
+    val start = remember(url) { startPositionMs }
     LaunchedEffect(url) {
         val resolved = withContext(Dispatchers.IO) {
             runCatching { fetchLiftStream(url) }.getOrNull()
@@ -319,7 +333,14 @@ internal fun WatchPlayer(url: String, title: String, logoUrl: String?, onDismiss
     val direct = playback
     when {
         embed -> EmbedPlayer(url = url, direct = true, allowedHostSuffix = null, onDismiss = onDismiss)
-        direct != null -> LiftExoPlayer(playback = direct, title = title, logoUrl = logoUrl, onDismiss = onDismiss)
+        direct != null -> LiftExoPlayer(
+            playback = direct,
+            title = title,
+            logoUrl = logoUrl,
+            startPositionMs = start,
+            onProgress = onProgress,
+            onDismiss = onDismiss,
+        )
         else -> Box(
             modifier = Modifier.fillMaxSize().background(Color.Black),
             contentAlignment = Alignment.Center,
