@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.62.2",
+            fixed = listOf(
+                "Ободок галочки просмотренного на обложке теперь цвета фона приложения, а не чёрный.",
+            ),
+        ),
+        Release(
             version = "1.62.1",
             fixed = listOf(
                 "В настройках «Интерфейс» список снова прокручивается. Нижние пункты не обрезаются.",
