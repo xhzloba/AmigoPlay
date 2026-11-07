@@ -100,6 +100,7 @@ fun SettingsRoute() {
         onShowLogos = repository::setShowLogos,
         onWatchedBadge = repository::setWatchedBadge,
         onShowPosterTitles = repository::setShowPosterTitles,
+        onLargePosters = repository::setLargePosters,
         onAutoBackdrop = repository::setAutoBackdrop,
         onWatchGlow = repository::setWatchGlow,
         onHaptic = repository::setHaptic,
@@ -115,6 +116,7 @@ private fun SettingsScreen(
     onShowLogos: (Boolean) -> Unit,
     onWatchedBadge: (Boolean) -> Unit,
     onShowPosterTitles: (Boolean) -> Unit,
+    onLargePosters: (Boolean) -> Unit,
     onAutoBackdrop: (Boolean) -> Unit,
     onWatchGlow: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
@@ -161,6 +163,13 @@ private fun SettingsScreen(
                     hint = stringResource(R.string.settings_poster_titles_hint),
                     checked = settings.showPosterTitles,
                     onChecked = onShowPosterTitles,
+                )
+                SettingsDivider()
+                SettingRow(
+                    title = stringResource(R.string.settings_large_posters),
+                    hint = stringResource(R.string.settings_large_posters_hint),
+                    checked = settings.largePosters,
+                    onChecked = onLargePosters,
                 )
                 SettingsDivider()
                 SettingRow(

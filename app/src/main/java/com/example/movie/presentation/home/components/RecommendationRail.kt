@@ -148,10 +148,11 @@ internal fun RecommendationRailSkeleton(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val posterHeight = PosterWidth * PosterAspect
+            val posterWidth = posterSize(PosterWidth)
+            val posterHeight = posterWidth * PosterAspect
             val showTitles = posterTitlesOn()
             val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
-            val count = ((maxWidth - RailStart) / (PosterWidth + PosterGap)).toInt().coerceIn(2, 4)
+            val count = ((maxWidth - RailStart) / (posterWidth + PosterGap)).toInt().coerceIn(2, 4)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -161,10 +162,10 @@ internal fun RecommendationRailSkeleton(
                 verticalAlignment = Alignment.Top,
             ) {
                 repeat(count) {
-                    Column(Modifier.width(PosterWidth)) {
+                    Column(Modifier.width(posterWidth)) {
                         Box(
                             modifier = Modifier
-                                .width(PosterWidth)
+                                .width(posterWidth)
                                 .height(posterHeight)
                                 .clip(PosterShape)
                                 .background(Color.White.copy(alpha = 0.08f)),
@@ -208,12 +209,13 @@ private fun RecommendationPager(
             ),
         )
     }
-    val posterHeight = PosterWidth * PosterAspect
+    val posterWidth = posterSize(PosterWidth)
+    val posterHeight = posterWidth * PosterAspect
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
     val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val end = (maxWidth - PosterWidth - RailStart).coerceAtLeast(RailStart)
+        val end = (maxWidth - posterWidth - RailStart).coerceAtLeast(RailStart)
         LazyRow(
             state = listState,
             contentPadding = PaddingValues(start = RailStart, end = end),
@@ -228,10 +230,10 @@ private fun RecommendationPager(
                 var pressed by remember(movie.id) { mutableStateOf(false) }
                 val pressScale = rememberPressScale(pressed)
                 val wave = remember(movie.id) { PosterWave() }
-                Column(Modifier.width(PosterWidth)) {
+                Column(Modifier.width(posterWidth)) {
                     Box(
                         Modifier
-                            .width(PosterWidth)
+                            .width(posterWidth)
                             .height(posterHeight)
                             .graphicsLayer {
                                 scaleX = pressScale

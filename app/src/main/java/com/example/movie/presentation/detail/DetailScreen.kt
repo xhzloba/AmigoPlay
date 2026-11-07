@@ -153,6 +153,7 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.MovieLogoShadow
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionBlock
+import com.example.movie.presentation.home.components.posterSize
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
@@ -1370,13 +1371,14 @@ private fun MovieStrip(
     val listState = rememberLazyListState()
     val tick = rememberHapticTick()
     val showTitles = posterTitlesOn()
+    val posterWidth = posterSize(108.dp)
     HapticOnChange(listState) { listState.firstVisibleItemIndex }
     LazyRow(
         state = listState,
         modifier = Modifier
             .edgeToEdge(DetailInset)
             .fillMaxWidth()
-            .height(108.dp * 1.46f + if (showTitles) PosterCaptionBlock else 0.dp),
+            .height(posterWidth * 1.46f + if (showTitles) PosterCaptionBlock else 0.dp),
         contentPadding = PaddingValues(horizontal = DetailInset),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -1386,7 +1388,7 @@ private fun MovieStrip(
             var pressed by remember(movie.id) { mutableStateOf(false) }
             val pressScale = rememberPressScale(pressed)
             val wave = remember(movie.id) { PosterWave() }
-            Column(modifier = Modifier.width(108.dp)) {
+            Column(modifier = Modifier.width(posterWidth)) {
                 AsyncImage(
                     model = movie.posterUrl,
                     contentDescription = movie.title,

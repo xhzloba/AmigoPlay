@@ -103,6 +103,7 @@ import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.WatchProgress
+import com.example.movie.presentation.home.components.posterGridColumns
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.components.BrandWordmark
 import com.example.movie.presentation.home.components.MenuSombreroEffect
@@ -243,7 +244,7 @@ internal fun FavoritesScreen(
         } else {
             LazyVerticalGrid(
                 state = gridState,
-                columns = GridCells.Fixed(3),
+                columns = GridCells.Fixed(posterGridColumns()),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = PosterGridInset,

@@ -31,7 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,6 +40,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
@@ -86,6 +87,8 @@ import com.example.movie.presentation.settings.SettingsRoute
 import com.example.movie.presentation.update.LocalAppUpdate
 import com.example.movie.presentation.update.UpdateBadge
 import com.example.movie.ui.theme.CinemaBlack
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private enum class AppTab(@StringRes val label: Int, val color: Color) {
     Home(R.string.nav_home, Color(0xFF3B6EF5)),
@@ -152,22 +155,23 @@ fun AppShell(
     var searchCover by remember { mutableFloatStateOf(0f) }
     val section = sectionName?.let { runCatching { HomeSection.valueOf(it) }.getOrNull() }
         ?.takeIf { tab == AppTab.Home }
-    val sectionVeil = remember { Animatable(0f) }
+    val sectionShift = remember { Animatable(1f) }
     var sectionShown by remember { mutableStateOf<HomeSection?>(null) }
     var barHidden by remember { mutableStateOf(false) }
     var barHeight by remember { mutableIntStateOf(0) }
     LaunchedEffect(section) {
+        val move = tween<Float>(240, easing = FastOutSlowInEasing)
         if (section != null) {
             sectionShown = section
+            sectionShift.snapTo(1f)
             withFrameNanos { }
             withFrameNanos { }
-            sectionVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+            sectionShift.animateTo(0f, move)
         } else if (sectionShown != null) {
-            sectionVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+            sectionShift.animateTo(1f, move)
             sectionShown = null
         }
     }
-    val sectionAlpha = if (sectionShown != null) sectionVeil.value else 0f
     var catalogListKey by rememberSaveable { mutableStateOf<String?>(null) }
     var genresType by rememberSaveable { mutableStateOf<String?>(null) }
     val genresVeil = remember { Animatable(0f) }
@@ -188,28 +192,28 @@ fun AppShell(
     }
     val genresAlpha = if (genresShown) genresVeil.value else 0f
     val catalogList = catalogListKey?.takeIf { tab == AppTab.Catalog }
-    val listVeil = remember { Animatable(0f) }
+    val listShift = remember { Animatable(1f) }
     var listShown by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(catalogList) {
+        val move = tween<Float>(240, easing = FastOutSlowInEasing)
         if (catalogList != null) {
             listShown = catalogList
+            listShift.snapTo(1f)
             withFrameNanos { }
             withFrameNanos { }
-            listVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+            listShift.animateTo(0f, move)
         } else if (listShown != null) {
-            listVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+            listShift.animateTo(1f, move)
             listShown = null
         }
     }
-    val listAlpha = if (listShown != null) listVeil.value else 0f
-    val catalogVeil = remember { Animatable(if (tab == AppTab.Catalog) 1f else 0f) }
+    var stageWidth by remember { mutableIntStateOf(0) }
+    var base by remember { mutableStateOf(if (tab == AppTab.Catalog) AppTab.Home else tab) }
+    var baseBehind by remember { mutableStateOf<AppTab?>(null) }
+    val baseShift = remember { Animatable(0f) }
     var catalogShown by remember { mutableStateOf(tab == AppTab.Catalog) }
     var catalogMounted by remember { mutableStateOf(tab == AppTab.Catalog) }
-    var catalogUnder by remember { mutableStateOf(if (tab == AppTab.Catalog) AppTab.Home else tab) }
-    val underTab = if (tab == AppTab.Catalog) catalogUnder else tab
-    SideEffect {
-        if (tab != AppTab.Catalog) catalogUnder = tab
-    }
+    val catalogShift = remember { Animatable(if (tab == AppTab.Catalog) 0f else 1f) }
     LaunchedEffect(Unit) {
         if (!catalogMounted) {
             withFrameNanos { }
@@ -217,16 +221,40 @@ fun AppShell(
         }
     }
     LaunchedEffect(tab) {
+        val move = tween<Float>(240, easing = FastOutSlowInEasing)
         if (tab == AppTab.Catalog) {
+            baseShift.snapTo(0f)
+            baseBehind = null
+            val dir = if (AppTab.Catalog.ordinal > base.ordinal) 1f else -1f
             catalogShown = true
+            if (abs(catalogShift.value) > 0.85f) catalogShift.snapTo(dir)
             withFrameNanos { }
-            catalogVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
-        } else if (catalogShown) {
-            catalogVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
-            catalogShown = false
+            catalogShift.animateTo(0f, move)
+            return@LaunchedEffect
         }
+        if (catalogShown) {
+            if (tab != base) {
+                base = tab
+                baseShift.snapTo(0f)
+                baseBehind = null
+            }
+            val dir = if (AppTab.Catalog.ordinal > tab.ordinal) 1f else -1f
+            withFrameNanos { }
+            withFrameNanos { }
+            catalogShift.animateTo(dir, move)
+            catalogShown = false
+            return@LaunchedEffect
+        }
+        if (tab == base) return@LaunchedEffect
+        val dir = if (tab.ordinal > base.ordinal) 1f else -1f
+        baseBehind = base
+        base = tab
+        baseShift.snapTo(dir)
+        withFrameNanos { }
+        withFrameNanos { }
+        baseShift.animateTo(0f, move)
+        baseBehind = null
     }
-    val catalogAlpha = if (catalogShown) catalogVeil.value else 0f
     LaunchedEffect(peek) {
         if (peek != null) keyboard?.hide()
     }
@@ -245,17 +273,10 @@ fun AppShell(
     LaunchedEffect(tab) {
         if (tab != AppTab.Home && tab != AppTab.Favorites) peek = null
     }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CinemaBlack),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = (1f - sectionAlpha) * (1f - catalogAlpha) },
-        ) {
-            when (underTab) {
+    @Composable
+    fun TabBody(which: AppTab, modifier: Modifier) {
+        Box(modifier) {
+            when (which) {
                 AppTab.Home -> HomeRoute(
                     onMovieClick = onMovieClick,
                     onMoviePeek = { peek = it },
@@ -274,32 +295,56 @@ fun AppShell(
                 AppTab.Settings -> SettingsRoute()
             }
         }
-        if (catalogMounted) {
-            Box(
-                Modifier.then(
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clipToBounds()
+            .background(CinemaBlack),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clipToBounds()
+                .onSizeChanged { stageWidth = it.width },
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                val behind = baseBehind
+                if (behind != null) {
+                    key(behind) {
+                        TabBody(behind, Modifier.fillMaxSize())
+                    }
+                }
+                key(base) {
+                    TabBody(
+                        base,
+                        Modifier
+                            .slideBy({ baseShift.value }, stageWidth)
+                            .fillMaxSize()
+                            .background(CinemaBlack),
+                    )
+                }
+            }
+            if (catalogMounted) {
+                Box(
                     if (catalogShown) {
                         Modifier
+                            .slideBy({ catalogShift.value }, stageWidth)
                             .fillMaxSize()
-                            .graphicsLayer { alpha = catalogAlpha }
                             .background(CinemaBlack)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = {},
-                            )
                     } else {
                         Modifier.holdOffscreen()
                     },
-                ),
-            ) {
-                CatalogScreen(
-                    onMovieClick = onMovieClick,
-                    onMoviePeek = { peek = it },
-                    onSearch = homeViewModel::openSearch,
-                    onGenres = { genresType = it },
-                    onOpenShelf = { type, sort -> catalogListKey = "$type:$sort" },
-                    active = tab == AppTab.Catalog,
-                )
+                ) {
+                    CatalogScreen(
+                        onMovieClick = onMovieClick,
+                        onMoviePeek = { peek = it },
+                        onSearch = homeViewModel::openSearch,
+                        onGenres = { genresType = it },
+                        onOpenShelf = { type, sort -> catalogListKey = "$type:$sort" },
+                        active = tab == AppTab.Catalog,
+                    )
+                }
             }
         }
         val shown = sectionShown
@@ -311,8 +356,9 @@ fun AppShell(
                 onMoviePeek = { peek = it },
                 onHideBar = { barHidden = it },
                 modifier = Modifier
+                    .slideBy({ sectionShift.value }, stageWidth)
                     .fillMaxSize()
-                    .graphicsLayer { alpha = sectionAlpha },
+                    .background(CinemaBlack),
             )
         }
         if (genresShown) {
@@ -347,8 +393,9 @@ fun AppShell(
                     onMoviePeek = { peek = it },
                     onHideBar = { barHidden = it },
                     modifier = Modifier
+                        .slideBy({ listShift.value }, stageWidth)
                         .fillMaxSize()
-                        .graphicsLayer { alpha = listVeil.value },
+                        .background(CinemaBlack),
                 )
             } else {
                 val titleRes = CatalogSort.entries.firstOrNull { it.sort == rest }?.title
@@ -362,8 +409,9 @@ fun AppShell(
                         onMoviePeek = { peek = it },
                         onHideBar = { barHidden = it },
                         modifier = Modifier
+                            .slideBy({ listShift.value }, stageWidth)
                             .fillMaxSize()
-                            .graphicsLayer { alpha = listVeil.value },
+                            .background(CinemaBlack),
                     )
                 }
             }
@@ -464,6 +512,9 @@ fun AppShell(
         }
     }
 }
+
+private fun Modifier.slideBy(fraction: () -> Float, widthPx: Int): Modifier =
+    offset { IntOffset((fraction() * widthPx).roundToInt(), 0) }
 
 private fun Modifier.holdOffscreen(): Modifier =
     layout { measurable, constraints ->

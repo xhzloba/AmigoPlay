@@ -174,6 +174,8 @@
     <string name="settings_extract_backdrop_hint">Ретушь берётся из текущего backdrop и меняется вместе с кадром. Включено — цвета с обложки выключаются.</string>
     <string name="settings_poster_titles">Названия под обложками</string>
     <string name="settings_poster_titles_hint">Название и год под постером. Длинное название обрезается.</string>
+    <string name="settings_large_posters">Крупные постеры</string>
+    <string name="settings_large_posters_hint">Больше обложки в полках и в полном списке фильмов. Выключено — размер как сейчас.</string>
     <string name="settings_watched_badge">Галочка просмотренного</string>
     <string name="settings_watched_badge_hint">На обложке в слайдерах, каталоге и полном списке. Синяя галочка с ободком цвета фона, если фильм или сериал просмотрен.</string>
     <string name="settings_logos">Логотипы</string>

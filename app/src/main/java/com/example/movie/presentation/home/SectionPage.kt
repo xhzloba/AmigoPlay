@@ -71,6 +71,7 @@ import com.example.movie.presentation.home.components.WatchedBadge
 import com.example.movie.presentation.home.components.WatchedBadgeHang
 import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.home.components.WatchProgress
+import com.example.movie.presentation.home.components.posterGridColumns
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
@@ -303,7 +304,7 @@ internal fun PosterGrid(
             }
     }
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
+        columns = GridCells.Fixed(posterGridColumns()),
         state = state,
         contentPadding = PaddingValues(start = PosterGridInset, end = PosterGridInset, top = topPadding, bottom = bottomPadding),
         horizontalArrangement = Arrangement.spacedBy(10.dp),

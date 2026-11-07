@@ -73,6 +73,7 @@ import com.example.movie.presentation.home.components.PosterCaptionSkeleton
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.WatchedBadge
 import com.example.movie.presentation.home.components.WatchedBadgeHang
+import com.example.movie.presentation.home.components.posterGridColumns
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.shell.ShellIcons
@@ -373,7 +374,7 @@ private fun SearchResults(
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
+        columns = GridCells.Fixed(posterGridColumns()),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -430,7 +431,7 @@ private fun SearchResults(
 private fun SearchSkeleton() {
     val showTitles = posterTitlesOn()
     LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
+        columns = GridCells.Fixed(posterGridColumns()),
         contentPadding = PaddingValues(horizontal = 22.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

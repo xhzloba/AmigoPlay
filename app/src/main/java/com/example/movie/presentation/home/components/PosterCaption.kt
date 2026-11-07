@@ -35,6 +35,18 @@ internal fun posterTitlesOn(): Boolean {
 }
 
 @Composable
+internal fun largePostersOn(): Boolean {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    return settings.largePosters
+}
+
+@Composable
+internal fun posterSize(base: Dp): Dp = if (largePostersOn()) base * 1.4f else base
+
+@Composable
+internal fun posterGridColumns(): Int = if (largePostersOn()) 2 else 3
+
+@Composable
 internal fun PosterCaption(title: String, year: Int?, modifier: Modifier = Modifier) {
     val style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
     Column(modifier.padding(top = 10.dp)) {

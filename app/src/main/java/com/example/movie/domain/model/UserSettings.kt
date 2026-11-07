@@ -11,6 +11,7 @@ data class UserSettings(
     val haptic: Boolean = true,
     val gyro: Boolean = true,
     val showPosterTitles: Boolean = false,
+    val largePosters: Boolean = false,
     val playerLogo: Boolean = true,
     val watchedBadge: Boolean = true,
 )
@@ -33,6 +34,8 @@ interface UserSettingsRepository {
     fun setGyro(enabled: Boolean)
 
     fun setShowPosterTitles(enabled: Boolean)
+
+    fun setLargePosters(enabled: Boolean)
 
     fun setPlayerLogo(enabled: Boolean)
 
