@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,7 +55,6 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -113,8 +111,6 @@ import com.example.movie.presentation.palette.forWordmark
 import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -141,18 +137,16 @@ private val LogoSlot = 52.dp
 
 private data class PosterPalette(val primary: Color, val secondary: Color)
 
-private class CoverTilt {
-    var side by mutableFloatStateOf(0f)
-}
+private data class CoverTilt(val side: Float)
 
 @Composable
 private fun rememberCoverTilt(): CoverTilt {
     val context = LocalContext.current
     val gyroOn by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val tilt = remember { CoverTilt() }
+    var side by remember { mutableFloatStateOf(0f) }
     DisposableEffect(context, gyroOn.gyro) {
         if (!gyroOn.gyro) {
-            tilt.side = 0f
+            side = 0f
             onDispose { }
         } else {
         val manager = context.getSystemService(SensorManager::class.java)
@@ -187,7 +181,7 @@ private fun rememberCoverTilt(): CoverTilt {
                     val sideTarget = (lateral / 0.4f).coerceIn(-1f, 1f) * upright
                     val alpha = 1f - exp(-dt / 0.28f)
                     smoothedSide += (sideTarget - smoothedSide) * alpha
-                    tilt.side = smoothedSide
+                    side = smoothedSide
                 }
 
                 override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -197,7 +191,7 @@ private fun rememberCoverTilt(): CoverTilt {
         }
         }
     }
-    return tilt
+    return CoverTilt(side)
 }
 
 private fun wrapRadians(angle: Float): Float {
@@ -232,23 +226,22 @@ fun PosterCarousel(
     val context = LocalContext.current
     val posterColors = remember { mutableStateMapOf<String, PosterPalette>() }
     val activeIndex = if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
-    val reportColor by rememberUpdatedState(onPlayColor)
-    LaunchedEffect(pagerState, movies) {
-        snapshotFlow {
-            val size = movies.size
-            val ready = posterColors.size
-            if (size == 0) {
-                null
-            } else {
-                Triple(pagerState.currentPage % size, pagerState.currentPageOffsetFraction, ready)
-            }
-        }.collect { sample ->
-            if (sample == null) return@collect
-            val (index, offset, _) = sample
-            val mark = wordmarkPlay(movies, index, offset, posterColors) ?: return@collect
-            val chip = capsuleTint(movies, index, offset, posterColors) ?: mark
-            reportColor(mark, chip, offset.absoluteValue > 0.02f)
-        }
+    val playOffset = pagerState.currentPageOffsetFraction
+    val play = wordmarkPlay(
+        movies = movies,
+        activeIndex = activeIndex,
+        offset = playOffset,
+        colors = posterColors,
+    )
+    val capsule = capsuleTint(
+        movies = movies,
+        activeIndex = activeIndex,
+        offset = playOffset,
+        colors = posterColors,
+    )
+    SideEffect {
+        val color = play ?: return@SideEffect
+        onPlayColor(color, capsule ?: color, playOffset.absoluteValue > 0.02f)
     }
     val active = movies.getOrNull(activeIndex)
     val tilt = rememberCoverTilt()
@@ -385,6 +378,9 @@ fun PosterCarousel(
                 },
             ) { page ->
                 val movie = movies[page % movies.size]
+                val pageOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
+                val distance = pageOffset.absoluteValue
+                val active = page == pagerState.currentPage && distance < 0.12f
                 var posterReady by remember(movie.id) { mutableStateOf(false) }
                 var holdProgress by remember { mutableFloatStateOf(0f) }
                 var pressed by remember { mutableStateOf(false) }
@@ -393,28 +389,19 @@ fun PosterCarousel(
                 val shine = remember(page) { Animatable(0f) }
                 val travel = shine.value
                 val shineTint = posterColors[movie.id]?.primary ?: Color.White
-                LaunchedEffect(page, posterReady) {
-                    snapshotFlow {
-                        val pageOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
-                        posterReady && page == pagerState.currentPage && pageOffset.absoluteValue < 0.12f
+                LaunchedEffect(active, posterReady) {
+                    if (!active || !posterReady) {
+                        shine.snapTo(0f)
+                        return@LaunchedEffect
                     }
-                        .distinctUntilChanged()
-                        .collectLatest { active ->
-                            if (!active) {
-                                shine.snapTo(0f)
-                                return@collectLatest
-                            }
-                            delay(520)
-                            shine.animateTo(1f, tween(1600, easing = FastOutSlowInEasing))
-                        }
+                    delay(520)
+                    shine.animateTo(1f, tween(1600, easing = FastOutSlowInEasing))
                 }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(if (page == pagerState.currentPage) 2f else 0f)
+                        .zIndex(2f - distance)
                         .graphicsLayer {
-                            val pageOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
-                            val distance = pageOffset.absoluteValue
                             val clamped = distance.coerceIn(0f, 1f)
                             val facing = 1f - clamped
                             val scale = lerp(1f, NeighborScale, clamped) * pressScale
@@ -439,10 +426,7 @@ fun PosterCarousel(
                         .holdCue(holdProgress)
                         .drawWithContent {
                             drawContent()
-                            val pageOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
-                            val shade = lerp(0f, 0.46f, pageOffset.absoluteValue.coerceIn(0f, 1f))
-                            if (shade > 0.01f) drawRect(Color.Black.copy(alpha = shade))
-                            if (!posterReady || travel <= 0f || travel >= 1f) return@drawWithContent
+                            if (!active || !posterReady || travel <= 0f || travel >= 1f) return@drawWithContent
                             val envelope = sin(travel * PI.toFloat())
                             val lift = Color(
                                 red = (shineTint.red * 0.55f + 0.45f).coerceIn(0f, 1f),
@@ -469,15 +453,28 @@ fun PosterCarousel(
                         modifier = Modifier.fillMaxSize(),
                         onReady = { posterReady = true },
                     )
+                    val shade = lerp(0f, 0.46f, distance.coerceIn(0f, 1f))
+                    if (shade > 0.01f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = shade)),
+                        )
+                    }
                 }
             }
             }
+            val pageShift = pagerState.currentPageOffsetFraction
+            val clamped = pageShift.absoluteValue.coerceIn(0f, 1f)
+            val settle = (1f - clamped / 0.28f).coerceIn(0f, 1f)
+            val appear = settle * settle * (3f - 2f * settle)
             PosterReflection(
                 movie = active,
                 width = fittedWidth,
                 cardHeight = cardHeight,
-                pagerState = pagerState,
-                tilt = tilt,
+                appear = appear,
+                pageShift = pageShift,
+                tiltSide = tilt.side,
             )
             }
         }
@@ -487,7 +484,7 @@ fun PosterCarousel(
         PagerDots(
             count = movies.size,
             activeIndex = activeIndex,
-            pagerState = pagerState,
+            offsetFraction = pagerState.currentPageOffsetFraction,
             onSelect = { index ->
                 if (!loop) return@PagerDots
                 val delta = index - activeIndex
@@ -501,12 +498,12 @@ fun PosterCarousel(
 private fun PagerDots(
     count: Int,
     activeIndex: Int,
-    pagerState: PagerState,
+    offsetFraction: Float,
     onSelect: (Int) -> Unit,
 ) {
     if (count <= 0) return
     val window = minOf(DotWindow, count)
-    val position = activeIndex + pagerState.currentPageOffsetFraction
+    val position = activeIndex + offsetFraction
     val maxStart = (count - window).coerceAtLeast(0).toFloat()
     val anchor = (window - 1) / 2f
     val start = (position - anchor).coerceIn(0f, maxStart)
@@ -893,8 +890,9 @@ private fun PosterReflection(
     movie: Movie?,
     width: androidx.compose.ui.unit.Dp,
     cardHeight: androidx.compose.ui.unit.Dp,
-    pagerState: PagerState,
-    tilt: CoverTilt,
+    appear: Float,
+    pageShift: Float,
+    tiltSide: Float,
 ) {
     val context = LocalContext.current
     var image by remember(movie?.id) { mutableStateOf<ImageBitmap?>(null) }
@@ -913,6 +911,8 @@ private fun PosterReflection(
         image = bitmap?.asImageBitmap()
     }
     val bitmap = image
+    val clamped = pageShift.absoluteValue.coerceIn(0f, 1f)
+    val facing = 1f - clamped
     Box(
         modifier = Modifier
             .layout { measurable, constraints ->
@@ -928,22 +928,17 @@ private fun PosterReflection(
             .width(width)
             .height(ReflectionHeight)
             .graphicsLayer {
-                val pageShift = pagerState.currentPageOffsetFraction
-                val clamped = pageShift.absoluteValue.coerceIn(0f, 1f)
-                val facing = 1f - clamped
-                val settle = (1f - clamped / 0.28f).coerceIn(0f, 1f)
-                val appear = settle * settle * (3f - 2f * settle)
                 transformOrigin = TransformOrigin(0.5f, 0f)
                 val scale = lerp(1f, NeighborScale, clamped)
                 scaleX = scale
                 scaleY = scale
                 translationX = pageShift * size.width * NeighborShift +
-                    tilt.side * 10.dp.toPx() * facing
+                    tiltSide * 10.dp.toPx() * facing
                 alpha = appear
                 compositingStrategy = CompositingStrategy.Offscreen
             },
     ) {
-        if (bitmap != null) {
+        if (bitmap != null && appear > 0.01f) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()

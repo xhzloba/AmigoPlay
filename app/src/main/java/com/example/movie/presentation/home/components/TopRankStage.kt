@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -65,7 +64,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -99,7 +97,6 @@ import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -170,6 +167,10 @@ private fun TopRankPager(
     }
     val page = pagerState.currentPage.coerceIn(0, movies.lastIndex)
     val movie = movies[page]
+    val drift = pagerState.currentPageOffsetFraction.absoluteValue
+    val appear = smoothStep((1f - drift / 0.38f).coerceIn(0f, 1f))
+    val position = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+        .coerceIn(0f, movies.lastIndex.toFloat())
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -186,9 +187,9 @@ private fun TopRankPager(
                 Box(Modifier.fillMaxWidth().height(cardHeight)) {
                     TopRankReflection(
                         movie = movie,
-                        pagerState = pagerState,
                         width = cardWidth,
                         cardHeight = cardHeight,
+                        appear = appear,
                         modifier = Modifier
                             .zIndex(0f)
                             .align(Alignment.BottomCenter)
@@ -208,14 +209,12 @@ private fun TopRankPager(
                         key = { index -> movies[index].id },
                     ) { index ->
                         val item = movies[index]
+                        val pageOffset = (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
                         TopRankCard(
                             movie = item,
-                            pagerState = pagerState,
-                            index = index,
+                            pageOffset = pageOffset,
                             onClick = {
                                 tick?.invoke()
-                                val pageOffset =
-                                    (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
                                 if (pageOffset.absoluteValue < 0.35f) {
                                     onMovieClick(item.id)
                                 } else {
@@ -233,10 +232,8 @@ private fun TopRankPager(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
-                    val drift = pagerState.currentPageOffsetFraction.absoluteValue
-                    val shown = smoothStep((1f - drift / 0.38f).coerceIn(0f, 1f))
-                    alpha = shown
-                    translationY = (1f - shown) * 8.dp.toPx()
+                    alpha = appear
+                    translationY = (1f - appear) * 8.dp.toPx()
                 }
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -355,7 +352,7 @@ private fun TopRankPager(
         }
         Spacer(Modifier.height(16.dp))
         RankTrack(
-            pagerState = pagerState,
+            position = position,
             count = movies.size,
             onScrub = { fraction ->
                 val last = movies.lastIndex
@@ -369,11 +366,13 @@ private fun TopRankPager(
 @Composable
 private fun TopRankCard(
     movie: Movie,
-    pagerState: PagerState,
-    index: Int,
+    pageOffset: Float,
     onClick: () -> Unit,
     onPeek: () -> Unit,
 ) {
+    val distance = pageOffset.absoluteValue
+    val clamped = distance.coerceIn(0f, 1f)
+    val active = distance < 0.12f
     var posterReady by remember(movie.id) { mutableStateOf(false) }
     var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
     var pressed by remember(movie.id) { mutableStateOf(false) }
@@ -381,29 +380,19 @@ private fun TopRankCard(
     val wave = remember(movie.id) { PosterWave() }
     val shine = remember(movie.id) { Animatable(0f) }
     val travel = shine.value
-    LaunchedEffect(index, posterReady) {
-        snapshotFlow {
-            val pageOffset = (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
-            posterReady && pageOffset.absoluteValue < 0.12f
+    LaunchedEffect(active, posterReady) {
+        if (!active || !posterReady) {
+            shine.snapTo(0f)
+            return@LaunchedEffect
         }
-            .distinctUntilChanged()
-            .collectLatest { active ->
-                if (!active) {
-                    shine.snapTo(0f)
-                    return@collectLatest
-                }
-                delay(420)
-                shine.animateTo(1f, tween(1500, easing = FastOutSlowInEasing))
-            }
+        delay(420)
+        shine.animateTo(1f, tween(1500, easing = FastOutSlowInEasing))
     }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .zIndex(if (index == pagerState.currentPage) 2f else 0f)
+            .zIndex(2f - distance)
             .graphicsLayer {
-                val pageOffset = (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
-                val distance = pageOffset.absoluteValue
-                val clamped = distance.coerceIn(0f, 1f)
                 val scale = lerp(1f, NeighborScale, clamped) * pressScale
                 scaleX = scale
                 scaleY = scale
@@ -426,10 +415,7 @@ private fun TopRankCard(
             .holdCue(holdProgress)
             .drawWithContent {
                 drawContent()
-                val pageOffset = (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
-                val shade = pageOffset.absoluteValue.coerceIn(0f, 1f)
-                if (shade > 0.01f) drawRect(Color.Black.copy(alpha = lerp(0f, 0.58f, shade)))
-                if (!posterReady || travel <= 0f || travel >= 1f) return@drawWithContent
+                if (!active || !posterReady || travel <= 0f || travel >= 1f) return@drawWithContent
                 val envelope = sin(travel * PI.toFloat())
                 val head = lerp(-0.35f, 1.2f, travel)
                 drawRect(
@@ -457,15 +443,22 @@ private fun TopRankCard(
                 .fillMaxSize()
                 .background(Color(0xFF1C1C1E)),
         )
+        if (clamped > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = lerp(0f, 0.58f, clamped))),
+            )
+        }
     }
 }
 
 @Composable
 private fun TopRankReflection(
     movie: Movie,
-    pagerState: PagerState,
     width: androidx.compose.ui.unit.Dp,
     cardHeight: androidx.compose.ui.unit.Dp,
+    appear: Float,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -490,15 +483,14 @@ private fun TopRankReflection(
             .width(width)
             .height(ReflectionHeight)
             .graphicsLayer {
-                val drift = pagerState.currentPageOffsetFraction.absoluteValue
                 transformOrigin = TransformOrigin(0.5f, 0f)
-                alpha = smoothStep((1f - drift / 0.38f).coerceIn(0f, 1f))
+                alpha = appear
                 clip = false
                 compositingStrategy = CompositingStrategy.Offscreen
             }
             .clip(RoundedCornerShape(topStart = width * 0.06f, topEnd = width * 0.06f)),
     ) {
-        if (bitmap != null) {
+        if (bitmap != null && appear > 0.01f) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val srcH = (bitmap.height * (size.height / cardHeight.toPx()))
                     .roundToInt()
@@ -530,15 +522,17 @@ private fun TopRankReflection(
 
 @Composable
 private fun RankTrack(
-    pagerState: PagerState,
+    position: Float,
     count: Int,
     onScrub: (Float) -> Unit,
     onScrubbing: (Boolean) -> Unit,
 ) {
     if (count <= 1) return
+    val fraction = (position / (count - 1)).coerceIn(0f, 1f)
     val thumb = 18.dp
     var dragging by remember { mutableStateOf(false) }
-    val dragFraction = remember { mutableFloatStateOf(0f) }
+    val dragFraction = remember { mutableFloatStateOf(fraction) }
+    val shown = if (dragging) dragFraction.floatValue else fraction
     val scrub = rememberUpdatedState(onScrub)
     val scrubbing = rememberUpdatedState(onScrubbing)
     Row(
@@ -596,21 +590,10 @@ private fun RankTrack(
                     .height(1.dp)
                     .background(Color.White.copy(alpha = 0.14f)),
             )
-            val travel = with(LocalDensity.current) { (maxWidth - thumb).toPx() }
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .graphicsLayer {
-                        val last = (count - 1).toFloat()
-                        val fraction = if (dragging) {
-                            dragFraction.floatValue
-                        } else {
-                            val spot = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
-                                .coerceIn(0f, last)
-                            (spot / last).coerceIn(0f, 1f)
-                        }
-                        translationX = travel * fraction
-                    }
+                    .offset(x = (maxWidth - thumb) * shown)
                     .size(thumb)
                     .clip(CircleShape)
                     .background(Color.White),
