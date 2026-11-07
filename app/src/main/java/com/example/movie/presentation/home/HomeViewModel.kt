@@ -17,11 +17,13 @@ import com.example.movie.data.search.SearchHistoryStore
 import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.usecase.SearchMoviesUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class HomeViewModel(
@@ -63,11 +65,36 @@ class HomeViewModel(
                 _state.value = _state.value.copy(watched = saved.map { it.toMovie() })
             }
         }
-        loadShelves()
-        loadRecommendations()
-        loadWatching()
-        loadTop()
-        loadBest()
+        viewModelScope.launch { loadShelves() }
+        viewModelScope.launch { loadRecommendations(keep = false) }
+        viewModelScope.launch { loadWatching(keep = false) }
+        viewModelScope.launch { loadTop(keep = false) }
+        viewModelScope.launch { loadBest(keep = false) }
+    }
+
+    fun refresh() {
+        if (_state.value.refreshing) return
+        viewModelScope.launch {
+            _state.update { it.copy(refreshing = true) }
+            moviesJob?.cancel()
+            try {
+                coroutineScope {
+                    launch { loadRecommendations(keep = true) }
+                    launch { loadWatching(keep = true) }
+                    launch { loadTop(keep = true) }
+                    launch { loadBest(keep = true) }
+                    launch {
+                        if (_state.value.shelves.isEmpty() || _state.value.selectedId == null) {
+                            loadShelves()
+                        } else {
+                            reloadSelectedShelf()
+                        }
+                    }
+                }
+            } finally {
+                _state.update { it.copy(refreshing = false) }
+            }
+        }
     }
 
     fun select(id: String) {
@@ -140,121 +167,127 @@ class HomeViewModel(
     }
 
     fun retry() {
-        if (!_state.value.recommendationsReady || _state.value.recommendations.isEmpty()) {
-            loadRecommendations()
-        }
-        if (!_state.value.watchingReady || _state.value.watching.isEmpty()) {
-            loadWatching()
-        }
-        if (!_state.value.topReady || _state.value.top.isEmpty()) {
-            loadTop()
-        }
-        if (!_state.value.bestReady || _state.value.best.isEmpty()) {
-            loadBest()
-        }
-        val selectedId = _state.value.selectedId
-        if (_state.value.shelves.isEmpty() || selectedId == null) {
-            loadShelves()
-        } else {
-            cache.remove(selectedId)
-            showShelf(selectedId)
-        }
-    }
-
-    private fun loadRecommendations() {
         viewModelScope.launch {
-            if (_state.value.recommendations.isEmpty()) {
-                _state.value = _state.value.copy(recommendationsReady = false)
+            if (!_state.value.recommendationsReady || _state.value.recommendations.isEmpty()) {
+                loadRecommendations(keep = false)
             }
-            getRecommendations()
-                .onSuccess { movies ->
-                    _state.value = _state.value.copy(
-                        recommendations = movies,
-                        recommendationsReady = true,
-                    )
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        recommendations = emptyList(),
-                        recommendationsReady = true,
-                    )
-                }
-        }
-    }
-
-    private fun loadWatching() {
-        viewModelScope.launch {
-            if (_state.value.watching.isEmpty()) {
-                _state.value = _state.value.copy(watchingReady = false)
+            if (!_state.value.watchingReady || _state.value.watching.isEmpty()) {
+                loadWatching(keep = false)
             }
-            getShelfMovies(CatalogQuery(sort = "watching"), limit = 15)
-                .onSuccess { movies ->
-                    _state.value = _state.value.copy(
-                        watching = movies,
-                        watchingReady = true,
-                    )
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(
-                        watching = emptyList(),
-                        watchingReady = true,
-                    )
-                }
-        }
-    }
-
-    private fun loadTop() {
-        viewModelScope.launch {
-            if (_state.value.top.isEmpty()) {
-                _state.value = _state.value.copy(topReady = false)
+            if (!_state.value.topReady || _state.value.top.isEmpty()) {
+                loadTop(keep = false)
             }
-            getTopMovies()
-                .onSuccess { movies ->
-                    _state.value = _state.value.copy(top = movies, topReady = true)
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(top = emptyList(), topReady = true)
-                }
-        }
-    }
-
-    private fun loadBest() {
-        viewModelScope.launch {
-            if (_state.value.best.isEmpty()) {
-                _state.value = _state.value.copy(bestReady = false)
+            if (!_state.value.bestReady || _state.value.best.isEmpty()) {
+                loadBest(keep = false)
             }
-            getShelfMovies(CatalogQuery(sort = "rating", type = "movie"))
-                .onSuccess { movies ->
-                    _state.value = _state.value.copy(best = movies.take(15), bestReady = true)
-                }
-                .onFailure {
-                    _state.value = _state.value.copy(best = emptyList(), bestReady = true)
-                }
+            val selectedId = _state.value.selectedId
+            if (_state.value.shelves.isEmpty() || selectedId == null) {
+                loadShelves()
+            } else {
+                cache.remove(selectedId)
+                showShelf(selectedId)
+            }
         }
     }
 
-    private fun loadShelves() {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(
-                shelves = emptyList(),
-                selectedId = null,
-                movies = emptyList(),
-                phase = HomePhase.Loading,
-            )
-            getHomeShelves()
-                .onSuccess { shelves ->
-                    _state.value = _state.value.copy(shelves = shelves)
-                    val first = shelves.firstOrNull()
-                    if (first == null) {
-                        _state.value = _state.value.copy(phase = HomePhase.Empty)
-                    } else {
-                        showShelf(first.id)
-                    }
-                }
-                .onFailure { error ->
-                    _state.value = _state.value.copy(phase = HomePhase.Failed(error.asDataError()))
-                }
+    private suspend fun loadRecommendations(keep: Boolean) {
+        if (!keep && _state.value.recommendations.isEmpty()) {
+            _state.update { it.copy(recommendationsReady = false) }
         }
+        getRecommendations()
+            .onSuccess { movies ->
+                _state.update { it.copy(recommendations = movies, recommendationsReady = true) }
+            }
+            .onFailure {
+                if (keep && _state.value.recommendations.isNotEmpty()) return@onFailure
+                _state.update { it.copy(recommendations = emptyList(), recommendationsReady = true) }
+            }
+    }
+
+    private suspend fun loadWatching(keep: Boolean) {
+        if (!keep && _state.value.watching.isEmpty()) {
+            _state.update { it.copy(watchingReady = false) }
+        }
+        getShelfMovies(CatalogQuery(sort = "watching"), limit = 15)
+            .onSuccess { movies ->
+                _state.update { it.copy(watching = movies, watchingReady = true) }
+            }
+            .onFailure {
+                if (keep && _state.value.watching.isNotEmpty()) return@onFailure
+                _state.update { it.copy(watching = emptyList(), watchingReady = true) }
+            }
+    }
+
+    private suspend fun loadTop(keep: Boolean) {
+        if (!keep && _state.value.top.isEmpty()) {
+            _state.update { it.copy(topReady = false) }
+        }
+        getTopMovies()
+            .onSuccess { movies ->
+                _state.update { it.copy(top = movies, topReady = true) }
+            }
+            .onFailure {
+                if (keep && _state.value.top.isNotEmpty()) return@onFailure
+                _state.update { it.copy(top = emptyList(), topReady = true) }
+            }
+    }
+
+    private suspend fun loadBest(keep: Boolean) {
+        if (!keep && _state.value.best.isEmpty()) {
+            _state.update { it.copy(bestReady = false) }
+        }
+        getShelfMovies(CatalogQuery(sort = "rating", type = "movie"))
+            .onSuccess { movies ->
+                _state.update { it.copy(best = movies.take(15), bestReady = true) }
+            }
+            .onFailure {
+                if (keep && _state.value.best.isNotEmpty()) return@onFailure
+                _state.update { it.copy(best = emptyList(), bestReady = true) }
+            }
+    }
+
+    private suspend fun reloadSelectedShelf() {
+        val id = _state.value.selectedId ?: return
+        val shelf = _state.value.shelves.firstOrNull { it.id == id } ?: return
+        cache.remove(id)
+        var result = getShelfMovies(shelf.query)
+        if (result.isFailure) {
+            delay(600)
+            if (_state.value.selectedId != id) return
+            result = getShelfMovies(shelf.query)
+        }
+        result.onSuccess { movies ->
+            if (movies.isNotEmpty()) cache[id] = movies
+            if (_state.value.selectedId != id) return@onSuccess
+            _state.update {
+                it.copy(
+                    movies = movies,
+                    phase = if (movies.isEmpty()) HomePhase.Empty else HomePhase.Ready,
+                )
+            }
+        }
+    }
+
+    private suspend fun loadShelves() {
+        _state.value = _state.value.copy(
+            shelves = emptyList(),
+            selectedId = null,
+            movies = emptyList(),
+            phase = HomePhase.Loading,
+        )
+        getHomeShelves()
+            .onSuccess { shelves ->
+                _state.value = _state.value.copy(shelves = shelves)
+                val first = shelves.firstOrNull()
+                if (first == null) {
+                    _state.value = _state.value.copy(phase = HomePhase.Empty)
+                } else {
+                    showShelf(first.id)
+                }
+            }
+            .onFailure { error ->
+                _state.value = _state.value.copy(phase = HomePhase.Failed(error.asDataError()))
+            }
     }
 
     private fun showShelf(id: String) {

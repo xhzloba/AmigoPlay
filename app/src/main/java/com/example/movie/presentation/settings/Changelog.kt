@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.65.0",
+            added = listOf(
+                "На главной и в каталоге свайп вниз тянет круг, как в системе. Отпускаешь — полки обновляются. Постеры остаются, пока не придёт ответ.",
+            ),
+        ),
+        Release(
             version = "1.64.0",
             added = listOf(
                 "У «Истории просмотров» стрелка в заголовке с первого фильма, не с пятнадцатого. Полный список открывается сразу. В полке по-прежнему не больше 15.",

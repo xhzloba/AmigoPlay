@@ -83,6 +83,7 @@ import com.example.movie.presentation.home.components.CategoryTabs
 import com.example.movie.presentation.home.components.CategoryTabsSkeleton
 import com.example.movie.presentation.home.components.CoverStackSkeleton
 import com.example.movie.presentation.home.components.LogoMood
+import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
 import com.example.movie.presentation.home.components.TopRankStage
@@ -113,6 +114,7 @@ fun HomeScreen(
     onClearRecent: () -> Unit,
     onOpenSection: (HomeSection) -> Unit = {},
     onPlayResume: (String) -> Unit = {},
+    onRefresh: () -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
     presentSearch: Boolean = true,
     modifier: Modifier = Modifier,
@@ -157,9 +159,15 @@ fun HomeScreen(
     }
     val cover = if (searchCover) veil.value else 0f
     SideEffect { onSearchCover(cover) }
+    val refreshOffset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
+        BrandTopInset + 88.dp
     Box(modifier = modifier.fillMaxSize()) {
-        Box(
-            Modifier
+        PageRefresh(
+            refreshing = state.refreshing,
+            onRefresh = onRefresh,
+            indicatorOffset = refreshOffset,
+            enabled = state.shelves.isNotEmpty() && !state.searchOpen,
+            modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = 1f - veil.value },
         ) {

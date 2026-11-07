@@ -49,6 +49,7 @@ import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.haptic.rememberHapticTick
+import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.BrandWordmark
@@ -100,7 +101,16 @@ fun CatalogScreen(
     val brandReserve = if (brandHeight == 0) 40.dp else with(density) { brandHeight.toDp() }
     val scrim = (scroll.value / with(density) { 28.dp.toPx() }).coerceIn(0f, 1f)
     val failed = state.shelves.all { it.ready && it.movies.isEmpty() }
-    Box(modifier = modifier.fillMaxSize()) {
+    val refreshOffset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
+        BrandTopInset + 88.dp
+    PageRefresh(
+        refreshing = state.refreshing,
+        onRefresh = viewModel::refresh,
+        indicatorOffset = refreshOffset,
+        enabled = !failed,
+        modifier = modifier.fillMaxSize(),
+    ) {
+    Box(Modifier.fillMaxSize()) {
         if (failed) {
             SectionError(viewModel::retry)
         } else {
@@ -155,6 +165,7 @@ fun CatalogScreen(
                 .padding(top = BrandTopInset)
                 .onSizeChanged { brandHeight = it.height },
         )
+    }
     }
 }
 

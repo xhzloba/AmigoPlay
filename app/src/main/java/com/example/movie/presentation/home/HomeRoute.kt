@@ -49,6 +49,7 @@ fun HomeRoute(
         onClearRecent = viewModel::clearRecent,
         onOpenSection = onOpenSection,
         onPlayResume = onPlayResume,
+        onRefresh = viewModel::refresh,
         onSearchCover = onSearchCover,
         presentSearch = presentSearch,
     )

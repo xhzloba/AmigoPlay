@@ -39,6 +39,7 @@ internal data class CatalogRail(
 
 internal data class CatalogUiState(
     val shelves: List<CatalogRail> = emptyList(),
+    val refreshing: Boolean = false,
 )
 
 internal class CatalogViewModel(
@@ -54,37 +55,51 @@ internal class CatalogViewModel(
     fun ensureLoaded() {
         if (started) return
         started = true
-        load()
+        load(keep = false)
     }
 
     fun retry() {
         started = true
         _state.value = CatalogUiState(sorts.map { CatalogRail(it) })
-        load()
+        load(keep = false)
     }
 
-    private fun load() {
+    fun refresh() {
+        if (_state.value.refreshing) return
+        load(keep = true)
+    }
+
+    private fun load(keep: Boolean) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            sorts.map { sort ->
-                async {
-                    val result = getShelfMovies(CatalogQuery(sort = sort.sort, type = type))
-                    _state.update { current ->
-                        current.copy(
-                            shelves = current.shelves.map { rail ->
-                                if (rail.sort != sort) {
-                                    rail
-                                } else {
-                                    rail.copy(
-                                        movies = result.getOrDefault(emptyList()),
-                                        ready = true,
-                                    )
-                                }
-                            },
-                        )
+            if (keep) _state.update { it.copy(refreshing = true) }
+            try {
+                sorts.map { sort ->
+                    async {
+                        val result = getShelfMovies(CatalogQuery(sort = sort.sort, type = type))
+                        _state.update { current ->
+                            current.copy(
+                                shelves = current.shelves.map { rail ->
+                                    if (rail.sort != sort) {
+                                        rail
+                                    } else {
+                                        val movies = if (result.isSuccess) {
+                                            result.getOrDefault(emptyList())
+                                        } else if (keep) {
+                                            rail.movies
+                                        } else {
+                                            emptyList()
+                                        }
+                                        rail.copy(movies = movies, ready = true)
+                                    }
+                                },
+                            )
+                        }
                     }
-                }
-            }.awaitAll()
+                }.awaitAll()
+            } finally {
+                if (keep) _state.update { it.copy(refreshing = false) }
+            }
         }
     }
 }
