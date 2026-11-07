@@ -587,6 +587,7 @@ private fun DetailContent(
                         seen = seen,
                         onClick = {
                             tick?.invoke()
+                            if (!seen) resumeStore.forget(detail.id)
                             watched.toggle(detail.toSaved())
                         },
                     )

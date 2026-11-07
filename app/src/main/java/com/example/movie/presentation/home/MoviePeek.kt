@@ -153,6 +153,7 @@ private fun MovieMenu(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val favorites = LocalAppContainer.current.favorites
     val watched = LocalAppContainer.current.watched
+    val resumeStore = LocalAppContainer.current.resume
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val watchedIds by watched.ids.collectAsStateWithLifecycle()
     val saved = movie.id in savedIds
@@ -229,6 +230,7 @@ private fun MovieMenu(
                 marked = seen,
                 onClick = {
                     tick?.invoke()
+                    if (!seen) resumeStore.forget(movie.id)
                     watched.toggle(movie.toSaved())
                     onDismiss()
                 },

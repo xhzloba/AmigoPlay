@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.65.1",
+            fixed = listOf(
+                "«Просмотрено» в долгом нажатии и в карточке убирает фильм из «Продолжить просмотр» на главной и в «Моё». Он сразу попадает в «Просмотрено».",
+            ),
+        ),
+        Release(
             version = "1.65.0",
             added = listOf(
                 "На главной и в каталоге свайп вниз тянет круг, как в системе. Отпускаешь — полки обновляются. Постеры остаются, пока не придёт ответ.",
