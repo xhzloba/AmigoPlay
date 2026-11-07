@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.69.9",
+            fixed = listOf(
+                "Короткий свайп по верху больше не дёргает блок со слайдерами. Кружок обновления вылезает только на длинном потяге вниз, затемнение под логотипом при этом не перерисовывается.",
+            ),
+        ),
+        Release(
             version = "1.69.8",
             fixed = listOf(
                 "Полка и верхняя обложка снова листаются сразу. У края обложка тянется за палец и встаёт обратно.",

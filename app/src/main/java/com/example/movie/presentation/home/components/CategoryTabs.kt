@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.movie.presentation.home.components
 
 import android.graphics.Bitmap
@@ -10,6 +12,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.OverscrollConfiguration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -36,6 +41,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -177,6 +183,7 @@ internal fun CategoryTabs(
                 BrandRow(play = play.value, onSearch = onSearch, hat = hat, mustache = mustache)
                 Spacer(Modifier.height(12.dp))
             }
+            CompositionLocalProvider(LocalOverscrollConfiguration provides OverscrollConfiguration()) {
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(start = HomeContentInset),
@@ -191,6 +198,7 @@ internal fun CategoryTabs(
                     )
                 }
                 item(key = "tail") { Spacer(Modifier.width(side)) }
+            }
             }
         }
     }
@@ -291,7 +299,6 @@ internal fun BrandRow(
     blend: Animatable<Float, AnimationVector1D>? = null,
     modifier: Modifier = Modifier,
 ) {
-    val shown = if (blend == null) play else lerp(play, PlayBlue, blend.value)
     val tick = rememberHapticTick()
     Row(
         modifier = modifier
@@ -299,7 +306,7 @@ internal fun BrandRow(
             .padding(start = HomeContentInset - BrandLogoBleed, end = HomeContentInset - 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BrandWordmark(play = shown, hat = hat, mustache = mustache)
+        BrandWordmark(play = play, blend = blend, hat = hat, mustache = mustache)
         Spacer(Modifier.weight(1f))
         Box(
             modifier = Modifier
@@ -402,6 +409,7 @@ internal fun BrandWordmark(
     play: Color,
     hat: Boolean = false,
     mustache: Boolean = false,
+    blend: Animatable<Float, AnimationVector1D>? = null,
 ) {
     val context = LocalContext.current
     val logo = remember {
@@ -441,6 +449,7 @@ internal fun BrandWordmark(
         Canvas(
             modifier = Modifier
                 .matchParentSize()
+                .graphicsLayer()
                 .semantics { contentDescription = "AmigoPlay" },
         ) {
             val dst = IntSize(size.width.roundToInt(), size.height.roundToInt())
@@ -450,11 +459,15 @@ internal fun BrandWordmark(
                 filterQuality = FilterQuality.High,
                 colorFilter = ColorFilter.tint(Color.White),
             )
+        }
+        Canvas(Modifier.matchParentSize()) {
+            val shown = if (blend == null) play else lerp(play, PlayBlue, blend.value)
+            val dst = IntSize(size.width.roundToInt(), size.height.roundToInt())
             drawImage(
                 image = logo.play,
                 dstSize = dst,
                 filterQuality = FilterQuality.High,
-                colorFilter = ColorFilter.tint(play),
+                colorFilter = ColorFilter.tint(shown),
             )
         }
         if (hat || landed > 0.01f) {

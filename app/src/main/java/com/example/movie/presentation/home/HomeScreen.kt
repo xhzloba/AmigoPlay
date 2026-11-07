@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.movie.presentation.home
 
 import androidx.activity.compose.BackHandler
@@ -8,6 +10,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -257,6 +262,7 @@ fun HomeScreen(
                     .weight(1f)
                     .fillMaxWidth(),
             ) {
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -412,6 +418,7 @@ fun HomeScreen(
                     }
                 }
             }
+            }
             BrandScrim(
                 progress = {
                     if (listState.firstVisibleItemIndex > 0) {
@@ -465,6 +472,7 @@ private fun BrandScrim(progress: () -> Float, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .height(top + BrandTopInset + 40.dp + 96.dp)
             .graphicsLayer { alpha = progress() }
+            .graphicsLayer()
             .drawBehind {
                 drawRect(
                     brush = Brush.verticalGradient(

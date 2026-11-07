@@ -1,8 +1,13 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.movie.presentation.home.components
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.rememberSplineBasedDecay
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.OverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -27,6 +32,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -216,6 +222,7 @@ private fun RecommendationPager(
     val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val end = (maxWidth - posterWidth - RailStart).coerceAtLeast(RailStart)
+        CompositionLocalProvider(LocalOverscrollConfiguration provides OverscrollConfiguration()) {
         LazyRow(
             state = listState,
             contentPadding = PaddingValues(start = RailStart, end = end),
@@ -283,6 +290,7 @@ private fun RecommendationPager(
                     if (showTitles) PosterCaption(movie.title, movie.year)
                 }
             }
+        }
         }
     }
 }

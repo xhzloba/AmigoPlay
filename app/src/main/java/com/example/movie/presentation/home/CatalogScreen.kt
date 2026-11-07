@@ -1,7 +1,11 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.movie.presentation.home
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.Animatable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -24,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -120,6 +125,7 @@ fun CatalogScreen(
             key(tab.name) {
             val listState = rememberLazyListState()
             Box(Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -158,6 +164,7 @@ fun CatalogScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+            }
             }
             CatalogScrim(
                 progress = {
@@ -251,6 +258,7 @@ private fun CatalogScrim(progress: () -> Float, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .height(top + BrandTopInset + 40.dp + 96.dp)
             .graphicsLayer { alpha = progress() }
+            .graphicsLayer()
             .drawBehind {
                 drawRect(
                     brush = Brush.verticalGradient(

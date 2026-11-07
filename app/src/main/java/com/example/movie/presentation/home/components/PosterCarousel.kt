@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.example.movie.presentation.home.components
 
 import android.graphics.Bitmap
@@ -14,6 +16,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.OverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -289,6 +294,7 @@ fun PosterCarousel(
                             )
                         },
                 )
+                CompositionLocalProvider(LocalOverscrollConfiguration provides OverscrollConfiguration()) {
                 HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(horizontal = sidePadding),
@@ -386,6 +392,7 @@ fun PosterCarousel(
                         )
                     }
                 }
+            }
             }
             }
             val pageShift = pagerState.currentPageOffsetFraction
