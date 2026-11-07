@@ -8,9 +8,9 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -75,9 +75,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -107,7 +106,7 @@ import com.example.movie.domain.model.isUnreleased
 import com.example.movie.domain.model.resumeClock
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.PlayBlue
-import kotlin.math.abs
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -637,21 +636,6 @@ private val HoldSheetScroll = object : NestedScrollConnection {
         Velocity(0f, available.y)
 }
 
-private fun Modifier.holdSheet(): Modifier = pointerInput(Unit) {
-    awaitEachGesture {
-        awaitFirstDown(requireUnconsumed = false)
-        while (true) {
-            val event = awaitPointerEvent(PointerEventPass.Main)
-            val change = event.changes.firstOrNull() ?: break
-            if (!change.pressed) break
-            val delta = change.positionChange()
-            if (!change.isConsumed && abs(delta.y) > abs(delta.x)) {
-                change.consume()
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EpisodeSheet(
@@ -737,7 +721,6 @@ internal fun EpisodeSheet(
                     .padding(top = 14.dp)
                     .heightIn(max = 460.dp)
                     .nestedScroll(HoldSheetScroll)
-                    .holdSheet()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
@@ -809,7 +792,7 @@ internal fun EpisodeSheet(
                             enter = fadeIn(SeasonFade) + expandVertically(SeasonTween, expandFrom = Alignment.Top),
                             exit = fadeOut(SeasonFade) + shrinkVertically(SeasonTween, shrinkTowards = Alignment.Top),
                         ) {
-                            Column {
+                            RevealEpisodes {
                                 season.episodes.forEach { episode ->
                                     EpisodeLine(
                                         season = season.number,
@@ -911,7 +894,7 @@ private fun Seasons(
                 enter = fadeIn(SeasonFade) + expandVertically(SeasonTween, expandFrom = Alignment.Top),
                 exit = fadeOut(SeasonFade) + shrinkVertically(SeasonTween, shrinkTowards = Alignment.Top),
             ) {
-                Column {
+                RevealEpisodes {
                     season.episodes.forEach { episode ->
                         EpisodeLine(
                             season = season.number,
@@ -1045,6 +1028,21 @@ private val SeasonChevron = 18.dp
 private val SeasonTween = tween<IntSize>(280, easing = FastOutSlowInEasing)
 private val SeasonArrow = tween<Float>(280, easing = FastOutSlowInEasing)
 private val SeasonFade = tween<Float>(220, easing = FastOutSlowInEasing)
+
+@Composable
+private fun RevealEpisodes(content: @Composable () -> Unit) {
+    val bring = remember { BringIntoViewRequester() }
+    val reveal = with(LocalDensity.current) { 220.dp.toPx() }
+    LaunchedEffect(Unit) {
+        repeat(8) {
+            bring.bringIntoView(Rect(0f, 0f, 1f, reveal))
+            delay(36)
+        }
+    }
+    Column(Modifier.bringIntoViewRequester(bring)) {
+        content()
+    }
+}
 
 @Composable
 private fun EpisodeBar(
