@@ -3,6 +3,7 @@ package com.example.movie.presentation.home.components
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.AnimationVector4D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -36,6 +37,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +53,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
@@ -58,6 +61,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -76,6 +80,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import com.example.movie.R
 import com.example.movie.domain.model.Shelf
+import com.example.movie.presentation.home.LocalRawTouch
 import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -178,6 +183,8 @@ internal fun CategoryTabs(
                 Spacer(Modifier.height(12.dp))
             }
             val chipFling = ScrollableDefaults.flingBehavior()
+            val chipTouch = LocalRawTouch.current ?: LocalViewConfiguration.current
+            CompositionLocalProvider(LocalViewConfiguration provides chipTouch) {
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(start = HomeContentInset),
@@ -194,6 +201,7 @@ internal fun CategoryTabs(
                     )
                 }
                 item(key = "tail") { Spacer(Modifier.width(side)) }
+            }
             }
         }
     }
@@ -291,8 +299,10 @@ internal fun BrandRow(
     onSearch: () -> Unit,
     hat: Boolean = false,
     mustache: Boolean = false,
+    blend: Animatable<Float, AnimationVector1D>? = null,
     modifier: Modifier = Modifier,
 ) {
+    val shown = if (blend == null) play else lerp(play, PlayBlue, blend.value)
     val tick = rememberHapticTick()
     Row(
         modifier = modifier
@@ -300,7 +310,7 @@ internal fun BrandRow(
             .padding(start = HomeContentInset - BrandLogoBleed, end = HomeContentInset - 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BrandWordmark(play = play, hat = hat, mustache = mustache)
+        BrandWordmark(play = shown, hat = hat, mustache = mustache)
         Spacer(Modifier.weight(1f))
         Box(
             modifier = Modifier

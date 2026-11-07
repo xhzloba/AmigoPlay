@@ -36,6 +36,7 @@ internal fun Modifier.sideScroll(
             val deltas = Channel<Float>(Channel.UNLIMITED)
             var totalX = 0f
             var totalY = 0f
+            var sidewaysSamples = 0
             var dragging = false
             val pointerId = down.id
             try {
@@ -52,11 +53,12 @@ internal fun Modifier.sideScroll(
                     if (!dragging) {
                         awaitPointerEvent(PointerEventPass.Final)
                         if (change.isConsumed) break
-                        val sideways = abs(totalX) > slop && abs(totalX) > abs(totalY) * 1.4f
-                        if (!sideways) {
-                            if (abs(totalY) > slop && abs(totalY) >= abs(totalX)) break
-                            continue
-                        }
+                        val verticalLead = abs(totalY) > slop * 0.45f && abs(totalY) > abs(totalX) * 0.4f
+                        if (verticalLead) break
+                        val sideways = abs(totalX) > slop && abs(totalX) > abs(totalY) * 2.2f
+                        if (sideways) sidewaysSamples++ else sidewaysSamples = 0
+                        val obvious = abs(totalX) > slop * 1.8f && abs(totalX) > abs(totalY) * 3f
+                        if (sidewaysSamples < 2 && !obvious) continue
                         session?.cancel()
                         session = scope.launch {
                             state.scroll(MutatePriority.UserInput) {

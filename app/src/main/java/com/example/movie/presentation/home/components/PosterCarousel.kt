@@ -98,6 +98,7 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.LocalRawTouch
 import com.example.movie.presentation.home.rememberRowSlop
 import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.home.PosterWave
@@ -293,8 +294,8 @@ fun PosterCarousel(
                             )
                         },
                 )
-                val finger = LocalViewConfiguration.current
-                val rowTouch = rememberRowSlop()
+                val finger = LocalRawTouch.current ?: LocalViewConfiguration.current
+                val rowTouch = rememberRowSlop(finger)
                 CompositionLocalProvider(LocalViewConfiguration provides rowTouch) {
                 val pageFling = PagerDefaults.flingBehavior(state = pagerState)
                 HorizontalPager(

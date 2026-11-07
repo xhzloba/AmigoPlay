@@ -49,6 +49,7 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.LocalRawTouch
 import com.example.movie.presentation.home.rememberRowSlop
 import com.example.movie.presentation.home.sideScroll
 import com.example.movie.presentation.home.PosterWave
@@ -218,8 +219,8 @@ private fun RecommendationPager(
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
     val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
-    val finger = LocalViewConfiguration.current
-    val rowTouch = rememberRowSlop()
+    val finger = LocalRawTouch.current ?: LocalViewConfiguration.current
+    val rowTouch = rememberRowSlop(finger)
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val end = (maxWidth - posterWidth - RailStart).coerceAtLeast(RailStart)
         CompositionLocalProvider(LocalViewConfiguration provides rowTouch) {

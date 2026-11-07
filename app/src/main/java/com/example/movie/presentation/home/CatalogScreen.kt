@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -119,7 +121,11 @@ fun CatalogScreen(
         } else {
             key(tab.name) {
             val listState = rememberLazyListState()
+            val systemTouch = LocalViewConfiguration.current
+            val listTouch = rememberEagerListTouch()
             Box(Modifier.fillMaxSize()) {
+            CompositionLocalProvider(LocalRawTouch provides systemTouch) {
+            CompositionLocalProvider(LocalViewConfiguration provides listTouch) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -158,6 +164,8 @@ fun CatalogScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+            }
+            }
             }
             CatalogScrim(
                 progress = {
