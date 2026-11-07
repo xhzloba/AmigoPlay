@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.69.15",
+            fixed = listOf(
+                "Заголовки полок чуть меньше.",
+                "Деталка заезжает справа, как полный список. Назад страница, с которой открыли фильм, наезжает слева.",
+            ),
+        ),
+        Release(
             version = "1.69.14",
             fixed = listOf(
                 "Главная и каталог снова листаются списком. У края страница и полки тянутся за палец и встают обратно. Кружок обновления при свайпе не появляется.",

@@ -8,13 +8,18 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -30,8 +35,14 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
+import com.example.movie.ui.theme.CinemaBlack
+import kotlin.math.roundToInt
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.detail.DetailRoute
@@ -72,7 +83,12 @@ class MainActivity : ComponentActivity() {
                     val session by rememberSaveable { mutableIntStateOf(0) }
                     var splash by rememberSaveable { mutableStateOf(true) }
                     var revealed by remember { mutableStateOf(false) }
-                    Box(Modifier.fillMaxSize()) {
+                    var stageWidth by remember { mutableIntStateOf(0) }
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .onSizeChanged { stageWidth = it.width },
+                    ) {
                         if (!splash || revealed) key(session) {
                         val stack = rememberSaveable(
                             saver = listSaver(
@@ -81,43 +97,101 @@ class MainActivity : ComponentActivity() {
                             ),
                         ) { mutableStateListOf<String>() }
                         val openedId = stack.lastOrNull()
+                        val detailShift = remember { Animatable(0f) }
+                        val coverShift = remember { Animatable(0f) }
+                        var covering by remember { mutableStateOf(false) }
+                        var presented by remember { mutableStateOf(stack.toList()) }
+                        LaunchedEffect(stack.toList()) {
+                            val move = tween<Float>(240, easing = FastOutSlowInEasing)
+                            val target = stack.toList()
+                            if (target.size == presented.size + 1 && target.dropLast(1) == presented) {
+                                covering = false
+                                coverShift.snapTo(0f)
+                                presented = target
+                                detailShift.snapTo(1f)
+                                withFrameNanos { }
+                                withFrameNanos { }
+                                detailShift.animateTo(0f, move)
+                            } else {
+                                while (
+                                    presented.size > target.size &&
+                                    presented.take(target.size) == target
+                                ) {
+                                    covering = true
+                                    detailShift.snapTo(0f)
+                                    coverShift.snapTo(-1f)
+                                    withFrameNanos { }
+                                    withFrameNanos { }
+                                    coverShift.animateTo(0f, move)
+                                    presented = presented.dropLast(1)
+                                }
+                                covering = false
+                                coverShift.snapTo(0f)
+                                if (presented != target) {
+                                    presented = target
+                                    detailShift.snapTo(0f)
+                                } else if (detailShift.value != 0f) {
+                                    detailShift.animateTo(0f, move)
+                                }
+                            }
+                        }
                         var tabName by rememberSaveable { mutableStateOf("Home") }
                         var detailPeek by remember { mutableStateOf<Movie?>(null) }
                         LaunchedEffect(openedId) { detailPeek = null }
-                        AppShell(
-                            tabName = tabName,
-                            onTabChange = { tabName = it },
-                            onMovieClick = { id -> if (stack.lastOrNull() != id) stack.add(id) },
-                            handleBack = openedId == null,
-                            session = session,
-                        )
+                        val shellCovers = covering && presented.size == 1
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .zIndex(if (shellCovers) 50f else 0f)
+                                .slideBy({ if (shellCovers) coverShift.value else 0f }, stageWidth),
+                        ) {
+                            AppShell(
+                                tabName = tabName,
+                                onTabChange = { tabName = it },
+                                onMovieClick = { id -> if (stack.lastOrNull() != id) stack.add(id) },
+                                handleBack = openedId == null,
+                                session = session,
+                            )
+                        }
                         BackHandler(enabled = openedId != null) {
                             if (detailPeek != null) detailPeek = null
                             else stack.removeAt(stack.lastIndex)
                         }
-                        if (openedId != null) {
+                        presented.forEachIndexed { index, id ->
+                            val top = index == presented.lastIndex
+                            val rides = covering && index == presented.lastIndex - 1
+                            val fraction = when {
+                                rides -> coverShift.value
+                                top && !covering -> detailShift.value
+                                else -> 0f
+                            }
                             Box(
                                 Modifier
                                     .fillMaxSize()
+                                    .zIndex(if (rides) presented.size + 5f else index + 1f)
+                                    .slideBy({ fraction }, stageWidth)
+                                    .background(CinemaBlack)
                                     .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
+                                        interactionSource = remember(id) { MutableInteractionSource() },
                                         indication = null,
                                         onClick = {},
                                     ),
                             ) {
                                 DetailRoute(
-                                    movieId = openedId,
-                                    onOpenMovie = { id -> if (stack.lastOrNull() != id) stack.add(id) },
+                                    movieId = id,
+                                    onOpenMovie = { next -> if (stack.lastOrNull() != next) stack.add(next) },
                                     onMoviePeek = { detailPeek = it },
                                 )
-                                MoviePeek(
-                                    movie = detailPeek,
-                                    onDismiss = { detailPeek = null },
-                                    onOpen = { id ->
-                                        detailPeek = null
-                                        if (stack.lastOrNull() != id) stack.add(id)
-                                    },
-                                )
+                                if (top) {
+                                    MoviePeek(
+                                        movie = detailPeek,
+                                        onDismiss = { detailPeek = null },
+                                        onOpen = { next ->
+                                            detailPeek = null
+                                            if (stack.lastOrNull() != next) stack.add(next)
+                                        },
+                                    )
+                                }
                             }
                         }
                         }
@@ -173,3 +247,6 @@ private fun NavigationGesture() {
         onDispose { view.viewTreeObserver.removeOnWindowFocusChangeListener(listener) }
     }
 }
+
+private fun Modifier.slideBy(fraction: () -> Float, widthPx: Int): Modifier =
+    offset { IntOffset((fraction() * widthPx).roundToInt(), 0) }
