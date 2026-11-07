@@ -8,6 +8,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +42,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
+private const val ArmMillis = 36L
 private const val HoldMillis = 450L
 private const val PressMillis = 110L
 private const val PressInMillis = 70
@@ -141,6 +144,16 @@ internal fun Modifier.posterWave(wave: PosterWave, light: Boolean = false): Modi
 }
 
 @Composable
+internal fun rememberEagerPageSlop(): ViewConfiguration {
+    val current = LocalViewConfiguration.current
+    return remember(current) {
+        object : ViewConfiguration by current {
+            override val touchSlop: Float = current.touchSlop * 0.4f
+        }
+    }
+}
+
+@Composable
 internal fun rememberPressScale(pressed: Boolean): Float {
     return animateFloatAsState(
         targetValue = if (pressed) 0.968f else 1f,
@@ -186,7 +199,7 @@ internal fun Modifier.holdToPeek(
             true
         }
     }.pointerInput(Unit) {
-        val slop = viewConfiguration.touchSlop
+        val slop = viewConfiguration.touchSlop * 0.45f
         var pressEpoch = 0
         coroutineScope {
             awaitEachGesture {
@@ -195,8 +208,13 @@ internal fun Modifier.holdToPeek(
                 val originFinger = fingerOnScreen(window, down)
                 val started = System.nanoTime()
                 val pressToken = ++pressEpoch
-                waves[0]?.press(origin)
-                presser[0].invoke(true)
+                var armed = false
+                val arm = launch {
+                    delay(ArmMillis)
+                    waves[0]?.press(origin)
+                    presser[0].invoke(true)
+                    armed = true
+                }
                 val buzz = launch {
                     delay(BuzzMillis)
                     motor[0]?.start()
@@ -220,9 +238,14 @@ internal fun Modifier.holdToPeek(
                         @Suppress("UNREACHABLE_CODE")
                         false
                     }
+                    arm.cancel()
                     if (tapped == false) {
                         draggedAway = true
                     } else if (tapped == true) {
+                        if (!armed) {
+                            waves[0]?.press(origin)
+                            presser[0].invoke(true)
+                        }
                         val elapsed = (System.nanoTime() - started) / 1_000_000
                         if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
                         openDetail = true
@@ -237,6 +260,7 @@ internal fun Modifier.holdToPeek(
                         }
                     }
                 } finally {
+                    arm.cancel()
                     buzz.cancel()
                     motor[0]?.stop()
                     if (draggedAway) waves[0]?.kill() else waves[0]?.release()

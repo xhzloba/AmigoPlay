@@ -36,6 +36,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -57,6 +58,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -65,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import com.example.movie.R
@@ -247,23 +250,30 @@ fun HomeScreen(
                 -used
             }
             val density = LocalDensity.current
+            val scrimDistance = with(density) { 28.dp.toPx() }
+            val parkDistance = with(density) { 12.dp.toPx() }
             var brandHeight by remember { mutableIntStateOf(0) }
-            val scrim = (scroll / with(density) { 28.dp.toPx() }).coerceIn(0f, 1f)
-            val parked = scroll < with(density) { 12.dp.toPx() }
             val playBlend = remember { androidx.compose.animation.core.Animatable(0f) }
-            LaunchedEffect(parked) {
-                playBlend.animateTo(
-                    if (parked) 0f else 1f,
-                    tween(520, easing = FastOutSlowInEasing),
-                )
+            LaunchedEffect(parkDistance) {
+                snapshotFlow { scroll < parkDistance }
+                    .distinctUntilChanged()
+                    .collect { parked ->
+                        playBlend.animateTo(
+                            if (parked) 0f else 1f,
+                            tween(520, easing = FastOutSlowInEasing),
+                        )
+                    }
             }
             val pinnedPlay = lerp(play, PlayBlue, playBlend.value)
             val brandReserve = if (brandHeight == 0) 40.dp else with(density) { brandHeight.toDp() }
+            val pageTouch = LocalViewConfiguration.current
+            val eagerTouch = rememberEagerPageSlop()
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
             ) {
+            CompositionLocalProvider(LocalViewConfiguration provides eagerTouch) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -280,9 +290,10 @@ fun HomeScreen(
                         maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
                     },
             ) {
+                CompositionLocalProvider(LocalViewConfiguration provides pageTouch) {
                 Box(
                     modifier = Modifier
-                        .scrollContent(scroll) { full ->
+                        .scrollContent({ scroll }) { full ->
                             contentHeight = full
                             maxScroll = (contentHeight - viewport).coerceAtLeast(0).toFloat()
                         }
@@ -436,8 +447,13 @@ fun HomeScreen(
                     Spacer(Modifier.height(HomeBottomClearance))
                 }
                 }
+                }
             }
-            BrandScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
+            }
+            BrandScrim(
+                progress = { (scroll / scrimDistance).coerceIn(0f, 1f) },
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
             BrandRow(
                 play = pinnedPlay,
                 onSearch = onOpenSearch,
@@ -478,13 +494,13 @@ private object NoBringIntoView : BringIntoViewSpec {
 }
 
 @Composable
-private fun BrandScrim(progress: Float, modifier: Modifier = Modifier) {
+private fun BrandScrim(progress: () -> Float, modifier: Modifier = Modifier) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     Box(
         modifier
             .fillMaxWidth()
             .height(top + BrandTopInset + 40.dp + 96.dp)
-            .graphicsLayer { alpha = progress }
+            .graphicsLayer { alpha = progress() }
             .drawBehind {
                 drawRect(
                     brush = Brush.verticalGradient(
@@ -521,7 +537,7 @@ private fun BrandScrim(progress: Float, modifier: Modifier = Modifier) {
     )
 }
 
-private fun Modifier.scrollContent(scroll: Float, onHeight: (Int) -> Unit): Modifier =
+private fun Modifier.scrollContent(scroll: () -> Float, onHeight: (Int) -> Unit): Modifier =
     layout { measurable, constraints ->
         val placeable = measurable.measure(
             constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity),
@@ -533,7 +549,7 @@ private fun Modifier.scrollContent(scroll: Float, onHeight: (Int) -> Unit): Modi
             constraints.maxHeight
         }
         layout(placeable.width, height) {
-            placeable.place(0, -scroll.roundToInt())
+            placeable.place(0, -scroll().roundToInt())
         }
     }
 

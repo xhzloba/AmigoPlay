@@ -23,6 +23,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -99,7 +101,9 @@ fun CatalogScreen(
     val scroll = remember(tab) { ScrollState(0) }
     var brandHeight by remember { mutableIntStateOf(0) }
     val brandReserve = if (brandHeight == 0) 40.dp else with(density) { brandHeight.toDp() }
-    val scrim = (scroll.value / with(density) { 28.dp.toPx() }).coerceIn(0f, 1f)
+    val scrimDistance = with(density) { 28.dp.toPx() }
+    val pageTouch = LocalViewConfiguration.current
+    val eagerTouch = rememberEagerPageSlop()
     val failed = state.shelves.all { it.ready && it.movies.isEmpty() }
     val refreshOffset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
         BrandTopInset + 88.dp
@@ -114,6 +118,7 @@ fun CatalogScreen(
         if (failed) {
             SectionError(viewModel::retry)
         } else {
+            CompositionLocalProvider(LocalViewConfiguration provides eagerTouch) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -121,6 +126,7 @@ fun CatalogScreen(
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
                     .padding(top = BrandTopInset),
             ) {
+                CompositionLocalProvider(LocalViewConfiguration provides pageTouch) {
                 Spacer(Modifier.height(brandReserve + 12.dp))
                 CategoryTabs(
                     shelves = menu,
@@ -150,10 +156,12 @@ fun CatalogScreen(
                     )
                 }
                 Spacer(Modifier.height(96.dp))
+                }
+            }
             }
         }
         CatalogScrim(
-            progress = scrim,
+            progress = { (scroll.value / scrimDistance).coerceIn(0f, 1f) },
             modifier = Modifier.align(Alignment.TopCenter),
         )
         CatalogBrand(
@@ -228,13 +236,13 @@ private fun CatalogBrand(
 }
 
 @Composable
-private fun CatalogScrim(progress: Float, modifier: Modifier = Modifier) {
+private fun CatalogScrim(progress: () -> Float, modifier: Modifier = Modifier) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     Box(
         modifier
             .fillMaxWidth()
             .height(top + BrandTopInset + 40.dp + 96.dp)
-            .graphicsLayer { alpha = progress }
+            .graphicsLayer { alpha = progress() }
             .drawBehind {
                 drawRect(
                     brush = Brush.verticalGradient(

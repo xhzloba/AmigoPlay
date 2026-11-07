@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.69.1",
+            fixed = listOf(
+                "Короткий свайп по главной и каталогу двигает список сразу, без рывка. Пока палец едет, обложка не сжимается.",
+            ),
+        ),
+        Release(
             version = "1.69.0",
             added = listOf(
                 "В настройках пункт «Крупные постеры». Выключено — размер как сейчас. Включено — обложки в полках и в ленте похожих крупнее, в полном списке, поиске и «Моё» две колонки вместо трёх.",
