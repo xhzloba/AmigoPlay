@@ -71,8 +71,9 @@ class MainActivity : ComponentActivity() {
                     NavigationGesture()
                     val session by rememberSaveable { mutableIntStateOf(0) }
                     var splash by rememberSaveable { mutableStateOf(true) }
+                    var revealed by remember { mutableStateOf(false) }
                     Box(Modifier.fillMaxSize()) {
-                        key(session) {
+                        if (!splash || revealed) key(session) {
                         val stack = rememberSaveable(
                             saver = listSaver(
                                 save = { it.toList() },
@@ -120,9 +121,12 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         }
-                        AppUpdateHost()
+                        if (!splash || revealed) AppUpdateHost()
                         if (splash) {
-                            SplashScreen(onFinished = { splash = false })
+                            SplashScreen(
+                                onReveal = { revealed = true },
+                                onFinished = { splash = false },
+                            )
                         }
                     }
                 }

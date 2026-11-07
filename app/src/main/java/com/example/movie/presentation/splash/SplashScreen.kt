@@ -7,8 +7,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,23 +15,21 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -50,21 +46,14 @@ import kotlin.math.roundToInt
 
 private val LogoHeight = 86.dp
 private val LogoAspect = 754f / 186f
-private val LetterACenter = LogoHeight * (75f / 186f)
-private val LetterATop = LogoHeight * (42f / 186f)
-private val HatWidth = LogoHeight * (92f / 186f) * 1.9f
-private val HatHeight = HatWidth * (476f / 752f)
-private const val HatCrownX = 362f / 752f
-private const val HatCrownY = 280f / 476f
 private val Enter = CubicBezierEasing(0.22f, 0.08f, 0.18f, 1f)
 
 private data class SplitLogo(val amigo: ImageBitmap, val play: ImageBitmap)
 
 @Composable
-internal fun SplashScreen(onFinished: () -> Unit) {
+internal fun SplashScreen(onReveal: () -> Unit, onFinished: () -> Unit) {
     val amigo = remember { Animatable(0f) }
     val play = remember { Animatable(0f) }
-    val hat = remember { Animatable(0f) }
     val veil = remember { Animatable(1f) }
     LaunchedEffect(Unit) {
         coroutineScope {
@@ -72,16 +61,16 @@ internal fun SplashScreen(onFinished: () -> Unit) {
             delay(340)
             launch { play.animateTo(1f, tween(680, easing = Enter)) }
         }
-        hat.animateTo(1f, tween(760, easing = FastOutSlowInEasing))
-        delay(460)
-        veil.animateTo(0f, tween(860, easing = FastOutSlowInEasing))
+        onReveal()
+        delay(280)
+        veil.animateTo(0f, tween(640, easing = FastOutSlowInEasing))
         onFinished()
     }
     BackHandler(enabled = true) {}
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer { alpha = veil.value }
+            .graphicsLayer(alpha = veil.value)
             .background(CinemaBlack)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -93,7 +82,6 @@ internal fun SplashScreen(onFinished: () -> Unit) {
         SplashWordmark(
             amigo = amigo.value,
             play = play.value,
-            hat = hat.value,
             slide = maxWidth * 0.62f,
         )
     }
@@ -103,7 +91,6 @@ internal fun SplashScreen(onFinished: () -> Unit) {
 private fun SplashWordmark(
     amigo: Float,
     play: Float,
-    hat: Float,
     slide: Dp,
 ) {
     val context = LocalContext.current
@@ -112,59 +99,46 @@ private fun SplashWordmark(
         val source = BitmapFactory.decodeResource(context.resources, R.drawable.amigoplay_logo, options)
         source.splitLogo()
     }
+    val amigoMark = rememberBold(logo.amigo, Color.White)
+    val playMark = rememberBold(logo.play, PlayBlue)
+    val slidePx = with(LocalDensity.current) { slide.toPx() }
     Box(
         modifier = Modifier
             .height(LogoHeight)
             .aspectRatio(LogoAspect, matchHeightConstraintsFirst = true)
             .semantics { contentDescription = "AmigoPlay" },
     ) {
-        Canvas(
-            modifier = Modifier
+        Box(
+            Modifier
                 .matchParentSize()
-                .graphicsLayer {
-                    translationX = (1f - amigo) * -slide.toPx()
-                    alpha = (amigo / 0.12f).coerceIn(0f, 1f)
-                },
-        ) {
-            drawBold(logo.amigo, Color.White)
-        }
-        Canvas(
-            modifier = Modifier
+                .graphicsLayer(
+                    translationX = (1f - amigo) * -slidePx,
+                    alpha = (amigo / 0.12f).coerceIn(0f, 1f),
+                )
+                .then(amigoMark),
+        )
+        Box(
+            Modifier
                 .matchParentSize()
-                .graphicsLayer {
-                    translationX = (1f - play) * slide.toPx()
-                    alpha = (play / 0.12f).coerceIn(0f, 1f)
-                },
-        ) {
-            drawBold(logo.play, PlayBlue)
-        }
-        if (hat > 0.01f) {
-            Image(
-                painter = painterResource(R.drawable.sombrero),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .offset(
-                        x = LetterACenter - HatWidth * HatCrownX,
-                        y = LetterATop - HatHeight * HatCrownY,
-                    )
-                    .graphicsLayer {
-                        transformOrigin = TransformOrigin(HatCrownX, HatCrownY)
-                        translationY = (1f - hat) * -46.dp.toPx()
-                        rotationZ = (1f - hat) * -16f
-                        alpha = (hat * 1.7f).coerceIn(0f, 1f)
-                        val scale = 0.8f + 0.2f * hat
-                        scaleX = scale
-                        scaleY = scale
-                    }
-                    .size(HatWidth, HatHeight),
-            )
+                .graphicsLayer(
+                    translationX = (1f - play) * slidePx,
+                    alpha = (play / 0.12f).coerceIn(0f, 1f),
+                )
+                .then(playMark),
+        )
+    }
+}
+
+@Composable
+private fun rememberBold(image: ImageBitmap, tint: Color): Modifier {
+    return remember(image, tint) {
+        Modifier.drawWithCache {
+            onDrawBehind { drawBold(image, tint) }
         }
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBold(
+private fun DrawScope.drawBold(
     image: ImageBitmap,
     tint: Color,
 ) {

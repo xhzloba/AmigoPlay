@@ -135,7 +135,13 @@ private fun SettingsScreen(
         )
         Spacer(Modifier.height(28.dp))
         when (section) {
-            SettingsSection.Interface -> {
+            SettingsSection.Interface -> Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 96.dp),
+            ) {
                 SettingRow(
                     title = stringResource(R.string.settings_extract_colors),
                     hint = stringResource(R.string.settings_extract_colors_hint),
