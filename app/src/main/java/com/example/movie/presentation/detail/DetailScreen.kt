@@ -302,6 +302,8 @@ private fun DetailContent(
 ) {
     val context = LocalContext.current
     var playingTrailer by remember { mutableStateOf<FranchiseTrailer?>(null) }
+    var watching by remember(detail.id) { mutableStateOf<Int?>(null) }
+    var watchRequested by remember(detail.id) { mutableStateOf(false) }
     var franchisePage by remember(detail.id) { mutableStateOf<String?>(null) }
     val pageVeil = remember { Animatable(0f) }
     var pageShown by remember { mutableStateOf<String?>(null) }
@@ -523,10 +525,22 @@ private fun DetailContent(
                 RatingsRow(detail)
             }
             Spacer(Modifier.height(22.dp))
+            val watchId = detail.franchise?.id
+            LaunchedEffect(watchRequested, watchId) {
+                val id = watchId ?: return@LaunchedEffect
+                if (!watchRequested) return@LaunchedEffect
+                watchRequested = false
+                watching = id
+            }
             WatchBar(
                 wash = paintWash,
                 glow = if (settings.watchGlow) watchGlow else null,
                 glowKey = detail.id,
+                onWatch = {
+                    tick?.invoke()
+                    val id = watchId
+                    if (id != null) watching = id else watchRequested = true
+                },
             )
             Spacer(Modifier.height(22.dp))
             Row(
@@ -630,6 +644,9 @@ private fun DetailContent(
         playingTrailer?.let { trailer ->
             TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
         }
+        watching?.let { id ->
+            WatchPlayer(url = liftWatchUrl(id), onDismiss = { watching = null })
+        }
     }
 }
 
@@ -712,7 +729,12 @@ private fun CastPage(cast: List<CastMember>, onBack: () -> Unit, modifier: Modif
 }
 
 @Composable
-private fun WatchBar(wash: PosterWash, glow: Color?, glowKey: String) {
+private fun WatchBar(
+    wash: PosterWash,
+    glow: Color?,
+    glowKey: String,
+    onWatch: () -> Unit,
+) {
     val play = wash.playColor()
     val travel = remember(glowKey) { Animatable(0f) }
     LaunchedEffect(glowKey, glow) {
@@ -736,7 +758,18 @@ private fun WatchBar(wash: PosterWash, glow: Color?, glowKey: String) {
         )
         source.splitWatchLogo()
     }
-    Box(Modifier.fillMaxWidth().height(72.dp)) {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .drawWithContent {
+                drawContent()
+                if (glow != null && borderAlpha > 0.01f && borderReveal > 0f) {
+                    drawWatchBorder(glow.copy(alpha = borderAlpha * 0.4f), 2.dp.toPx(), borderReveal)
+                    drawWatchBorder(glow.copy(alpha = borderAlpha), 1.1.dp.toPx(), borderReveal)
+                }
+            },
+    ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -784,7 +817,7 @@ private fun WatchBar(wash: PosterWash, glow: Color?, glowKey: String) {
             WatchCaption(start = logoHeight * WatchLogoAspect * WatchLogoInkLeft)
         }
         Button(
-            onClick = {},
+            onClick = onWatch,
             modifier = Modifier.height(44.dp),
             shape = RoundedCornerShape(22.dp),
             contentPadding = PaddingValues(horizontal = 18.dp),
@@ -801,21 +834,6 @@ private fun WatchBar(wash: PosterWash, glow: Color?, glowKey: String) {
             )
         }
     }
-        if (glow != null && borderAlpha > 0.01f && borderReveal > 0f) {
-            Canvas(
-                Modifier
-                    .matchParentSize()
-                    .graphicsLayer {
-                        alpha = borderAlpha * 0.4f
-                        renderEffect = BlurEffect(6f, 6f, TileMode.Decal)
-                    },
-            ) {
-                drawWatchBorder(glow, 2.dp.toPx(), borderReveal)
-            }
-            Canvas(Modifier.matchParentSize().graphicsLayer { alpha = borderAlpha }) {
-                drawWatchBorder(glow, 1.1.dp.toPx(), borderReveal)
-            }
-        }
     }
 }
 

@@ -11,6 +11,7 @@ internal data class TimelineDto(
 
 @Serializable
 internal data class FranchiseDto(
+    val id: JsonElement? = null,
     val slogan: String? = null,
     val budget: String? = null,
     @SerialName("fees_world") val feesWorld: String? = null,

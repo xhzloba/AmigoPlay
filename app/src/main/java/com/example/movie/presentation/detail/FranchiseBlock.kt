@@ -42,7 +42,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,8 +79,12 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.SectionScrim
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
+import com.example.movie.data.player.WatchPlayback
+import com.example.movie.data.player.fetchLiftStream
 import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.CinemaBlack
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.content.Intent
 import android.net.Uri
 import android.view.View
@@ -297,8 +303,44 @@ internal fun TrailerRow(trailers: List<FranchiseTrailer>, onPlay: (FranchiseTrai
     }
 }
 
+internal fun liftWatchUrl(id: Int): String =
+    "https://embed.liftw.ws/embed/movie/$id?host=lift.com&imp2=a7579fe91a3b6593c0b2f4bdb69fae4e6e539ff0a39a988f90a280e97fd43718&t2=1794007180&ht=5f79777865aa38c62bbc232817687bfdd3003a8e2dabebba331258f181643072&imp3=9125fe15854f815949c15971ca44fd92cf9abddf40a233ebcc375e358119b86a"
+
+@Composable
+internal fun WatchPlayer(url: String, onDismiss: () -> Unit) {
+    var playback by remember(url) { mutableStateOf<WatchPlayback?>(null) }
+    var embed by remember(url) { mutableStateOf(false) }
+    LaunchedEffect(url) {
+        val resolved = withContext(Dispatchers.IO) {
+            runCatching { fetchLiftStream(url) }.getOrNull()
+        }
+        if (resolved == null) embed = true else playback = resolved
+    }
+    val direct = playback
+    when {
+        embed -> EmbedPlayer(url = url, direct = true, allowedHostSuffix = null, onDismiss = onDismiss)
+        direct != null -> LiftExoPlayer(playback = direct, onDismiss = onDismiss)
+        else -> Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(color = Color.White)
+        }
+    }
+}
+
 @Composable
 internal fun TrailerPlayer(trailer: FranchiseTrailer, onDismiss: () -> Unit) {
+    EmbedPlayer(url = trailer.url, direct = false, allowedHostSuffix = "nextembed.ws", onDismiss = onDismiss)
+}
+
+@Composable
+private fun EmbedPlayer(
+    url: String,
+    direct: Boolean,
+    allowedHostSuffix: String?,
+    onDismiss: () -> Unit,
+) {
     val host = remember { arrayOfNulls<TrailerHost>(1) }
     BackHandler {
         if (host[0]?.exitFullscreen() == true) return@BackHandler
@@ -308,7 +350,7 @@ internal fun TrailerPlayer(trailer: FranchiseTrailer, onDismiss: () -> Unit) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { context ->
-                TrailerHost(context, trailer.url).also { host[0] = it }
+                TrailerHost(context, url, direct, allowedHostSuffix).also { host[0] = it }
             },
             onRelease = {
                 it.release()
@@ -340,7 +382,12 @@ internal fun TrailerPlayer(trailer: FranchiseTrailer, onDismiss: () -> Unit) {
     }
 }
 
-private class TrailerHost(context: android.content.Context, url: String) : FrameLayout(context) {
+private class TrailerHost(
+    context: android.content.Context,
+    url: String,
+    direct: Boolean,
+    allowedHostSuffix: String?,
+) : FrameLayout(context) {
     private val web = WebView(context)
     private var custom: View? = null
     private var customCallback: WebChromeClient.CustomViewCallback? = null
@@ -379,13 +426,19 @@ private class TrailerHost(context: android.content.Context, url: String) : Frame
                 if (!request.isForMainFrame) return false
                 val scheme = request.url.scheme.orEmpty()
                 if (scheme == "about" || scheme == "data" || scheme == "blob") return false
+                if (scheme != "http" && scheme != "https") return true
+                val suffix = allowedHostSuffix ?: return false
                 val host = request.url.host.orEmpty()
-                return !host.endsWith("nextembed.ws")
+                return !host.endsWith(suffix)
             }
         }
         addView(web, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        val page = trailerPage(url)
-        web.loadDataWithBaseURL("https://api.nextembed.ws/", page, "text/html", "utf-8", null)
+        if (direct) {
+            web.loadUrl(url)
+        } else {
+            val page = trailerPage(url)
+            web.loadDataWithBaseURL("https://api.nextembed.ws/", page, "text/html", "utf-8", null)
+        }
     }
 
     fun exitFullscreen(): Boolean {

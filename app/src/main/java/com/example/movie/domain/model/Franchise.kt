@@ -1,6 +1,7 @@
 package com.example.movie.domain.model
 
 data class Franchise(
+    val id: Int? = null,
     val directors: List<String> = emptyList(),
     val screenwriters: List<String> = emptyList(),
     val producers: List<String> = emptyList(),

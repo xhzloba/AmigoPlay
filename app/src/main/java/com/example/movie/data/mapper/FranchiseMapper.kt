@@ -34,6 +34,7 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
         )
     }.sortedBy { it.number }
     return Franchise(
+        id = id.asInt(),
         directors = director.names(),
         screenwriters = screenwriter.names(),
         producers = producer.names(),
