@@ -645,7 +645,7 @@ private fun DetailContent(
             TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
         }
         watching?.let { id ->
-            WatchPlayer(url = liftWatchUrl(id), onDismiss = { watching = null })
+            WatchPlayer(url = liftWatchUrl(id), title = detail.title, onDismiss = { watching = null })
         }
     }
 }
