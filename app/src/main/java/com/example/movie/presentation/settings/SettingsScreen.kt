@@ -98,6 +98,7 @@ fun SettingsRoute() {
         onExtractColors = repository::setExtractColors,
         onExtractBackdrop = repository::setExtractBackdrop,
         onShowLogos = repository::setShowLogos,
+        onWatchedBadge = repository::setWatchedBadge,
         onShowPosterTitles = repository::setShowPosterTitles,
         onAutoBackdrop = repository::setAutoBackdrop,
         onWatchGlow = repository::setWatchGlow,
@@ -112,6 +113,7 @@ private fun SettingsScreen(
     onExtractColors: (Boolean) -> Unit,
     onExtractBackdrop: (Boolean) -> Unit,
     onShowLogos: (Boolean) -> Unit,
+    onWatchedBadge: (Boolean) -> Unit,
     onShowPosterTitles: (Boolean) -> Unit,
     onAutoBackdrop: (Boolean) -> Unit,
     onWatchGlow: (Boolean) -> Unit,
@@ -160,6 +162,13 @@ private fun SettingsScreen(
                     hint = stringResource(R.string.settings_logos_hint),
                     checked = settings.showLogos,
                     onChecked = onShowLogos,
+                )
+                SettingsDivider()
+                SettingRow(
+                    title = stringResource(R.string.settings_watched_badge),
+                    hint = stringResource(R.string.settings_watched_badge_hint),
+                    checked = settings.watchedBadge,
+                    onChecked = onWatchedBadge,
                 )
                 SettingsDivider()
                 SettingRow(

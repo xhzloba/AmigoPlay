@@ -71,7 +71,10 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionSkeleton
 import com.example.movie.presentation.home.components.PosterGridInset
+import com.example.movie.presentation.home.components.WatchedBadge
+import com.example.movie.presentation.home.components.WatchedBadgeHang
 import com.example.movie.presentation.home.components.posterTitlesOn
+import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.CinemaMuted
@@ -368,6 +371,7 @@ private fun SearchResults(
 ) {
     val tick = rememberHapticTick()
     val showTitles = posterTitlesOn()
+    val watched = rememberWatchedIds()
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 24.dp),
@@ -381,17 +385,21 @@ private fun SearchResults(
             val pressScale = rememberPressScale(pressed)
             val wave = remember(movie.id) { PosterWave() }
             Column {
-                AsyncImage(
-                    model = movie.posterUrl ?: movie.backdropUrl,
-                    contentDescription = stringResource(R.string.poster_content_description, movie.title),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
+                Box(
+                    Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f / 1.46f)
                         .graphicsLayer {
                             scaleX = pressScale
                             scaleY = pressScale
-                        }
+                        },
+                ) {
+                AsyncImage(
+                    model = movie.posterUrl ?: movie.backdropUrl,
+                    contentDescription = stringResource(R.string.poster_content_description, movie.title),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .matchParentSize()
                         .clip(PosterShape)
                         .background(Color.White.copy(alpha = 0.08f))
                         .posterWave(wave)
@@ -407,6 +415,11 @@ private fun SearchResults(
                         )
                         .holdCue(holdProgress),
                 )
+                if (movie.id in watched) {
+                    WatchedBadge(Modifier.align(Alignment.BottomEnd))
+                }
+                }
+                Spacer(Modifier.height(WatchedBadgeHang))
                 if (showTitles) PosterCaption(movie.title, movie.year)
             }
         }

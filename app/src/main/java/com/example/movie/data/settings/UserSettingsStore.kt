@@ -41,6 +41,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setPlayerLogo(enabled: Boolean) = write { it.copy(playerLogo = enabled) }
 
+    override fun setWatchedBadge(enabled: Boolean) = write { it.copy(watchedBadge = enabled) }
+
     private fun write(transform: (UserSettings) -> UserSettings) {
         val next = transform(state.value)
         prefs.edit()
@@ -53,6 +55,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_GYRO, next.gyro)
             .putBoolean(KEY_POSTER_TITLES, next.showPosterTitles)
             .putBoolean(KEY_PLAYER_LOGO, next.playerLogo)
+            .putBoolean(KEY_WATCHED_BADGE, next.watchedBadge)
             .commit()
         state.value = next
     }
@@ -67,6 +70,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         gyro = prefs.getBoolean(KEY_GYRO, true),
         showPosterTitles = prefs.getBoolean(KEY_POSTER_TITLES, false),
         playerLogo = prefs.getBoolean(KEY_PLAYER_LOGO, true),
+        watchedBadge = prefs.getBoolean(KEY_WATCHED_BADGE, true),
     )
 
     private companion object {
@@ -80,5 +84,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_GYRO = "gyro"
         const val KEY_POSTER_TITLES = "poster_titles"
         const val KEY_PLAYER_LOGO = "player_logo"
+        const val KEY_WATCHED_BADGE = "watched_badge"
     }
 }

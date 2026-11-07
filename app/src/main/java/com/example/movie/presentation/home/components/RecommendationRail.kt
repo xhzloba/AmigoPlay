@@ -150,7 +150,7 @@ internal fun RecommendationRailSkeleton(
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val posterHeight = PosterWidth * PosterAspect
             val showTitles = posterTitlesOn()
-            val rowHeight = posterHeight + if (showTitles) PosterCaptionBlock else 0.dp
+            val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
             val count = ((maxWidth - RailStart) / (PosterWidth + PosterGap)).toInt().coerceIn(2, 4)
             Row(
                 modifier = Modifier
@@ -210,7 +210,8 @@ private fun RecommendationPager(
     }
     val posterHeight = PosterWidth * PosterAspect
     val showTitles = posterTitlesOn()
-    val rowHeight = posterHeight + if (showTitles) PosterCaptionBlock else 0.dp
+    val watched = rememberWatchedIds()
+    val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val end = (maxWidth - PosterWidth - RailStart).coerceAtLeast(RailStart)
         LazyRow(
@@ -235,10 +236,14 @@ private fun RecommendationPager(
                             .graphicsLayer {
                                 scaleX = pressScale
                                 scaleY = pressScale
-                            }
-                            .clip(PosterShape)
-                            .background(Color.White.copy(alpha = 0.08f)),
+                            },
                     ) {
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .clip(PosterShape)
+                                .background(Color.White.copy(alpha = 0.08f)),
+                        ) {
                         AsyncImage(
                             model = movie.posterUrl,
                             contentDescription = stringResource(R.string.poster_content_description, movie.title),
@@ -267,7 +272,12 @@ private fun RecommendationPager(
                                 modifier = Modifier.align(Alignment.BottomCenter),
                             )
                         }
+                        }
+                        if (movie.id in watched) {
+                            WatchedBadge(Modifier.align(Alignment.BottomEnd))
+                        }
                     }
+                    Spacer(Modifier.height(WatchedBadgeHang))
                     if (showTitles) PosterCaption(movie.title, movie.year)
                 }
             }

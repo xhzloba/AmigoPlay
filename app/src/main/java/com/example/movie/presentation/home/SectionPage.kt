@@ -67,6 +67,9 @@ import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionSkeleton
+import com.example.movie.presentation.home.components.WatchedBadge
+import com.example.movie.presentation.home.components.WatchedBadgeHang
+import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.home.components.WatchProgress
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
@@ -359,6 +362,7 @@ private fun PosterCell(
     val pressScale = rememberPressScale(pressed)
     val wave = remember(movie.id) { PosterWave() }
     val showTitles = posterTitlesOn()
+    val watched = rememberWatchedIds()
     Column {
         Box(
             Modifier
@@ -367,10 +371,14 @@ private fun PosterCell(
                 .graphicsLayer {
                     scaleX = pressScale
                     scaleY = pressScale
-                }
-                .clip(PosterShape)
-                .background(Color.White.copy(alpha = 0.08f)),
+                },
         ) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .clip(PosterShape)
+                    .background(Color.White.copy(alpha = 0.08f)),
+            ) {
             AsyncImage(
                 model = movie.posterUrl,
                 contentDescription = stringResource(R.string.poster_content_description, movie.title),
@@ -397,7 +405,12 @@ private fun PosterCell(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
+            }
+            if (movie.id in watched) {
+                WatchedBadge(Modifier.align(Alignment.BottomEnd))
+            }
         }
+        Spacer(Modifier.height(WatchedBadgeHang))
         if (showTitles) PosterCaption(movie.title, movie.year)
     }
 }

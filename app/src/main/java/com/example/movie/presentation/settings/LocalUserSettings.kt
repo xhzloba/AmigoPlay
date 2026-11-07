@@ -30,4 +30,6 @@ private object DefaultUserSettings : UserSettingsRepository {
     override fun setShowPosterTitles(enabled: Boolean) = Unit
 
     override fun setPlayerLogo(enabled: Boolean) = Unit
+
+    override fun setWatchedBadge(enabled: Boolean) = Unit
 }

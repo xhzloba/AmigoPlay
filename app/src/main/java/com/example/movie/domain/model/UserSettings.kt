@@ -12,6 +12,7 @@ data class UserSettings(
     val gyro: Boolean = true,
     val showPosterTitles: Boolean = false,
     val playerLogo: Boolean = true,
+    val watchedBadge: Boolean = true,
 )
 
 interface UserSettingsRepository {
@@ -34,4 +35,6 @@ interface UserSettingsRepository {
     fun setShowPosterTitles(enabled: Boolean)
 
     fun setPlayerLogo(enabled: Boolean)
+
+    fun setWatchedBadge(enabled: Boolean)
 }
