@@ -3,6 +3,7 @@ package com.example.movie.presentation.detail
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Rational
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -65,7 +66,7 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
+import com.example.movie.data.download.MediaCache
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
@@ -74,7 +75,6 @@ import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.example.movie.R
-import com.example.movie.data.player.LIFT_USER_AGENT
 import com.example.movie.data.player.WatchEpisode
 import com.example.movie.data.player.WatchKind
 import com.example.movie.data.player.WatchPlayback
@@ -85,13 +85,11 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: () -> Unit) {
     val view = LocalView.current
-    val activity = view.context as ComponentActivity
+    val activity = view.context.hostActivity()
     val delayProcessor = remember { AudioDelayProcessor() }
     var current by remember(playback) { mutableStateOf(playback.stream) }
     val player = remember(playback) {
-        val http = DefaultHttpDataSource.Factory()
-            .setUserAgent(LIFT_USER_AGENT)
-            .setAllowCrossProtocolRedirects(true)
+        val source = MediaCache.readSource(activity)
         val renderers = object : DefaultRenderersFactory(activity) {
             override fun buildAudioSink(
                 context: Context,
@@ -104,7 +102,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                 .build()
         }
         ExoPlayer.Builder(activity, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(activity).setDataSourceFactory(http))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(activity).setDataSourceFactory(source))
             .setSeekParameters(SeekParameters.CLOSEST_SYNC)
             .build()
             .apply {
@@ -427,6 +425,15 @@ private fun ExoPlayer.switchAudio(group: Tracks.Group, index: Int) {
         .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, listOf(index)))
         .build()
     seekTo(at)
+}
+
+private fun Context.hostActivity(): ComponentActivity {
+    var current = this
+    while (current is ContextWrapper) {
+        if (current is ComponentActivity) return current
+        current = current.baseContext
+    }
+    error("no activity")
 }
 
 private fun Activity.enterPip() {
