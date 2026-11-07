@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.69.3",
+            fixed = listOf(
+                "Короткий свайп по главной и каталогу идёт так же ровно, как в полном списке. Листается только то, что на экране.",
+            ),
+        ),
+        Release(
             version = "1.69.2",
             fixed = listOf(
                 "Короткий свайп по главной и каталогу больше не дёргается. Наклон телефона не пересобирает страницу, полка не перехватывает мелкое движение вниз.",

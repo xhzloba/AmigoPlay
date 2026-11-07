@@ -5,7 +5,7 @@ import androidx.compose.animation.Animatable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -19,13 +19,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +41,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,13 +98,12 @@ fun CatalogScreen(
         )
     }
     val density = LocalDensity.current
-    val scroll = remember(tab) { ScrollState(0) }
     var brandHeight by remember { mutableIntStateOf(0) }
     val brandReserve = if (brandHeight == 0) 40.dp else with(density) { brandHeight.toDp() }
     val scrimDistance = with(density) { 28.dp.toPx() }
-    val pageTouch = LocalViewConfiguration.current
-    val eagerTouch = rememberEagerPageSlop()
+    val topInset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val failed = state.shelves.all { it.ready && it.movies.isEmpty() }
+    val rails = state.shelves.filterNot { it.ready && it.movies.isEmpty() }
     val refreshOffset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding() +
         BrandTopInset + 88.dp
     PageRefresh(
@@ -118,34 +117,38 @@ fun CatalogScreen(
         if (failed) {
             SectionError(viewModel::retry)
         } else {
-            CompositionLocalProvider(LocalViewConfiguration provides eagerTouch) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scroll)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    .padding(top = BrandTopInset),
+            key(tab.name) {
+            val listState = rememberLazyListState()
+            Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = topInset + BrandTopInset + brandReserve + 12.dp,
+                    bottom = 96.dp,
+                ),
             ) {
-                CompositionLocalProvider(LocalViewConfiguration provides pageTouch) {
-                Spacer(Modifier.height(brandReserve + 12.dp))
-                CategoryTabs(
-                    shelves = menu,
-                    selectedId = tab.name,
-                    play = play,
-                    onSelect = { id ->
-                        if (id == tab.name) return@CategoryTabs
-                        tabName = id
-                    },
-                    onSearch = onSearch,
-                    showBrand = false,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(16.dp))
-                var placed = false
-                state.shelves.forEach { rail ->
-                    if (rail.ready && rail.movies.isEmpty()) return@forEach
-                    if (placed) Spacer(Modifier.height(CatalogGap))
-                    placed = true
+                item(key = "tabs") {
+                    CategoryTabs(
+                        shelves = menu,
+                        selectedId = tab.name,
+                        play = play,
+                        onSelect = { id ->
+                            if (id == tab.name) return@CategoryTabs
+                            tabName = id
+                        },
+                        onSearch = onSearch,
+                        showBrand = false,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
+                items(
+                    count = rails.size,
+                    key = { index -> rails[index].sort.name },
+                ) { index ->
+                    val rail = rails[index]
+                    if (index > 0) Spacer(Modifier.height(CatalogGap))
                     RecommendationRail(
                         movies = rail.movies,
                         onMovieClick = onMovieClick,
@@ -155,15 +158,20 @@ fun CatalogScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                Spacer(Modifier.height(96.dp))
-                }
+            }
+            CatalogScrim(
+                progress = {
+                    if (listState.firstVisibleItemIndex > 0) {
+                        1f
+                    } else {
+                        (listState.firstVisibleItemScrollOffset / scrimDistance).coerceIn(0f, 1f)
+                    }
+                },
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
             }
             }
         }
-        CatalogScrim(
-            progress = { (scroll.value / scrimDistance).coerceIn(0f, 1f) },
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
         CatalogBrand(
             onSearch = onSearch,
             onGenres = { onGenres(tab.type) },

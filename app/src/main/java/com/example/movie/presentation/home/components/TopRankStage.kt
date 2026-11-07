@@ -126,7 +126,7 @@ internal fun TopRankStage(
     modifier: Modifier = Modifier,
 ) {
     HapticOnAppend(movies.map { it.id })
-    Column(modifier = modifier.graphicsLayer().fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         RailTitle(title = title, onClick = onOpen)
         Spacer(Modifier.height(14.dp))
         if (movies.isEmpty()) {

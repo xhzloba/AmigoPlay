@@ -124,7 +124,7 @@ internal fun RecommendationRail(
     captionOf: (Movie) -> String? = { null },
 ) {
     HapticOnAppend(movies.map { it.id })
-    Column(modifier = modifier.graphicsLayer().fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         if (title != null) {
             RailTitle(title = title, onClick = onOpen)
             Spacer(Modifier.height(10.dp))

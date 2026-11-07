@@ -154,16 +154,6 @@ fun rememberRowSlop(): ViewConfiguration {
 }
 
 @Composable
-internal fun rememberEagerPageSlop(): ViewConfiguration {
-    val current = LocalViewConfiguration.current
-    return remember(current) {
-        object : ViewConfiguration by current {
-            override val touchSlop: Float = current.touchSlop * 0.4f
-        }
-    }
-}
-
-@Composable
 internal fun rememberPressScale(pressed: Boolean): Float {
     return animateFloatAsState(
         targetValue = if (pressed) 0.968f else 1f,
