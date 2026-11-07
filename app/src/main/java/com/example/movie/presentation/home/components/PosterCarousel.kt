@@ -203,7 +203,7 @@ fun PosterCarousel(
     }
 
     Column(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {

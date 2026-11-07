@@ -175,7 +175,7 @@ internal fun CategoryTabs(
             centering = false
         }
     }
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(modifier = modifier.graphicsLayer()) {
         val side = maxWidth / 2
         Column {
             if (showBrand) {
