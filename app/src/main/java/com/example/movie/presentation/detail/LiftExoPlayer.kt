@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import android.util.Rational
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -12,27 +13,38 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -45,8 +57,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -61,25 +78,39 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
-import com.example.movie.data.download.MediaCache
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import com.example.movie.R
+import com.example.movie.data.player.LIFT_USER_AGENT
 import com.example.movie.data.player.WatchEpisode
 import com.example.movie.data.player.WatchKind
 import com.example.movie.data.player.WatchPlayback
 import com.example.movie.data.player.WatchStream
+import com.example.movie.data.player.fallbackManifest
+import com.example.movie.data.player.preferRicherManifest
+import com.example.movie.presentation.shell.ShellIcons
+import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -89,7 +120,23 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
     val delayProcessor = remember { AudioDelayProcessor() }
     var current by remember(playback) { mutableStateOf(playback.stream) }
     val player = remember(playback) {
-        val source = MediaCache.readSource(activity)
+        val source = DefaultHttpDataSource.Factory()
+            .setUserAgent(LIFT_USER_AGENT)
+            .setAllowCrossProtocolRedirects(true)
+        val selector = DefaultTrackSelector(activity).apply {
+            parameters = buildUponParameters()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .setMaxVideoSize(Int.MAX_VALUE, Int.MAX_VALUE)
+                .setExceedRendererCapabilitiesIfNecessary(true)
+                .setExceedVideoConstraintsIfNecessary(true)
+                .clearViewportSizeConstraints()
+                .setAudioOffloadPreferences(
+                    AudioOffloadPreferences.Builder()
+                        .setAudioOffloadMode(AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED)
+                        .build(),
+                )
+                .build()
+        }
         val renderers = object : DefaultRenderersFactory(activity) {
             override fun buildAudioSink(
                 context: Context,
@@ -102,26 +149,20 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                 .build()
         }
         ExoPlayer.Builder(activity, renderers)
+            .setTrackSelector(selector)
             .setMediaSourceFactory(DefaultMediaSourceFactory(activity).setDataSourceFactory(source))
             .setSeekParameters(SeekParameters.CLOSEST_SYNC)
             .build()
-            .apply {
-                setMediaItem(current.toMediaItem())
-                trackSelectionParameters = trackSelectionParameters.buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                    .setAudioOffloadPreferences(
-                        AudioOffloadPreferences.Builder()
-                            .setAudioOffloadMode(AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_DISABLED)
-                            .build(),
-                    )
-                    .build()
-                playWhenReady = true
-                prepare()
-            }
+            .apply { playWhenReady = true }
     }
-    LaunchedEffect(current.url) {
+    LaunchedEffect(current.url, current.kind, current.manifestPicked, current.alternateUrl) {
+        if (!current.manifestPicked && current.alternateUrl != null) {
+            val picked = withContext(Dispatchers.IO) { current.preferRicherManifest() }
+            current = picked
+            return@LaunchedEffect
+        }
         val playing = player.currentMediaItem?.localConfiguration?.uri?.toString()
-        if (playing == current.url) return@LaunchedEffect
+        if (playing == current.url && player.playbackState != Player.STATE_IDLE) return@LaunchedEffect
         val textOff = C.TRACK_TYPE_TEXT in player.trackSelectionParameters.disabledTrackTypes
         player.setMediaItem(current.toMediaItem())
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
@@ -153,19 +194,23 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
     var autoNext by remember(player) { mutableStateOf(playback.episodes.size > 1) }
     var underCamera by remember(player) { mutableStateOf(false) }
     var inPip by remember(player) { mutableStateOf(activity.isInPictureInPictureMode) }
-    val episode = playback.episodes.firstOrNull { it.stream.url == current.url }
-    val episodeIndex = playback.episodes.indexOfFirst { it.stream.url == current.url }
+    val episode = playback.episodes.firstOrNull { it.stream.sameSource(current) }
+    val episodeIndex = playback.episodes.indexOfFirst { it.stream.sameSource(current) }
     val follow = remember(playback) {
         object {
             var index = -1
             var auto = false
             var episodes: List<WatchEpisode> = emptyList()
+            var stream: WatchStream = playback.stream
         }
     }
     follow.index = episodeIndex
     follow.auto = autoNext
     follow.episodes = playback.episodes
+    follow.stream = current
+    val haze = rememberHazeState()
     DisposableEffect(activity) {
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         val window = activity.window
         val previous = window.attributes.screenBrightness
         val previousCutout = window.attributes.layoutInDisplayCutoutMode
@@ -177,6 +222,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
         }
         activity.addOnPictureInPictureModeChangedListener(pipListener)
         onDispose {
+            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             activity.removeOnPictureInPictureModeChangedListener(pipListener)
             controller.show(WindowInsetsCompat.Type.systemBars())
             window.attributes = window.attributes.apply {
@@ -210,6 +256,12 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                 if (state == Player.STATE_ENDED && follow.auto) {
                     follow.episodes.getOrNull(follow.index + 1)?.let { current = it.stream }
                 }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                val next = follow.stream.fallbackManifest() ?: return
+                if (next.url == follow.stream.url) return
+                current = next
             }
         }
         player.addListener(listener)
@@ -266,6 +318,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()
+                .hazeSource(haze)
                 .then(
                     if (underCamera) Modifier else Modifier.windowInsetsPadding(WindowInsets.displayCutout),
                 ),
@@ -306,10 +359,15 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
         }
         if (!inPip && menu == null && chrome && !locked) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f)))
+            val chromeInsets = if (underCamera) {
+                WindowInsets.systemBars.union(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+            } else {
+                WindowInsets.systemBars.union(WindowInsets.displayCutout)
+            }
             Column(
                 Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
+                    .windowInsetsPadding(chromeInsets)
                     .padding(horizontal = 8.dp, vertical = 6.dp),
             ) {
                 TopBar(
@@ -343,6 +401,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CenterControls(
+                    haze = haze,
                     playing = playing,
                     hasEpisodes = playback.episodes.size > 1,
                     onRewind = {
@@ -455,14 +514,24 @@ private fun TopBar(
     Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
         PlayerGlyph(R.drawable.ic_player_back, stringResource(R.string.player_exit), Modifier.size(48.dp), onBack)
         Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(
+                    imageVector = ShellIcons.chevron,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
             if (episode != null) {
                 Text(
                     text = stringResource(R.string.player_episode, episode.season, episode.episode),
@@ -482,6 +551,7 @@ private fun TopBar(
 
 @Composable
 private fun CenterControls(
+    haze: HazeState,
     playing: Boolean,
     hasEpisodes: Boolean,
     onRewind: () -> Unit,
@@ -491,28 +561,107 @@ private fun CenterControls(
     onForward: () -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        SeekButton(rewind = true, onClick = onRewind)
+        SeekButton(haze, rewind = true, onClick = onRewind)
         if (hasEpisodes) {
-            PlayerGlyph(R.drawable.ic_player_prev, stringResource(R.string.player_episode_prev), Modifier.padding(start = 8.dp).size(56.dp), onPrevious)
+            GlassCircle(
+                haze = haze,
+                modifier = Modifier.padding(start = 8.dp).size(48.dp),
+                onClick = onPrevious,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_player_prev),
+                    contentDescription = stringResource(R.string.player_episode_prev),
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
-        PlayerGlyph(
-            icon = if (playing) R.drawable.ic_player_pause else R.drawable.ic_player_play,
-            description = stringResource(R.string.player_play_pause),
-            modifier = Modifier.padding(horizontal = 10.dp).size(76.dp),
+        GlassCircle(
+            haze = haze,
+            modifier = Modifier.padding(horizontal = 14.dp).size(70.dp),
             onClick = onPlay,
-        )
-        if (hasEpisodes) {
-            PlayerGlyph(R.drawable.ic_player_next, stringResource(R.string.player_episode_next), Modifier.padding(end = 8.dp).size(56.dp), onNext)
+        ) {
+            if (playing) {
+                Icon(
+                    imageVector = Pause,
+                    contentDescription = stringResource(R.string.player_play_pause),
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp),
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.PlayArrow,
+                    contentDescription = stringResource(R.string.player_play_pause),
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp),
+                )
+            }
         }
-        SeekButton(rewind = false, onClick = onForward)
+        if (hasEpisodes) {
+            GlassCircle(
+                haze = haze,
+                modifier = Modifier.padding(end = 8.dp).size(48.dp),
+                onClick = onNext,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_player_next),
+                    contentDescription = stringResource(R.string.player_episode_next),
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+        SeekButton(haze, rewind = false, onClick = onForward)
     }
 }
 
+private val Pause: ImageVector = ImageVector.Builder(
+    name = "Pause",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(fill = SolidColor(Color.Black)) {
+        moveTo(8f, 19f)
+        curveTo(9.1f, 19f, 10f, 18.1f, 10f, 17f)
+        verticalLineTo(7f)
+        curveTo(10f, 5.9f, 9.1f, 5f, 8f, 5f)
+        reflectiveCurveTo(6f, 5.9f, 6f, 7f)
+        verticalLineTo(17f)
+        curveTo(6f, 18.1f, 6.9f, 19f, 8f, 19f)
+        close()
+        moveTo(16f, 5f)
+        curveTo(14.9f, 5f, 14f, 5.9f, 14f, 7f)
+        verticalLineTo(17f)
+        curveTo(14f, 18.1f, 14.9f, 19f, 16f, 19f)
+        reflectiveCurveTo(18f, 18.1f, 18f, 17f)
+        verticalLineTo(7f)
+        curveTo(18f, 5.9f, 17.1f, 5f, 16f, 5f)
+        close()
+    }
+}.build()
+
 @Composable
-private fun SeekButton(rewind: Boolean, onClick: () -> Unit) {
+private fun GlassCircle(
+    haze: HazeState,
+    modifier: Modifier,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
     Box(
-        Modifier
-            .size(64.dp)
+        modifier
+            .clip(CircleShape)
+            .hazeEffect(
+                state = haze,
+                style = HazeDefaults.style(
+                    backgroundColor = Color.White.copy(alpha = 0.14f),
+                    tint = HazeTint(Color.White.copy(alpha = 0.24f)),
+                    blurRadius = 24.dp,
+                    noiseFactor = 0.16f,
+                ),
+            )
+            .border(0.6.dp, Color.White.copy(alpha = 0.42f), CircleShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -520,12 +669,19 @@ private fun SeekButton(rewind: Boolean, onClick: () -> Unit) {
             ),
         contentAlignment = Alignment.Center,
     ) {
+        content()
+    }
+}
+
+@Composable
+private fun SeekButton(haze: HazeState, rewind: Boolean, onClick: () -> Unit) {
+    GlassCircle(haze = haze, modifier = Modifier.size(54.dp), onClick = onClick) {
         Icon(
             painter = painterResource(R.drawable.ic_player_seek),
             contentDescription = stringResource(if (rewind) R.string.player_rewind else R.string.player_forward),
             tint = Color.White.copy(alpha = 0.9f),
             modifier = Modifier
-                .size(40.dp)
+                .size(26.dp)
                 .graphicsLayer { if (rewind) rotationY = 180f },
         )
         Text(
@@ -553,20 +709,12 @@ private fun BottomBar(
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             TimeText(position)
-            Slider(
-                value = if (duration > 0) position.toFloat().coerceIn(0f, duration.toFloat()) else 0f,
-                onValueChange = { onScrub(it.toLong()) },
-                onValueChangeFinished = onScrubFinished,
-                valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
-                enabled = duration > 0,
-                modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.White,
-                    activeTrackColor = Color.White,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.35f),
-                    disabledThumbColor = Color.White,
-                    disabledActiveTrackColor = Color.White.copy(alpha = 0.5f),
-                ),
+            SeekBar(
+                position = position,
+                duration = duration,
+                onScrub = onScrub,
+                onScrubFinished = onScrubFinished,
+                modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
             )
             TimeText(duration)
         }
@@ -597,6 +745,62 @@ private fun Action(icon: Int, label: String, onClick: () -> Unit) {
 }
 
 @Composable
+private fun SeekBar(
+    position: Long,
+    duration: Long,
+    onScrub: (Long) -> Unit,
+    onScrubFinished: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val fraction = if (duration > 0) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
+    BoxWithConstraints(
+        modifier
+            .height(28.dp)
+            .pointerInput(duration) {
+                if (duration <= 0L) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    fun at(x: Float): Long {
+                        val width = size.width.toFloat().coerceAtLeast(1f)
+                        return (x / width * duration).toLong().coerceIn(0L, duration)
+                    }
+                    onScrub(at(down.position.x))
+                    drag(down.id) { change ->
+                        onScrub(at(change.position.x))
+                        change.consume()
+                    }
+                    onScrubFinished()
+                }
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        val thumb = 14.dp
+        val travel = (maxWidth - thumb).coerceAtLeast(0.dp)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color.White.copy(alpha = 0.35f)),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth(fraction)
+                .height(3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color.White),
+        )
+        Box(
+            Modifier
+                .offset(x = travel * fraction)
+                .size(thumb)
+                .clip(CircleShape)
+                .background(Color.White),
+        )
+    }
+}
+
+@Composable
 private fun TimeText(ms: Long) {
     Text(text = formatPlayerTime(ms), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 }
@@ -613,6 +817,12 @@ private fun PlayerGlyph(icon: Int, description: String, modifier: Modifier, onCl
     ) {
         Icon(painter = painterResource(icon), contentDescription = description, tint = Color.White, modifier = Modifier.size(24.dp))
     }
+}
+
+private fun WatchStream.sameSource(other: WatchStream): Boolean {
+    val left = listOfNotNull(url, alternateUrl)
+    val right = listOfNotNull(other.url, other.alternateUrl)
+    return left.any { it in right }
 }
 
 private fun formatPlayerTime(ms: Long): String {

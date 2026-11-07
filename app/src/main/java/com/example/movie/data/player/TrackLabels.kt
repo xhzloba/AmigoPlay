@@ -1,9 +1,9 @@
 package com.example.movie.data.player
 
 internal fun videoTrackLabel(height: Int, bitrate: Int): String {
-    val picture = if (height > 0) "${height}p" else "Видео"
-    if (bitrate <= 0) return picture
-    return "$picture · ${bitrate / 1000} кбит/с"
+    if (height <= 0) return "Видео"
+    if (height >= 2000) return "4K"
+    return "${height}p"
 }
 
 private val audioCode = Regex("""^[A-Za-z]{2,3}(\d+)$""")

@@ -3,7 +3,6 @@ package com.example.movie.di
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.example.movie.BuildConfig
-import com.example.movie.data.download.OfflineStore
 import com.example.movie.data.favorites.FavoriteStore
 import com.example.movie.data.favorites.WatchedStore
 import com.example.movie.data.remote.FranchiseApi
@@ -35,7 +34,6 @@ class AppContainer(context: Context) {
     val userSettings: UserSettingsRepository = UserSettingsStore(context)
     val favorites = FavoriteStore(context)
     val watched = WatchedStore(context)
-    internal val offline = OfflineStore(context)
     val searchHistory = SearchHistoryStore(context)
     val viewHistory = ViewHistoryStore(context)
     private val json = Json {

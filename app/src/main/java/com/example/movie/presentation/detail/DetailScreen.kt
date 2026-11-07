@@ -112,7 +112,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.platform.LocalDensity
@@ -130,9 +129,6 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.example.movie.R
-import com.example.movie.data.download.offlineItem
-import com.example.movie.data.download.toPlayback
-import com.example.movie.data.player.fetchLiftStream
 import com.example.movie.domain.model.CastMember
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.FranchiseTrailer
@@ -324,18 +320,8 @@ private fun DetailContent(
     val pageAlpha = if (pageShown != null) pageVeil.value else 0f
     val favorites = LocalAppContainer.current.favorites
     val watched = LocalAppContainer.current.watched
-    val offline = LocalAppContainer.current.offline
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val watchedIds by watched.ids.collectAsStateWithLifecycle()
-    val downloads by offline.items.collectAsStateWithLifecycle()
-    val downloadTasks by offline.tasks.collectAsStateWithLifecycle()
-    val downloadPending by offline.pending.collectAsStateWithLifecycle()
-    val downloaded = downloads.firstOrNull { it.title.id == detail.id }
-    var downloadSheet by remember(detail.id) { mutableStateOf(false) }
-    var downloadHeights by remember(detail.id) { mutableStateOf<List<Int>>(emptyList()) }
-    var downloadBusy by remember(detail.id) { mutableStateOf(false) }
-    var pendingPlayback by remember(detail.id) { mutableStateOf<com.example.movie.data.player.WatchPlayback?>(null) }
-    var offlinePlay by remember(detail.id) { mutableStateOf(false) }
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack, CinemaBlack)
@@ -552,12 +538,8 @@ private fun DetailContent(
                 glowKey = detail.id,
                 onWatch = {
                     tick?.invoke()
-                    if (downloaded != null) {
-                        offlinePlay = true
-                    } else {
-                        val id = watchId
-                        if (id != null) watching = id else watchRequested = true
-                    }
+                    val id = watchId
+                    if (id != null) watching = id else watchRequested = true
                 },
             )
             Spacer(Modifier.height(22.dp))
@@ -587,74 +569,6 @@ private fun DetailContent(
                             watched.toggle(detail.toSaved())
                         },
                     )
-                }
-                ActionSlot(
-                    stringResource(
-                        if (downloaded?.let { offline.status(it, downloadTasks, downloadPending).phase == com.example.movie.data.download.OfflinePhase.Ready } == true) {
-                            R.string.action_downloaded
-                        } else {
-                            R.string.action_download
-                        },
-                    ),
-                ) {
-                    val phase = downloaded?.let { offline.status(it, downloadTasks, downloadPending) }
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(ActionCircle)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                enabled = !downloadBusy,
-                                onClick = {
-                                    tick?.invoke()
-                                    val franchise = detail.franchise?.id ?: return@clickable
-                                    scope.launch {
-                                        downloadBusy = true
-                                        val playback = withContext(Dispatchers.IO) {
-                                            runCatching { fetchLiftStream(liftWatchUrl(franchise)) }.getOrNull()
-                                        }
-                                        val probe = playback?.episodes?.firstOrNull()?.stream ?: playback?.stream
-                                        val heights = probe?.let { offline.heights(it) }.orEmpty()
-                                        pendingPlayback = playback
-                                        downloadHeights = heights
-                                        downloadBusy = false
-                                        if (playback != null) downloadSheet = true
-                                    }
-                                },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (downloadBusy || phase?.phase == com.example.movie.data.download.OfflinePhase.Preparing) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        } else if (phase?.phase == com.example.movie.data.download.OfflinePhase.Downloading) {
-                            Text(
-                                text = "${phase.percent}",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                            )
-                        } else if (phase?.phase == com.example.movie.data.download.OfflinePhase.Ready) {
-                            Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = stringResource(R.string.action_downloaded),
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        } else {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_action_download),
-                                contentDescription = stringResource(R.string.action_download),
-                                tint = Color.White.copy(alpha = 0.92f),
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
-                    }
                 }
                 ActionSlot(stringResource(R.string.action_share)) {
                     RoundAction(Icons.Filled.Share)
@@ -732,50 +646,6 @@ private fun DetailContent(
         }
         watching?.let { id ->
             WatchPlayer(url = liftWatchUrl(id), title = detail.title, onDismiss = { watching = null })
-        }
-        if (offlinePlay && downloaded != null) {
-            LiftExoPlayer(
-                playback = downloaded.toPlayback(),
-                title = detail.title,
-                onDismiss = { offlinePlay = false },
-            )
-        }
-        val pickedPlayback = pendingPlayback
-        if (downloadSheet && pickedPlayback != null) {
-            val savedEpisode = downloaded?.streams?.firstOrNull { it.start } ?: downloaded?.streams?.firstOrNull()
-            DownloadSheet(
-                playback = pickedPlayback,
-                heights = downloadHeights,
-                initialSeason = savedEpisode?.season,
-                initialEpisode = savedEpisode?.episode,
-                status = { season, episode ->
-                    val item = downloaded
-                    val matched = when {
-                        item == null -> emptyList()
-                        season == null || episode == null -> item.streams
-                        else -> item.streams.filter { it.season == season && it.episode == episode }
-                    }
-                    if (item == null || matched.isEmpty()) {
-                        null
-                    } else {
-                        offline.status(item.copy(streams = matched), downloadTasks, downloadPending)
-                    }
-                },
-                onDownload = { season, episode, height, audio ->
-                    offline.enqueue(
-                        offlineItem(detail.toSaved(), pickedPlayback, height, season, episode, audio),
-                    )
-                    downloadSheet = false
-                },
-                onDelete = downloaded?.let {
-                    { season, episode ->
-                        if (season != null && episode != null) offline.removeStream(detail.id, season, episode)
-                        else offline.remove(detail.id)
-                        downloadSheet = false
-                    }
-                },
-                onDismiss = { downloadSheet = false },
-            )
         }
     }
 }

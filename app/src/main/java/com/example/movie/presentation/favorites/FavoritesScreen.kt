@@ -90,8 +90,6 @@ import com.example.movie.presentation.home.PeekExit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.movie.R
-import com.example.movie.data.download.OfflineItem
-import com.example.movie.presentation.detail.OfflinePlayer
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.SavedTitle
@@ -163,17 +161,11 @@ internal fun FavoritesScreen(
     val container = LocalAppContainer.current
     val favorites by container.favorites.items.collectAsStateWithLifecycle()
     val watched by container.watched.items.collectAsStateWithLifecycle()
-    val downloads by container.offline.items.collectAsStateWithLifecycle()
-    val downloadTasks by container.offline.tasks.collectAsStateWithLifecycle()
-    val downloadPending by container.offline.pending.collectAsStateWithLifecycle()
     var libraryName by rememberSaveable { mutableStateOf(LibrarySection.Favorites.name) }
-    val library = LibrarySection.valueOf(libraryName)
-    var playing by remember { mutableStateOf<OfflinePlay?>(null) }
-    var openedDownload by rememberSaveable { mutableStateOf<String?>(null) }
+    val library = LibrarySection.entries.firstOrNull { it.name == libraryName } ?: LibrarySection.Favorites
     val items = when (library) {
         LibrarySection.Favorites -> favorites
         LibrarySection.Watched -> watched
-        LibrarySection.Downloads -> downloads.map { it.title }
         LibrarySection.Actors -> emptyList()
     }
     var tabName by rememberSaveable { mutableStateOf(FavoriteTab.All.name) }
@@ -203,43 +195,8 @@ internal fun FavoritesScreen(
         filtersOpen = false
         tabName = next.name
     }
-    val downloadStatus = { item: OfflineItem ->
-        container.offline.status(item, downloadTasks, downloadPending)
-    }
-    val opened = downloads.firstOrNull { it.title.id == openedDownload }
     Box(modifier = Modifier.fillMaxSize()) {
-        if (library == LibrarySection.Downloads) {
-            DownloadsLibrary(
-                items = downloads,
-                topPadding = topInset + BrandTopInset + brandReserve + 12.dp,
-                statusOf = downloadStatus,
-                onOpen = { openedDownload = it.title.id },
-                onPlay = { playing = OfflinePlay(it, null, null) },
-            )
-            LibraryBrand(
-                hat = logo.hat,
-                mustache = logo.mustache,
-                library = library,
-                onLibrary = {
-                    openedDownload = null
-                    libraryName = it.name
-                },
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
-                    .padding(top = BrandTopInset)
-                    .onSizeChanged { brandHeight = it.height },
-            )
-            if (opened != null) {
-                DownloadedEpisodes(
-                    item = opened,
-                    statusOf = downloadStatus,
-                    onPlay = { season, episode -> playing = OfflinePlay(opened, season, episode) },
-                    onRemove = { season, episode -> container.offline.removeStream(opened.title.id, season, episode) },
-                    onBack = { openedDownload = null },
-                )
-            }
-        } else if (shown.isEmpty()) {
+        if (shown.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -270,9 +227,7 @@ internal fun FavoritesScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = stringResource(
-                            if (library == LibrarySection.Downloads) R.string.downloads_empty else R.string.catalog_empty,
-                        ),
+                        text = stringResource(R.string.catalog_empty),
                         color = CinemaMuted,
                         fontSize = 16.sp,
                         lineHeight = 22.sp,
@@ -340,7 +295,7 @@ internal fun FavoritesScreen(
             )
         }
         LibraryFilterDialog(
-                open = filtersOpen && tab.hasGenres && library != LibrarySection.Downloads,
+                open = filtersOpen && tab.hasGenres,
                 title = stringResource(tab.label),
                 genres = genres,
                 genre = genre,
@@ -354,18 +309,8 @@ internal fun FavoritesScreen(
                 },
                 onDismiss = { filtersOpen = false },
             )
-        playing?.let { play ->
-            OfflinePlayer(
-                item = play.item,
-                season = play.season,
-                episode = play.episode,
-                onDismiss = { playing = null },
-            )
-        }
     }
 }
-
-private data class OfflinePlay(val item: OfflineItem, val season: Int?, val episode: Int?)
 
 @Composable
 private fun LibraryBrand(
@@ -434,7 +379,6 @@ private fun LibraryScrim(progress: Float, modifier: Modifier = Modifier) {
 private enum class LibrarySection(@StringRes val label: Int) {
     Favorites(R.string.nav_favorites),
     Watched(R.string.favorites_watched),
-    Downloads(R.string.favorites_downloaded),
     Actors(R.string.favorites_actors),
 }
 

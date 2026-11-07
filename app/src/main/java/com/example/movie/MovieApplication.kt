@@ -3,8 +3,6 @@ package com.example.movie
 import android.app.Application
 import coil.Coil
 import coil.ImageLoader
-import com.example.movie.data.download.MediaCache
-import com.example.movie.data.download.resumePendingDownloads
 import com.example.movie.di.AppContainer
 
 class MovieApplication : Application() {
@@ -13,9 +11,7 @@ class MovieApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        MediaCache.install(this)
         container = AppContainer(this)
-        resumePendingDownloads(this)
         Coil.setImageLoader(
             ImageLoader.Builder(this)
                 .crossfade(350)

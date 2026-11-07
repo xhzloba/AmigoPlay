@@ -6,7 +6,8 @@ import org.junit.Test
 class TrackLabelsTest {
     @Test
     fun videoLabelUsesHeightAndBitrate() {
-        assertEquals("1080p · 4500 кбит/с", videoTrackLabel(1080, 4_500_000))
+        assertEquals("1080p", videoTrackLabel(1080, 4_500_000))
+        assertEquals("4K", videoTrackLabel(2160, 12_000_000))
         assertEquals("720p", videoTrackLabel(720, 0))
         assertEquals("Видео", videoTrackLabel(0, 0))
     }

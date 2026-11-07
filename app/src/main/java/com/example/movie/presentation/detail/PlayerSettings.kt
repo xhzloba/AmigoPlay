@@ -292,7 +292,12 @@ private fun rows(
     tracks.groups.forEach { group ->
         if (group.type != type) return@forEach
         for (index in 0 until group.length) {
-            if (!group.isTrackSupported(index)) continue
+            val playable = if (type == C.TRACK_TYPE_VIDEO) {
+                group.isTrackSupported(index, true)
+            } else {
+                group.isTrackSupported(index)
+            }
+            if (!playable) continue
             val format = group.getTrackFormat(index)
             val label = when (type) {
                 C.TRACK_TYPE_VIDEO -> videoTrackLabel(format.height, format.bitrate)
@@ -303,8 +308,13 @@ private fun rows(
         }
     }
     if (type == C.TRACK_TYPE_VIDEO) {
-        rows.sortByDescending { it.group.getTrackFormat(it.index).height }
-        return rows
+        val unique = LinkedHashMap<Int, TrackRow>()
+        rows.forEach { row ->
+            val height = row.group.getTrackFormat(row.index).height
+            val previous = unique[height]
+            if (previous == null || row.group.isTrackSelected(row.index)) unique[height] = row
+        }
+        return unique.values.sortedByDescending { it.group.getTrackFormat(it.index).height }
     }
     if (type != C.TRACK_TYPE_AUDIO) return rows
     val unique = LinkedHashMap<String, TrackRow>()

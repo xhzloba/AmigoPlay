@@ -28,6 +28,16 @@ class LiftEmbedTest {
         assertTrue(playback?.episodes.orEmpty().isEmpty())
         assertEquals(listOf("Рус. Дублированный", "LostFilm"), playback?.stream?.audioNames)
         assertEquals(listOf(1, 0), playback?.stream?.audioOrder)
+        assertEquals("https://cdn.example/video.mpd?t=1", playback?.stream?.alternateUrl)
+        assertEquals(WatchKind.Dash, playback?.stream?.alternateKind)
+    }
+
+    @Test
+    fun dashManifestKeepsHeightsHlsDrops() {
+        val hls = "#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=1272x530\n"
+        val dash = """<Representation height="2160"/><Representation height="1080"/><Representation height="720"/>"""
+        assertEquals(setOf(530), manifestHeights(hls))
+        assertEquals(setOf(2160, 1080, 720), manifestHeights(dash))
     }
 
     @Test

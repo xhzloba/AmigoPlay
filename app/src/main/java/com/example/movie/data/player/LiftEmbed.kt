@@ -21,6 +21,9 @@ internal data class WatchStream(
     val subtitles: List<WatchSubtitle>,
     val audioNames: List<String> = emptyList(),
     val audioOrder: List<Int> = emptyList(),
+    val alternateUrl: String? = null,
+    val alternateKind: WatchKind? = null,
+    val manifestPicked: Boolean = false,
 )
 
 internal data class WatchEpisode(
@@ -109,22 +112,18 @@ private fun parseEpisodes(html: String): List<WatchEpisode> {
 }
 
 private fun JsonObject.stream(): WatchStream? {
-    val hls = string("hls")
-    val dash = string("dash") ?: string("dasha")
-    val url = hls ?: dash ?: return null
     val subs = (this["cc"] as? JsonArray).orEmpty().mapNotNull { item ->
         val row = item as? JsonObject ?: return@mapNotNull null
         val subtitle = row.string("url") ?: return@mapNotNull null
         WatchSubtitle(subtitle, row.string("name").orEmpty())
     }
     val (names, order) = (this["audio"] as? JsonObject)?.trackNames() ?: (emptyList<String>() to emptyList())
-    return WatchStream(url, if (hls != null) WatchKind.Hls else WatchKind.Dash, subs, names, order)
+    return buildStream(string("hls"), string("dash") ?: string("dasha"), subs, names, order)
 }
 
 private fun singleStream(html: String): WatchStream? {
     val hls = hlsUrl.find(html)?.groupValues?.get(1)?.cleanUrl()
     val dash = dashUrl.find(html)?.groupValues?.get(1)?.cleanUrl()
-    val url = hls ?: dash ?: return null
     val subs = ccBlock.find(html)?.groupValues?.get(1).orEmpty()
         .let { block ->
             ccItem.findAll(block).map { match ->
@@ -132,8 +131,78 @@ private fun singleStream(html: String): WatchStream? {
             }.toList()
         }
     val (names, order) = audioFromHtml(html)
-    return WatchStream(url, if (hls != null) WatchKind.Hls else WatchKind.Dash, subs, names, order)
+    return buildStream(hls, dash, subs, names, order)
 }
+
+private fun buildStream(
+    hls: String?,
+    dash: String?,
+    subs: List<WatchSubtitle>,
+    names: List<String>,
+    order: List<Int>,
+): WatchStream? {
+    val url = hls ?: dash ?: return null
+    return WatchStream(
+        url = url,
+        kind = if (hls != null) WatchKind.Hls else WatchKind.Dash,
+        subtitles = subs,
+        audioNames = names,
+        audioOrder = order,
+        alternateUrl = if (hls != null) dash else null,
+        alternateKind = if (hls != null && dash != null) WatchKind.Dash else null,
+    )
+}
+
+internal fun WatchStream.preferRicherManifest(): WatchStream {
+    val other = alternateUrl ?: return copy(manifestPicked = true)
+    val otherKind = alternateKind ?: return copy(manifestPicked = true)
+    val mine = fetchHeights(url)
+    val theirs = fetchHeights(other)
+    if (theirs.size > mine.size) {
+        return copy(
+            url = other,
+            kind = otherKind,
+            alternateUrl = url,
+            alternateKind = kind,
+            manifestPicked = true,
+        )
+    }
+    return copy(manifestPicked = true)
+}
+
+internal fun WatchStream.fallbackManifest(): WatchStream? {
+    val other = alternateUrl ?: return null
+    val otherKind = alternateKind ?: return null
+    return copy(
+        url = other,
+        kind = otherKind,
+        alternateUrl = null,
+        alternateKind = null,
+        manifestPicked = true,
+    )
+}
+
+internal fun manifestHeights(manifest: String): Set<Int> {
+    val heights = LinkedHashSet<Int>()
+    hlsResolution.findAll(manifest).forEach { match ->
+        match.groupValues[2].toIntOrNull()?.takeIf { it > 0 }?.let(heights::add)
+    }
+    dashHeight.findAll(manifest).forEach { match ->
+        match.groupValues[1].toIntOrNull()?.takeIf { it > 0 }?.let(heights::add)
+    }
+    return heights
+}
+
+private fun fetchHeights(url: String): Set<Int> = runCatching {
+    val request = Request.Builder().url(url).header("User-Agent", LIFT_USER_AGENT).build()
+    client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) return emptySet()
+        manifestHeights(response.peekBody(400_000).string())
+    }
+}.getOrDefault(emptySet())
+
+private val hlsResolution = Regex("""RESOLUTION=(\d+)x(\d+)""")
+private val dashHeight = Regex("""height\s*=\s*["'](\d+)["']""")
 
 private fun audioFromHtml(html: String): Pair<List<String>, List<Int>> {
     for (match in audioKey.findAll(html)) {
