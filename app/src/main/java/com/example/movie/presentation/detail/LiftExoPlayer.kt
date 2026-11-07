@@ -5,6 +5,7 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.util.Rational
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -152,6 +153,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
     var delayUs by remember(player) { mutableLongStateOf(0L) }
     var brightness by remember(player) { mutableStateOf<Float?>(null) }
     var autoNext by remember(player) { mutableStateOf(playback.episodes.size > 1) }
+    var underCamera by remember(player) { mutableStateOf(false) }
     var inPip by remember(player) { mutableStateOf(activity.isInPictureInPictureMode) }
     val episode = playback.episodes.firstOrNull { it.stream.url == current.url }
     val episodeIndex = playback.episodes.indexOfFirst { it.stream.url == current.url }
@@ -168,6 +170,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
     DisposableEffect(activity) {
         val window = activity.window
         val previous = window.attributes.screenBrightness
+        val previousCutout = window.attributes.layoutInDisplayCutoutMode
         val controller = WindowCompat.getInsetsController(window, view)
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controller.hide(WindowInsetsCompat.Type.systemBars())
@@ -178,7 +181,20 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
         onDispose {
             activity.removeOnPictureInPictureModeChangedListener(pipListener)
             controller.show(WindowInsetsCompat.Type.systemBars())
-            window.attributes = window.attributes.apply { screenBrightness = previous }
+            window.attributes = window.attributes.apply {
+                screenBrightness = previous
+                layoutInDisplayCutoutMode = previousCutout
+            }
+        }
+    }
+    LaunchedEffect(underCamera) {
+        val window = activity.window
+        window.attributes = window.attributes.apply {
+            layoutInDisplayCutoutMode = if (underCamera) {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            } else {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+            }
         }
     }
     DisposableEffect(player) {
@@ -250,7 +266,11 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
     }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (underCamera) Modifier else Modifier.windowInsetsPadding(WindowInsets.displayCutout),
+                ),
             factory = { viewContext ->
                 PlayerView(viewContext).apply {
                     this.player = player
@@ -374,6 +394,9 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                 delayUs = delayUs,
                 brightness = brightness,
                 autoNext = autoNext,
+                underCamera = underCamera,
+                audioNames = current.audioNames,
+                audioOrder = current.audioOrder,
                 onPage = { page = it },
                 onBack = {
                     if (fromSettings && page != PlayerPage.Root) page = PlayerPage.Root else closeMenu()
@@ -389,6 +412,7 @@ internal fun LiftExoPlayer(playback: WatchPlayback, title: String, onDismiss: ()
                 },
                 onBrightness = { brightness = it },
                 onAutoNext = { autoNext = it },
+                onUnderCamera = { underCamera = it },
             )
         }
     }

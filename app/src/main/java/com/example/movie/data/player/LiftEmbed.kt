@@ -19,6 +19,8 @@ internal data class WatchStream(
     val url: String,
     val kind: WatchKind,
     val subtitles: List<WatchSubtitle>,
+    val audioNames: List<String> = emptyList(),
+    val audioOrder: List<Int> = emptyList(),
 )
 
 internal data class WatchEpisode(
@@ -40,6 +42,7 @@ private val dashUrl = Regex("""["']?dash["']?\s*:\s*"(https?:[^"]+)"""")
 private val ccBlock = Regex("""["']?cc["']?\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
 private val ccItem = Regex("""\{\s*"url"\s*:\s*"(https?:[^"]+)"\s*,\s*"name"\s*:\s*"([^"]*)"""")
 private val seasonsKey = Regex("""["']?seasons["']?\s*:\s*\[""")
+private val audioKey = Regex("""["']?audio["']?\s*:\s*\{""")
 private val currentEpisode = Regex(
     """["']?current["']?\s*:\s*\{[^}]*?["']?season["']?\s*:\s*"?(\d+)"?[^}]*?["']?episode["']?\s*:\s*"?(\d+)""",
 )
@@ -114,7 +117,8 @@ private fun JsonObject.stream(): WatchStream? {
         val subtitle = row.string("url") ?: return@mapNotNull null
         WatchSubtitle(subtitle, row.string("name").orEmpty())
     }
-    return WatchStream(url, if (hls != null) WatchKind.Hls else WatchKind.Dash, subs)
+    val (names, order) = (this["audio"] as? JsonObject)?.trackNames() ?: (emptyList<String>() to emptyList())
+    return WatchStream(url, if (hls != null) WatchKind.Hls else WatchKind.Dash, subs, names, order)
 }
 
 private fun singleStream(html: String): WatchStream? {
@@ -127,11 +131,37 @@ private fun singleStream(html: String): WatchStream? {
                 WatchSubtitle(match.groupValues[1].cleanUrl(), match.groupValues[2])
             }.toList()
         }
-    return WatchStream(url, if (hls != null) WatchKind.Hls else WatchKind.Dash, subs)
+    val (names, order) = audioFromHtml(html)
+    return WatchStream(url, if (hls != null) WatchKind.Hls else WatchKind.Dash, subs, names, order)
 }
 
-private fun extractJsonArray(html: String, start: Int): String? {
-    if (start < 0 || html.getOrNull(start) != '[') return null
+private fun audioFromHtml(html: String): Pair<List<String>, List<Int>> {
+    for (match in audioKey.findAll(html)) {
+        val start = html.indexOf('{', match.range.first)
+        val raw = extractJsonObject(html, start) ?: continue
+        val parsed = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull()?.trackNames()
+        if (parsed != null && parsed.first.isNotEmpty()) return parsed
+    }
+    return emptyList<String>() to emptyList()
+}
+
+private fun JsonObject.trackNames(): Pair<List<String>, List<Int>> {
+    val names = (this["names"] as? JsonArray).orEmpty().mapNotNull { item ->
+        (item as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+    }
+    val order = (this["order"] as? JsonArray).orEmpty().mapNotNull { item ->
+        val value = item as? JsonPrimitive ?: return@mapNotNull null
+        value.intOrNull ?: value.contentOrNull?.toIntOrNull()
+    }
+    return names to order
+}
+
+private fun extractJsonObject(html: String, start: Int): String? = extractJson(html, start, '{', '}')
+
+private fun extractJsonArray(html: String, start: Int): String? = extractJson(html, start, '[', ']')
+
+private fun extractJson(html: String, start: Int, open: Char, close: Char): String? {
+    if (start < 0 || html.getOrNull(start) != open) return null
     var depth = 0
     var inString = false
     var escaped = false
@@ -147,8 +177,8 @@ private fun extractJsonArray(html: String, start: Int): String? {
         }
         when (char) {
             '"' -> inString = true
-            '[' -> depth++
-            ']' -> {
+            open -> depth++
+            close -> {
                 depth--
                 if (depth == 0) return html.substring(start, index + 1)
             }

@@ -17,4 +17,12 @@ class TrackLabelsTest {
         assertEquals("Русский", namedTrackLabel(null, "ru", 1))
         assertEquals("Дорожка 3", namedTrackLabel(" ", "und", 2))
     }
+
+    @Test
+    fun audioCodeMapsToStudioName() {
+        val names = listOf("Кубик в кубе", "Рус. Дублированный", "LostFilm")
+        assertEquals("Кубик в кубе", audioTrackLabel("rus0", "ru", 4, names))
+        assertEquals("LostFilm", audioTrackLabel("rus2", "ru", 0, names))
+        assertEquals("Русский", audioTrackLabel(null, "ru", 0, names))
+    }
 }

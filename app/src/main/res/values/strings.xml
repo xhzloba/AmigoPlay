@@ -53,6 +53,7 @@
     <string name="player_brightness">Яркость</string>
     <string name="player_brightness_system">Системная</string>
     <string name="player_auto_next">Следующая серия автоматически</string>
+    <string name="player_under_camera">Под камеру</string>
     <string name="player_on">вкл</string>
     <string name="player_off">выкл</string>
     <string name="watch_free">смотри бесплатно</string>

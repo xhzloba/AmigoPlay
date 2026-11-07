@@ -12,7 +12,8 @@ class LiftEmbedTest {
             source: {
                 dash: "https://cdn.example/video.mpd?t=1",
                 hls: "https://cdn.example/master.m3u8?t=1",
-                cc: [{"url":"https://cdn.example/ru.vtt?t=1","name":"Рус. полные"}]
+                cc: [{"url":"https://cdn.example/ru.vtt?t=1","name":"Рус. полные"}],
+                audio: {"names":["Рус. Дублированный","LostFilm"],"order":[1,0]}
             }
         """.trimIndent()
 
@@ -25,6 +26,8 @@ class LiftEmbedTest {
             playback?.stream?.subtitles,
         )
         assertTrue(playback?.episodes.orEmpty().isEmpty())
+        assertEquals(listOf("Рус. Дублированный", "LostFilm"), playback?.stream?.audioNames)
+        assertEquals(listOf(1, 0), playback?.stream?.audioOrder)
     }
 
     @Test
@@ -41,7 +44,7 @@ class LiftEmbedTest {
             seasons:[{
               "season":1,
               "episodes":[
-                {"episode":"1","dash":"https://cdn.example/e1.mpd","hls":"https://cdn.example/e1.m3u8","cc":[{"url":"https://cdn.example/e1.vtt","name":"Рус"}]},
+                {"episode":"1","dash":"https://cdn.example/e1.mpd","hls":"https://cdn.example/e1.m3u8","audio":{"names":["Кубик в кубе","Рус. Дублированный"],"order":[0,1]},"cc":[{"url":"https://cdn.example/e1.vtt","name":"Рус"}]},
                 {"episode":"2","hls":"https://cdn.example/e2.m3u8"}
               ]
             },{
@@ -55,6 +58,8 @@ class LiftEmbedTest {
         assertEquals("https://cdn.example/e2.m3u8", playback?.stream?.url)
         assertEquals(listOf(1 to 1, 1 to 2, 2 to 1), playback?.episodes?.map { it.season to it.episode })
         assertEquals("https://cdn.example/e1.vtt", playback?.episodes?.first()?.stream?.subtitles?.single()?.url)
+        assertEquals(listOf("Кубик в кубе", "Рус. Дублированный"), playback?.episodes?.first()?.stream?.audioNames)
+        assertEquals(listOf(0, 1), playback?.episodes?.first()?.stream?.audioOrder)
     }
 
     @Test

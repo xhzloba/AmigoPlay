@@ -40,6 +40,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.example.movie.R
 import com.example.movie.data.player.WatchEpisode
+import com.example.movie.data.player.audioCodeIndex
+import com.example.movie.data.player.audioTrackLabel
 import com.example.movie.data.player.namedTrackLabel
 import com.example.movie.data.player.videoTrackLabel
 
@@ -75,6 +77,9 @@ internal fun PlayerMenu(
     delayUs: Long,
     brightness: Float?,
     autoNext: Boolean,
+    underCamera: Boolean,
+    audioNames: List<String>,
+    audioOrder: List<Int>,
     onPage: (PlayerPage) -> Unit,
     onBack: () -> Unit,
     onClose: () -> Unit,
@@ -84,9 +89,12 @@ internal fun PlayerMenu(
     onDelay: (Long) -> Unit,
     onBrightness: (Float?) -> Unit,
     onAutoNext: (Boolean) -> Unit,
+    onUnderCamera: (Boolean) -> Unit,
 ) {
     val video = remember(tracks) { rows(tracks, C.TRACK_TYPE_VIDEO) }
-    val audio = remember(tracks) { rows(tracks, C.TRACK_TYPE_AUDIO) }
+    val audio = remember(tracks, audioNames, audioOrder) {
+        rows(tracks, C.TRACK_TYPE_AUDIO, audioNames, audioOrder)
+    }
     val text = remember(tracks) { rows(tracks, C.TRACK_TYPE_TEXT) }
     val title = when (page) {
         PlayerPage.Root -> stringResource(R.string.player_menu)
@@ -154,6 +162,10 @@ internal fun PlayerMenu(
                             "${(brightness * 100).toInt()}%"
                         },
                     ) { onPage(PlayerPage.Brightness) }
+                    NavRow(
+                        stringResource(R.string.player_under_camera),
+                        stringResource(if (underCamera) R.string.player_on else R.string.player_off),
+                    ) { onUnderCamera(!underCamera) }
                     if (episodes.size > 1) {
                         NavRow(
                             stringResource(R.string.player_auto_next),
@@ -270,23 +282,41 @@ private fun overrideIndex(player: ExoPlayer, group: Tracks.Group?): Int? {
 }
 
 @OptIn(UnstableApi::class)
-private fun rows(tracks: Tracks, type: Int): List<TrackRow> {
+private fun rows(
+    tracks: Tracks,
+    type: Int,
+    audioNames: List<String> = emptyList(),
+    audioOrder: List<Int> = emptyList(),
+): List<TrackRow> {
     val rows = ArrayList<TrackRow>()
     tracks.groups.forEach { group ->
         if (group.type != type) return@forEach
         for (index in 0 until group.length) {
             if (!group.isTrackSupported(index)) continue
             val format = group.getTrackFormat(index)
-            val label = if (type == C.TRACK_TYPE_VIDEO) {
-                videoTrackLabel(format.height, format.bitrate)
-            } else {
-                namedTrackLabel(format.label, format.language, rows.size)
+            val label = when (type) {
+                C.TRACK_TYPE_VIDEO -> videoTrackLabel(format.height, format.bitrate)
+                C.TRACK_TYPE_AUDIO -> audioTrackLabel(format.label, format.language, rows.size, audioNames)
+                else -> namedTrackLabel(format.label, format.language, rows.size)
             }
             rows += TrackRow(group, index, label)
         }
     }
-    if (type == C.TRACK_TYPE_VIDEO) rows.sortByDescending { it.group.getTrackFormat(it.index).height }
-    return rows
+    if (type == C.TRACK_TYPE_VIDEO) {
+        rows.sortByDescending { it.group.getTrackFormat(it.index).height }
+        return rows
+    }
+    if (type != C.TRACK_TYPE_AUDIO) return rows
+    val unique = LinkedHashMap<String, TrackRow>()
+    rows.forEach { row ->
+        val previous = unique[row.label]
+        if (previous == null || row.group.isTrackSelected(row.index)) unique[row.label] = row
+    }
+    return unique.values.sortedBy { row ->
+        val code = audioCodeIndex(row.group.getTrackFormat(row.index).label)
+        val position = code?.let { audioOrder.indexOf(it) } ?: -1
+        if (position >= 0) position else code ?: Int.MAX_VALUE
+    }
 }
 
 @Composable
