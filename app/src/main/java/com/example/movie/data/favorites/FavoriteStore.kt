@@ -24,6 +24,15 @@ class FavoriteStore(context: Context) {
         } else {
             listOf(item) + itemsState.value
         }
+        write(next)
+    }
+
+    fun remove(id: String) {
+        if (id.isBlank() || !idsState.value.contains(id)) return
+        write(itemsState.value.filterNot { it.id == id })
+    }
+
+    private fun write(next: List<SavedTitle>) {
         prefs.edit().putString(KEY, json.encodeToString(next)).commit()
         itemsState.value = next
         idsState.value = next.map { it.id }.toSet()

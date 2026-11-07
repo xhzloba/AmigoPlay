@@ -446,6 +446,7 @@ fun AppShell(
                             val stored = container.resume.items.value.firstOrNull { it.id == next.id } ?: return@launch
                             if (seasons.fullyWatched(stored.episodeMarks())) {
                                 container.watched.add(stored.toSaved())
+                                container.favorites.remove(next.id)
                                 container.resume.forget(next.id)
                             }
                         }
@@ -453,7 +454,10 @@ fun AppShell(
                     val finished = container.resume.record(next) { stored ->
                         aired.orEmpty().fullyWatched(stored.episodeMarks())
                     }
-                    if (finished) container.watched.add(next.toSaved())
+                    if (finished) {
+                        container.watched.add(next.toSaved())
+                        container.favorites.remove(next.id)
+                    }
                 },
                 onDismiss = { resumePlayback = null },
             )

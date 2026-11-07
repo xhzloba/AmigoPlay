@@ -605,7 +605,8 @@ private fun DetailContent(
                                 }
                                 else -> {
                                     resumeStore.forget(detail.id)
-                                    watched.toggle(detail.toSaved())
+                                    watched.add(detail.toSaved())
+                                    favorites.remove(detail.id)
                                 }
                             }
                         },
@@ -731,7 +732,10 @@ private fun DetailContent(
                     val item = detail.toResume(request.franchiseId, position, duration, playedSeason, playedEpisode)
                     val seasons = detail.franchise?.seasons.orEmpty()
                     val finished = resumeStore.record(item) { stored -> seasons.fullyWatched(stored.episodeMarks()) }
-                    if (finished) watched.add(detail.toSaved())
+                    if (finished) {
+                        watched.add(detail.toSaved())
+                        favorites.remove(detail.id)
+                    }
                 },
                 onDismiss = { watching = null },
             )

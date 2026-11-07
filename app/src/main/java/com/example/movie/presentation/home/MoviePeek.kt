@@ -250,7 +250,8 @@ private fun MovieMenu(
                         }
                         else -> {
                             resumeStore.forget(movie.id)
-                            watched.toggle(movie.toSaved())
+                            watched.add(movie.toSaved())
+                            favorites.remove(movie.id)
                             onDismiss()
                         }
                     }

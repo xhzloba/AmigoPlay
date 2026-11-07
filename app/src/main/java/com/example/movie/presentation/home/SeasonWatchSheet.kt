@@ -105,6 +105,7 @@ internal fun SeasonWatchSheet(
     val container = LocalAppContainer.current
     val resumeStore = container.resume
     val watched = container.watched
+    val favorites = container.favorites
     val resume by resumeStore.items.collectAsStateWithLifecycle()
     val kept by resumeStore.kept.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
@@ -244,7 +245,12 @@ internal fun SeasonWatchSheet(
                             tick?.invoke()
                             applying = true
                             val finished = resumeStore.watchSeasons(movie.id, loaded, picked)
-                            if (finished) watched.add(movie.toSaved()) else watched.remove(movie.id)
+                            if (finished) {
+                                watched.add(movie.toSaved())
+                                favorites.remove(movie.id)
+                            } else {
+                                watched.remove(movie.id)
+                            }
                             onDismiss()
                         },
                         enabled = picked.isNotEmpty() && !applying,
