@@ -1,20 +1,20 @@
 package com.example.movie.data.history
 
 import android.content.Context
+import com.example.movie.domain.model.EpisodeProgress
 import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.episodeFinished
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-internal enum class ResumeWrite { Save, Drop, Ignore }
+internal enum class ResumeWrite { Save, Complete, Drop, Ignore }
 
-internal fun resumeWrite(positionMs: Long, durationMs: Long, sameEpisode: Boolean): ResumeWrite {
-    val finished = durationMs > 0L &&
-        (durationMs - positionMs < FINISH_TAIL_MS || positionMs >= durationMs * 95 / 100)
-    if (finished) return ResumeWrite.Drop
-    if (positionMs < MIN_POSITION_MS && sameEpisode) return ResumeWrite.Ignore
+internal fun resumeWrite(positionMs: Long, durationMs: Long, series: Boolean): ResumeWrite {
+    if (episodeFinished(positionMs, durationMs)) return if (series) ResumeWrite.Complete else ResumeWrite.Drop
+    if (positionMs < MIN_POSITION_MS) return ResumeWrite.Ignore
     return ResumeWrite.Save
 }
 
@@ -29,21 +29,37 @@ class ResumeStore(context: Context) {
         if (item.id.isBlank() || item.franchiseId <= 0 || item.posterUrl.isNullOrBlank()) return
         val current = itemsState.value
         val previous = current.firstOrNull { it.id == item.id }
-        val sameEpisode = previous == null || (previous.season == item.season && previous.episode == item.episode)
-        when (resumeWrite(item.positionMs, item.durationMs, sameEpisode)) {
+        val series = item.season != null && item.episode != null
+        when (resumeWrite(item.positionMs, item.durationMs, series)) {
             ResumeWrite.Ignore -> return
             ResumeWrite.Drop -> write(current.filter { it.id != item.id })
-            ResumeWrite.Save -> {
+            ResumeWrite.Save, ResumeWrite.Complete -> {
+                val completed = episodeFinished(item.positionMs, item.durationMs)
                 val stored = item.copy(
                     posterUrl = item.posterUrl ?: previous?.posterUrl,
                     logoUrl = if (item.logoUrl.isNullOrBlank()) previous?.logoUrl else item.logoUrl,
                     genres = item.genres.ifBlank { previous?.genres.orEmpty() },
                     year = item.year ?: previous?.year,
+                    positionMs = if (completed) item.durationMs else item.positionMs,
+                    marks = mergeMarks(previous?.marks.orEmpty(), item, completed),
                     updatedAt = System.currentTimeMillis(),
                 )
                 write((listOf(stored) + current.filter { it.id != item.id }).take(CAP))
             }
         }
+    }
+
+    private fun mergeMarks(previous: List<EpisodeProgress>, item: ResumeItem, completed: Boolean): List<EpisodeProgress> {
+        val season = item.season ?: return previous
+        val episode = item.episode ?: return previous
+        val next = EpisodeProgress(
+            season = season,
+            episode = episode,
+            positionMs = if (completed) item.durationMs else item.positionMs,
+            durationMs = item.durationMs,
+            completed = completed,
+        )
+        return listOf(next) + previous.filterNot { it.season == season && it.episode == episode }
     }
 
     private fun read(): List<ResumeItem> {
@@ -65,4 +81,3 @@ class ResumeStore(context: Context) {
 }
 
 private const val MIN_POSITION_MS = 10_000L
-private const val FINISH_TAIL_MS = 20_000L

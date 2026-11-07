@@ -138,6 +138,7 @@ import com.example.movie.presentation.palette.PosterWash
 import com.example.movie.presentation.palette.posterWash
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.episodeMarks
 import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
@@ -296,6 +297,12 @@ fun DetailScreen(
     }
 }
 
+private data class WatchRequest(
+    val franchiseId: Int,
+    val season: Int? = null,
+    val episode: Int? = null,
+)
+
 @Composable
 private fun DetailContent(
     detail: MovieDetail,
@@ -305,7 +312,8 @@ private fun DetailContent(
 ) {
     val context = LocalContext.current
     var playingTrailer by remember { mutableStateOf<FranchiseTrailer?>(null) }
-    var watching by remember(detail.id) { mutableStateOf<Int?>(null) }
+    var watching by remember(detail.id) { mutableStateOf<WatchRequest?>(null) }
+    var episodesOpen by remember(detail.id) { mutableStateOf(false) }
     var watchRequested by remember(detail.id) { mutableStateOf(false) }
     var franchisePage by remember(detail.id) { mutableStateOf<String?>(null) }
     val pageVeil = remember { Animatable(0f) }
@@ -535,17 +543,23 @@ private fun DetailContent(
                 val id = watchId ?: return@LaunchedEffect
                 if (!watchRequested) return@LaunchedEffect
                 watchRequested = false
-                watching = id
+                watching = WatchRequest(id)
             }
+            val continued = resumeItems.firstOrNull { it.id == detail.id }
+            val seasonList = detail.franchise?.seasons.orEmpty()
             WatchBar(
                 wash = paintWash,
                 glow = if (settings.watchGlow) watchGlow else null,
                 glowKey = detail.id,
-                resume = resumeItems.firstOrNull { it.id == detail.id },
+                resume = continued,
                 onWatch = {
                     tick?.invoke()
-                    val id = watchId
-                    if (id != null) watching = id else watchRequested = true
+                    if (continued != null && seasonList.isNotEmpty()) {
+                        episodesOpen = true
+                    } else {
+                        val id = watchId
+                        if (id != null) watching = WatchRequest(id) else watchRequested = true
+                    }
                 },
             )
             Spacer(Modifier.height(22.dp))
@@ -604,6 +618,11 @@ private fun DetailContent(
                 FranchiseBlock(
                     detail,
                     onPlayTrailer = { playingTrailer = it },
+                    onPlayEpisode = { season, episode ->
+                        val id = detail.franchise?.id ?: return@FranchiseBlock
+                        watching = WatchRequest(id, season, episode)
+                    },
+                    marks = continued?.episodeMarks().orEmpty(),
                     onOpenAbout = { franchisePage = "about" },
                     onOpenFacts = { franchisePage = "facts" },
                 )
@@ -647,21 +666,42 @@ private fun DetailContent(
                 )
             }
         }
+        if (episodesOpen) {
+            val franchise = detail.franchise
+            if (franchise != null && franchise.seasons.isNotEmpty()) {
+                EpisodeSheet(
+                    seasons = franchise.seasons,
+                    resume = resumeItems.firstOrNull { it.id == detail.id },
+                    onPlay = { season, episode ->
+                        episodesOpen = false
+                        val id = franchise.id ?: return@EpisodeSheet
+                        watching = WatchRequest(id, season, episode)
+                    },
+                    onDismiss = { episodesOpen = false },
+                )
+            }
+        }
         playingTrailer?.let { trailer ->
             TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
         }
         val savedResume = remember(detail.id, watching) {
             watching?.let { resumeStore.items.value.firstOrNull { item -> item.id == detail.id } }
         }
-        watching?.let { id ->
+        watching?.let { request ->
             val saved = savedResume
+            val pinned = request.season != null && request.episode != null
+            val season = if (pinned) request.season else saved?.season
+            val episode = if (pinned) request.episode else saved?.episode
+            val sameSaved = saved != null && saved.season == season && saved.episode == episode
             WatchPlayer(
-                url = resumeWatchUrl(id, saved?.season, saved?.episode),
+                url = resumeWatchUrl(request.franchiseId, season, episode),
                 title = detail.title,
                 logoUrl = detail.logoUrl,
-                startPositionMs = saved?.positionMs ?: 0L,
-                onProgress = { position, duration, season, episode ->
-                    resumeStore.record(detail.toResume(id, position, duration, season, episode))
+                startPositionMs = if (!pinned || sameSaved) saved?.positionMs ?: 0L else 0L,
+                onProgress = { position, duration, playedSeason, playedEpisode ->
+                    resumeStore.record(
+                        detail.toResume(request.franchiseId, position, duration, playedSeason, playedEpisode),
+                    )
                 },
                 onDismiss = { watching = null },
             )

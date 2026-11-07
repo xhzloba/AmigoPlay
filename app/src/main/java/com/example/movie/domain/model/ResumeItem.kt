@@ -17,9 +17,42 @@ data class ResumeItem(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val updatedAt: Long = 0L,
+    val marks: List<EpisodeProgress> = emptyList(),
 ) {
     val fraction: Float
         get() = if (durationMs <= 0L) 0f else (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+}
+
+@Serializable
+data class EpisodeProgress(
+    val season: Int,
+    val episode: Int,
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val completed: Boolean = false,
+) {
+    val fraction: Float
+        get() = when {
+            completed -> 1f
+            durationMs <= 0L -> 0f
+            else -> (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+        }
+}
+
+internal fun episodeFinished(positionMs: Long, durationMs: Long): Boolean =
+    durationMs > 0L && (durationMs - positionMs < 20_000L || positionMs >= durationMs * 95 / 100)
+
+internal fun ResumeItem.episodeMarks(): List<EpisodeProgress> {
+    val season = season ?: return marks
+    val episode = episode ?: return marks
+    if (marks.any { it.season == season && it.episode == episode }) return marks
+    return marks + EpisodeProgress(
+        season = season,
+        episode = episode,
+        positionMs = positionMs,
+        durationMs = durationMs,
+        completed = episodeFinished(positionMs, durationMs),
+    )
 }
 
 internal fun ResumeItem.toSaved(): SavedTitle = SavedTitle(

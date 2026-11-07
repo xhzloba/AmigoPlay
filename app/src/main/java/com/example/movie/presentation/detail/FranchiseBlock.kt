@@ -1,8 +1,15 @@
 package com.example.movie.presentation.detail
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -39,8 +46,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -54,6 +64,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -64,6 +78,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -71,9 +87,18 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.movie.R
+import com.example.movie.domain.model.EpisodeProgress
 import com.example.movie.domain.model.Franchise
+import com.example.movie.domain.model.FranchiseEpisode
+import com.example.movie.domain.model.FranchiseSeason
 import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.MovieDetail
+import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.episodeMarks
+import com.example.movie.domain.model.resumeClock
+import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.ui.theme.PlayBlue
+import kotlin.math.roundToInt
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.SectionScrim
@@ -110,6 +135,8 @@ private val dateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("ru")
 internal fun FranchiseBlock(
     detail: MovieDetail,
     onPlayTrailer: (FranchiseTrailer) -> Unit,
+    onPlayEpisode: (Int, Int) -> Unit,
+    marks: List<EpisodeProgress> = emptyList(),
     onOpenAbout: () -> Unit,
     onOpenFacts: () -> Unit,
 ) {
@@ -177,7 +204,7 @@ internal fun FranchiseBlock(
         }
         if (franchise.seasons.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
-            Seasons(franchise)
+            Seasons(franchise, marks, onPlayEpisode)
         }
         if (franchise.kinopoiskId != null || !franchise.imdbId.isNullOrBlank()) {
             Spacer(Modifier.height(22.dp))
@@ -592,10 +619,186 @@ private fun FactPopup(fact: String, onDismiss: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Seasons(franchise: Franchise) {
+internal fun EpisodeSheet(
+    seasons: List<FranchiseSeason>,
+    resume: ResumeItem?,
+    onPlay: (Int, Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val marks = resume?.episodeMarks().orEmpty()
     val tick = rememberHapticTick()
-    var opened by remember(franchise.seasons) { mutableStateOf(setOf<Int>()) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var opened by remember(seasons, resume?.season) {
+        mutableStateOf(resume?.season ?: seasons.firstOrNull()?.number)
+    }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CinemaBlack,
+        contentColor = Color.White,
+        scrimColor = Color(0xFF3A3A3E).copy(alpha = 0.86f),
+        dragHandle = null,
+        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
+        tonalElevation = 0.dp,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                .padding(bottom = 8.dp),
+        ) {
+            Box(
+                Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 8.dp, bottom = 12.dp)
+                    .width(32.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.28f)),
+            )
+            Text(
+                text = stringResource(R.string.section_continue),
+                modifier = Modifier.padding(horizontal = 20.dp),
+                color = Color.White,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (resume != null) {
+                val place = if (resume.season != null && resume.episode != null) {
+                    stringResource(R.string.player_episode, resume.season, resume.episode)
+                } else {
+                    null
+                }
+                if (place != null) {
+                    Text(
+                        text = place,
+                        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 2.dp),
+                        color = Color(0xFF8E8E93),
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                val percent = (resume.fraction * 100f).roundToInt().coerceIn(0, 100)
+                Row(
+                    Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    EpisodeBar(
+                        fraction = resume.fraction,
+                        modifier = Modifier.weight(1f),
+                        thickness = 2.dp,
+                    )
+                    Text(
+                        text = "$percent%  ·  ${resumeClock(resume.positionMs)}",
+                        modifier = Modifier.padding(start = 10.dp),
+                        color = Color(0xFF8E8E93),
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
+            Column(
+                Modifier
+                    .padding(top = 14.dp)
+                    .heightIn(max = 460.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+            ) {
+                seasons.forEach { season ->
+                    val expanded = season.number == opened
+                    val done = season.finished(marks)
+                    val rotation by animateFloatAsState(
+                        targetValue = if (expanded) 180f else 0f,
+                        animationSpec = SeasonArrow,
+                        label = "sheetSeason",
+                    )
+                    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    interactionSource = remember(season.number) { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {
+                                        tick?.invoke()
+                                        opened = if (expanded) null else season.number
+                                    },
+                                )
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.franchise_season, season.number),
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                if (season.episodes.isNotEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.franchise_episodes, season.episodes.size),
+                                        color = Color(0xFF8E8E93),
+                                        fontSize = 13.sp,
+                                    )
+                                }
+                            }
+                            Box(
+                                Modifier.width(MarkSlot),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (done) DoneMark()
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.55f),
+                                modifier = Modifier
+                                    .size(SeasonChevron)
+                                    .graphicsLayer { rotationZ = rotation },
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = expanded,
+                            enter = fadeIn(SeasonFade) + expandVertically(SeasonTween, expandFrom = Alignment.Top),
+                            exit = fadeOut(SeasonFade) + shrinkVertically(SeasonTween, shrinkTowards = Alignment.Top),
+                        ) {
+                            Column {
+                                season.episodes.forEach { episode ->
+                                    EpisodeLine(
+                                        season = season.number,
+                                        episode = episode,
+                                        mark = marks.mark(season.number, episode.number),
+                                        current = resume?.season == season.number && resume.episode == episode.number,
+                                        padStart = 12.dp,
+                                        padEnd = 0.dp,
+                                        trailInset = MarkSlot + 8.dp + SeasonChevron,
+                                        onPlay = {
+                                            tick?.invoke()
+                                            onPlay(season.number, episode.number)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Seasons(
+    franchise: Franchise,
+    marks: List<EpisodeProgress>,
+    onPlayEpisode: (Int, Int) -> Unit,
+) {
+    val tick = rememberHapticTick()
+    var opened by remember(franchise.seasons) { mutableStateOf<Int?>(null) }
     Text(
         text = stringResource(R.string.franchise_seasons),
         color = Color.White,
@@ -604,7 +807,7 @@ private fun Seasons(franchise: Franchise) {
     )
     Spacer(Modifier.height(12.dp))
     franchise.seasons.forEach { season ->
-        val expanded = season.number in opened
+        val expanded = season.number == opened
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -620,7 +823,7 @@ private fun Seasons(franchise: Franchise) {
                         indication = null,
                         onClick = {
                             tick?.invoke()
-                            opened = if (expanded) opened - season.number else opened + season.number
+                            opened = if (expanded) null else season.number
                         },
                     )
                     .padding(12.dp),
@@ -652,56 +855,199 @@ private fun Seasons(franchise: Franchise) {
                         )
                     }
                 }
+                Box(Modifier.width(MarkSlot), contentAlignment = Alignment.Center) {
+                    if (season.finished(marks)) DoneMark()
+                }
+                Spacer(Modifier.width(8.dp))
                 val rotation by animateFloatAsState(
                     targetValue = if (expanded) 180f else 0f,
-                    animationSpec = tween(220),
+                    animationSpec = SeasonArrow,
                     label = "seasonArrow",
                 )
                 Icon(
                     imageVector = Icons.Filled.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.82f),
+                    tint = Color.White.copy(alpha = 0.55f),
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(SeasonChevron)
                         .graphicsLayer { rotationZ = rotation },
                 )
             }
-            if (expanded) {
-                season.episodes.forEach { episode ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        Text(
-                            text = episode.number.toString(),
-                            color = Label,
-                            fontSize = 14.sp,
-                            modifier = Modifier.width(28.dp),
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(SeasonFade) + expandVertically(SeasonTween, expandFrom = Alignment.Top),
+                exit = fadeOut(SeasonFade) + shrinkVertically(SeasonTween, shrinkTowards = Alignment.Top),
+            ) {
+                Column {
+                    season.episodes.forEach { episode ->
+                        EpisodeLine(
+                            season = season.number,
+                            episode = episode,
+                            mark = marks.mark(season.number, episode.number),
+                            trailInset = MarkSlot + 8.dp + SeasonChevron,
+                            onPlay = {
+                                tick?.invoke()
+                                onPlayEpisode(season.number, episode.number)
+                            },
                         )
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = episode.name ?: stringResource(R.string.franchise_episode, episode.number),
-                                color = Value,
-                                fontSize = 14.sp,
-                                lineHeight = 18.sp,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            episode.release?.let { release ->
-                                Text(
-                                    text = release.asDate(),
-                                    color = Label,
-                                    fontSize = 12.sp,
-                                )
-                            }
-                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun EpisodeLine(
+    season: Int,
+    episode: FranchiseEpisode,
+    mark: EpisodeProgress?,
+    current: Boolean = false,
+    padStart: Dp = 12.dp,
+    padEnd: Dp = 12.dp,
+    trailInset: Dp = 0.dp,
+    onPlay: () -> Unit,
+) {
+    val done = mark?.completed == true
+    val upcoming = !done && episode.release.unreleased()
+    val partial = mark != null && !done && mark.fraction > 0f
+    val ink = when {
+        upcoming -> Color.White.copy(alpha = 0.34f)
+        else -> Value
+    }
+    val meta = if (upcoming) Color.White.copy(alpha = 0.28f) else Label
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 4.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (done) PlayBlue.copy(alpha = 0.10f) else Color.Transparent)
+            .clickable(
+                interactionSource = remember(season, episode.number) { MutableInteractionSource() },
+                indication = null,
+                enabled = !upcoming,
+                onClick = onPlay,
+            )
+            .padding(start = padStart, end = padEnd, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = episode.number.toString(),
+            color = when {
+                upcoming -> meta
+                current -> Color.White
+                else -> Label
+            },
+            fontSize = 14.sp,
+            modifier = Modifier.width(24.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = episode.name ?: stringResource(R.string.franchise_episode, episode.number),
+                color = if (upcoming) ink else if (done || current) Color.White else Value,
+                fontSize = 15.sp,
+                fontWeight = if (done || current) FontWeight.Medium else FontWeight.Normal,
+                lineHeight = 19.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (partial) {
+                Text(
+                    text = "${(mark.fraction * 100f).roundToInt().coerceIn(1, 99)}%",
+                    color = meta,
+                    fontSize = 12.sp,
+                )
+                EpisodeBar(
+                    fraction = mark.fraction,
+                    modifier = Modifier.padding(top = 4.dp),
+                    thickness = 2.dp,
+                )
+            } else {
+                episode.release?.let { release ->
+                    Text(
+                        text = release.asDate(),
+                        color = meta,
+                        fontSize = 12.sp,
+                    )
+                }
+            }
+        }
+        Box(
+            Modifier
+                .padding(start = 8.dp)
+                .width(MarkSlot),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (done) {
+                DoneMark()
+            } else if (!upcoming) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        if (trailInset > 0.dp) Spacer(Modifier.width(trailInset - MarkSlot))
+    }
+}
+
+private val MarkSlot = 18.dp
+private val SeasonChevron = 18.dp
+private val SeasonTween = tween<IntSize>(280, easing = FastOutSlowInEasing)
+private val SeasonArrow = tween<Float>(280, easing = FastOutSlowInEasing)
+private val SeasonFade = tween<Float>(220, easing = FastOutSlowInEasing)
+
+@Composable
+private fun EpisodeBar(fraction: Float, modifier: Modifier = Modifier, thickness: Dp = 2.dp) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(thickness)
+            .clip(RoundedCornerShape(thickness))
+            .background(Color.White.copy(alpha = 0.16f)),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(fraction.coerceIn(0.04f, 1f))
+                .height(thickness)
+                .background(Color.White),
+        )
+    }
+}
+
+@Composable
+private fun DoneMark() {
+    Canvas(Modifier.size(MarkSlot)) {
+        val stroke = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val radius = size.minDimension / 2f - stroke.width / 2f
+        drawCircle(color = PlayBlue, radius = radius, style = stroke)
+        drawPath(
+            path = Path().apply {
+                moveTo(size.width * 0.30f, size.height * 0.52f)
+                lineTo(size.width * 0.44f, size.height * 0.66f)
+                lineTo(size.width * 0.70f, size.height * 0.36f)
+            },
+            color = PlayBlue,
+            style = stroke,
+        )
+    }
+}
+
+private fun List<EpisodeProgress>.mark(season: Int, episode: Int): EpisodeProgress? =
+    firstOrNull { it.season == season && it.episode == episode }
+
+private fun FranchiseSeason.finished(marks: List<EpisodeProgress>): Boolean {
+    val aired = episodes.filterNot { it.release.unreleased() }
+    return aired.isNotEmpty() && aired.all { episode -> marks.mark(number, episode.number)?.completed == true }
+}
+
+private fun String?.unreleased(): Boolean {
+    val raw = this?.trim().orEmpty()
+    if (raw.isEmpty()) return false
+    val date = runCatching { LocalDate.parse(raw.take(10)) }.getOrNull() ?: return false
+    return date.isAfter(LocalDate.now())
 }
 
 @Composable
