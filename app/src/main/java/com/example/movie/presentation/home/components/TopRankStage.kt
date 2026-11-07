@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
@@ -85,6 +87,7 @@ import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.rememberRowSlop
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
@@ -123,7 +126,7 @@ internal fun TopRankStage(
     modifier: Modifier = Modifier,
 ) {
     HapticOnAppend(movies.map { it.id })
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.graphicsLayer().fillMaxWidth()) {
         RailTitle(title = title, onClick = onOpen)
         Spacer(Modifier.height(14.dp))
         if (movies.isEmpty()) {
@@ -195,6 +198,9 @@ private fun TopRankPager(
                             .align(Alignment.BottomCenter)
                             .offset(y = ReflectionHeight),
                     )
+                    val finger = LocalViewConfiguration.current
+                    val rowTouch = rememberRowSlop()
+                    CompositionLocalProvider(LocalViewConfiguration provides rowTouch) {
                     HorizontalPager(
                         state = pagerState,
                         contentPadding = PaddingValues(horizontal = side),
@@ -210,6 +216,7 @@ private fun TopRankPager(
                     ) { index ->
                         val item = movies[index]
                         val pageOffset = (index - pagerState.currentPage) - pagerState.currentPageOffsetFraction
+                        CompositionLocalProvider(LocalViewConfiguration provides finger) {
                         TopRankCard(
                             movie = item,
                             pageOffset = pageOffset,
@@ -223,6 +230,8 @@ private fun TopRankPager(
                             },
                             onPeek = { onMoviePeek(item) },
                         )
+                        }
+                    }
                     }
                 }
             }

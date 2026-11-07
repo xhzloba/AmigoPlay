@@ -144,6 +144,16 @@ internal fun Modifier.posterWave(wave: PosterWave, light: Boolean = false): Modi
 }
 
 @Composable
+fun rememberRowSlop(): ViewConfiguration {
+    val current = LocalViewConfiguration.current
+    return remember(current) {
+        object : ViewConfiguration by current {
+            override val touchSlop: Float = current.touchSlop * 2.4f
+        }
+    }
+}
+
+@Composable
 internal fun rememberEagerPageSlop(): ViewConfiguration {
     val current = LocalViewConfiguration.current
     return remember(current) {

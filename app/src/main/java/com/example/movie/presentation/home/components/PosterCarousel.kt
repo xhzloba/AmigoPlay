@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -101,6 +102,7 @@ import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
+import com.example.movie.presentation.home.rememberRowSlop
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
@@ -137,16 +139,18 @@ private val LogoSlot = 52.dp
 
 private data class PosterPalette(val primary: Color, val secondary: Color)
 
-private data class CoverTilt(val side: Float)
+private class CoverTilt {
+    var side by mutableFloatStateOf(0f)
+}
 
 @Composable
 private fun rememberCoverTilt(): CoverTilt {
     val context = LocalContext.current
     val gyroOn by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    var side by remember { mutableFloatStateOf(0f) }
+    val tilt = remember { CoverTilt() }
     DisposableEffect(context, gyroOn.gyro) {
         if (!gyroOn.gyro) {
-            side = 0f
+            tilt.side = 0f
             onDispose { }
         } else {
         val manager = context.getSystemService(SensorManager::class.java)
@@ -181,7 +185,7 @@ private fun rememberCoverTilt(): CoverTilt {
                     val sideTarget = (lateral / 0.4f).coerceIn(-1f, 1f) * upright
                     val alpha = 1f - exp(-dt / 0.28f)
                     smoothedSide += (sideTarget - smoothedSide) * alpha
-                    side = smoothedSide
+                    if ((smoothedSide - tilt.side).absoluteValue > 0.004f) tilt.side = smoothedSide
                 }
 
                 override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -191,7 +195,7 @@ private fun rememberCoverTilt(): CoverTilt {
         }
         }
     }
-    return CoverTilt(side)
+    return tilt
 }
 
 private fun wrapRadians(angle: Float): Float {
@@ -272,7 +276,7 @@ fun PosterCarousel(
     }
 
     Column(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
     ) {
@@ -363,6 +367,9 @@ fun PosterCarousel(
                             )
                         },
                 )
+                val finger = LocalViewConfiguration.current
+                val rowTouch = rememberRowSlop()
+                CompositionLocalProvider(LocalViewConfiguration provides rowTouch) {
                 HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(horizontal = sidePadding),
@@ -377,6 +384,7 @@ fun PosterCarousel(
                     "${movie.id}-$page"
                 },
             ) { page ->
+                CompositionLocalProvider(LocalViewConfiguration provides finger) {
                 val movie = movies[page % movies.size]
                 val pageOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
                 val distance = pageOffset.absoluteValue
@@ -462,6 +470,8 @@ fun PosterCarousel(
                         )
                     }
                 }
+                }
+            }
             }
             }
             val pageShift = pagerState.currentPageOffsetFraction
@@ -474,7 +484,7 @@ fun PosterCarousel(
                 cardHeight = cardHeight,
                 appear = appear,
                 pageShift = pageShift,
-                tiltSide = tilt.side,
+                tilt = tilt,
             )
             }
         }
@@ -892,7 +902,7 @@ private fun PosterReflection(
     cardHeight: androidx.compose.ui.unit.Dp,
     appear: Float,
     pageShift: Float,
-    tiltSide: Float,
+    tilt: CoverTilt,
 ) {
     val context = LocalContext.current
     var image by remember(movie?.id) { mutableStateOf<ImageBitmap?>(null) }
@@ -933,7 +943,7 @@ private fun PosterReflection(
                 scaleX = scale
                 scaleY = scale
                 translationX = pageShift * size.width * NeighborShift +
-                    tiltSide * 10.dp.toPx() * facing
+                    tilt.side * 10.dp.toPx() * facing
                 alpha = appear
                 compositingStrategy = CompositingStrategy.Offscreen
             },
