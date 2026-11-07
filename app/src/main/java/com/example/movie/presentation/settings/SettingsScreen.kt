@@ -47,12 +47,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.view.HapticFeedbackConstants
 import com.example.movie.BuildConfig
 import com.example.movie.R
 import com.example.movie.domain.model.UserSettings
@@ -229,6 +231,7 @@ private fun SettingsScreen(
                             hint = stringResource(R.string.settings_haptic_hint),
                             checked = settings.haptic,
                             onChecked = onHaptic,
+                            armHaptic = true,
                         ),
                     ),
                 )
@@ -588,6 +591,7 @@ private data class SettingItem(
     val hint: String,
     val checked: Boolean,
     val onChecked: (Boolean) -> Unit,
+    val armHaptic: Boolean = false,
 )
 
 @Composable
@@ -626,6 +630,7 @@ private fun SettingGroup(
                 hint = item.hint,
                 checked = item.checked,
                 onChecked = item.onChecked,
+                armHaptic = item.armHaptic,
             )
         }
     }
@@ -637,14 +642,24 @@ private fun SettingRow(
     hint: String,
     checked: Boolean,
     onChecked: (Boolean) -> Unit,
+    armHaptic: Boolean = false,
 ) {
+    val tick = rememberHapticTick()
+    val view = LocalView.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = { onChecked(!checked) },
+                onClick = {
+                    if (tick != null) {
+                        tick()
+                    } else if (armHaptic && !checked) {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    }
+                    onChecked(!checked)
+                },
             )
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
