@@ -445,6 +445,7 @@ private fun SkeletonPoster() {
                 .clip(PosterShape)
                 .background(Color.White.copy(alpha = 0.08f)),
         )
+        Spacer(Modifier.height(WatchedBadgeHang))
         if (showTitles) PosterCaptionSkeleton()
     }
 }

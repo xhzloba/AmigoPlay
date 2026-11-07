@@ -333,11 +333,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_history),
-                            onOpen = if (state.history.size >= HistoryRailSize) {
-                                { onOpenSection(HomeSection.History) }
-                            } else {
-                                null
-                            },
+                            onOpen = { onOpenSection(HomeSection.History) },
                             onSettled = logo::onSettled,
                             stickToStart = true,
                             modifier = Modifier.fillMaxWidth(),

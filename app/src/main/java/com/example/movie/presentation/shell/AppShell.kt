@@ -159,6 +159,8 @@ fun AppShell(
     LaunchedEffect(section) {
         if (section != null) {
             sectionShown = section
+            withFrameNanos { }
+            withFrameNanos { }
             sectionVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
         } else if (sectionShown != null) {
             sectionVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
@@ -191,6 +193,7 @@ fun AppShell(
     LaunchedEffect(catalogList) {
         if (catalogList != null) {
             listShown = catalogList
+            withFrameNanos { }
             withFrameNanos { }
             listVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
         } else if (listShown != null) {
