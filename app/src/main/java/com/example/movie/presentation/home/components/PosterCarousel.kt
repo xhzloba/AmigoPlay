@@ -108,6 +108,7 @@ import com.example.movie.presentation.palette.dominantColors
 import com.example.movie.presentation.palette.forGlow
 import com.example.movie.presentation.palette.forCapsule
 import com.example.movie.presentation.palette.forWordmark
+import com.example.movie.ui.theme.PlayBlue
 import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -157,21 +158,28 @@ fun PosterCarousel(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val posterColors = remember { mutableStateMapOf<String, PosterPalette>() }
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val tintOn = settings.heroPosterColors
+    val shownColors = if (tintOn) posterColors else emptyMap()
     val activeIndex = if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
     val playOffset = pagerState.currentPageOffsetFraction
     val play = wordmarkPlay(
         movies = movies,
         activeIndex = activeIndex,
         offset = playOffset,
-        colors = posterColors,
+        colors = shownColors,
     )
     val capsule = capsuleTint(
         movies = movies,
         activeIndex = activeIndex,
         offset = playOffset,
-        colors = posterColors,
+        colors = shownColors,
     )
     SideEffect {
+        if (!tintOn) {
+            onPlayColor(PlayBlue, PlayBlue, false)
+            return@SideEffect
+        }
         val color = play ?: return@SideEffect
         onPlayColor(color, capsule ?: color, playOffset.absoluteValue > 0.02f)
     }
@@ -181,8 +189,8 @@ fun PosterCarousel(
     HapticOnAppend(movies.map { it.id })
     SettleEffect(pagerState, { pagerState.isScrollInProgress }, onSettled)
 
-    LaunchedEffect(movies) {
-        if (movies.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(movies, tintOn) {
+        if (!tintOn || movies.isEmpty()) return@LaunchedEffect
         val started = HashSet<String>()
         snapshotFlow {
             if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
@@ -218,7 +226,7 @@ fun PosterCarousel(
                 movies = movies,
                 activeIndex = activeIndex,
                 offset = pagerState.currentPageOffsetFraction,
-                colors = posterColors,
+                colors = shownColors,
             )
             val glowReveal = remember { Animatable(0f) }
             var revealMovies by remember { mutableStateOf(movies) }
@@ -320,7 +328,7 @@ fun PosterCarousel(
                 val wave = remember(movie.id) { PosterWave() }
                 val shine = remember(page) { Animatable(0f) }
                 val travel = shine.value
-                val shineTint = posterColors[movie.id]?.primary ?: Color.White
+                val shineTint = shownColors[movie.id]?.primary ?: Color.White
                 LaunchedEffect(active, posterReady) {
                     if (!active || !posterReady) {
                         shine.snapTo(0f)

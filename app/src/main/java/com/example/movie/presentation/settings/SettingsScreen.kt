@@ -97,6 +97,7 @@ fun SettingsRoute() {
         settings = settings,
         onExtractColors = repository::setExtractColors,
         onExtractBackdrop = repository::setExtractBackdrop,
+        onHeroPosterColors = repository::setHeroPosterColors,
         onShowLogos = repository::setShowLogos,
         onWatchedBadge = repository::setWatchedBadge,
         onShowPosterTitles = repository::setShowPosterTitles,
@@ -112,6 +113,7 @@ private fun SettingsScreen(
     settings: UserSettings,
     onExtractColors: (Boolean) -> Unit,
     onExtractBackdrop: (Boolean) -> Unit,
+    onHeroPosterColors: (Boolean) -> Unit,
     onShowLogos: (Boolean) -> Unit,
     onWatchedBadge: (Boolean) -> Unit,
     onShowPosterTitles: (Boolean) -> Unit,
@@ -142,68 +144,93 @@ private fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 96.dp),
             ) {
-                SettingRow(
-                    title = stringResource(R.string.settings_extract_colors),
-                    hint = stringResource(R.string.settings_extract_colors_hint),
-                    checked = settings.extractColors,
-                    onChecked = onExtractColors,
+                SettingGroup(
+                    title = stringResource(R.string.settings_group_posters),
+                    accent = PosterBlue,
+                    items = listOf(
+                        SettingItem(
+                            title = stringResource(R.string.settings_large_posters),
+                            hint = stringResource(R.string.settings_large_posters_hint),
+                            checked = settings.largePosters,
+                            onChecked = onLargePosters,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_poster_titles),
+                            hint = stringResource(R.string.settings_poster_titles_hint),
+                            checked = settings.showPosterTitles,
+                            onChecked = onShowPosterTitles,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_watched_badge),
+                            hint = stringResource(R.string.settings_watched_badge_hint),
+                            checked = settings.watchedBadge,
+                            onChecked = onWatchedBadge,
+                        ),
+                    ),
                 )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_extract_backdrop),
-                    hint = stringResource(R.string.settings_extract_backdrop_hint),
-                    checked = settings.extractBackdrop,
-                    onChecked = onExtractBackdrop,
+                Spacer(Modifier.height(22.dp))
+                SettingGroup(
+                    title = stringResource(R.string.settings_group_color),
+                    accent = ColorViolet,
+                    items = listOf(
+                        SettingItem(
+                            title = stringResource(R.string.settings_hero_colors),
+                            hint = stringResource(R.string.settings_hero_colors_hint),
+                            checked = settings.heroPosterColors,
+                            onChecked = onHeroPosterColors,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_extract_colors),
+                            hint = stringResource(R.string.settings_extract_colors_hint),
+                            checked = settings.extractColors,
+                            onChecked = onExtractColors,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_extract_backdrop),
+                            hint = stringResource(R.string.settings_extract_backdrop_hint),
+                            checked = settings.extractBackdrop,
+                            onChecked = onExtractBackdrop,
+                        ),
+                    ),
                 )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_poster_titles),
-                    hint = stringResource(R.string.settings_poster_titles_hint),
-                    checked = settings.showPosterTitles,
-                    onChecked = onShowPosterTitles,
-                )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_large_posters),
-                    hint = stringResource(R.string.settings_large_posters_hint),
-                    checked = settings.largePosters,
-                    onChecked = onLargePosters,
-                )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_logos),
-                    hint = stringResource(R.string.settings_logos_hint),
-                    checked = settings.showLogos,
-                    onChecked = onShowLogos,
-                )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_watched_badge),
-                    hint = stringResource(R.string.settings_watched_badge_hint),
-                    checked = settings.watchedBadge,
-                    onChecked = onWatchedBadge,
-                )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_backdrop_auto),
-                    hint = stringResource(R.string.settings_backdrop_auto_hint),
-                    checked = settings.autoBackdrop,
-                    onChecked = onAutoBackdrop,
-                )
-                SettingsDivider()
-                SettingRow(
-                    title = stringResource(R.string.settings_watch_glow),
-                    hint = stringResource(R.string.settings_watch_glow_hint),
-                    checked = settings.watchGlow,
-                    onChecked = onWatchGlow,
+                Spacer(Modifier.height(22.dp))
+                SettingGroup(
+                    title = stringResource(R.string.settings_group_detail),
+                    accent = DetailGreen,
+                    items = listOf(
+                        SettingItem(
+                            title = stringResource(R.string.settings_logos),
+                            hint = stringResource(R.string.settings_logos_hint),
+                            checked = settings.showLogos,
+                            onChecked = onShowLogos,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_backdrop_auto),
+                            hint = stringResource(R.string.settings_backdrop_auto_hint),
+                            checked = settings.autoBackdrop,
+                            onChecked = onAutoBackdrop,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_watch_glow),
+                            hint = stringResource(R.string.settings_watch_glow_hint),
+                            checked = settings.watchGlow,
+                            onChecked = onWatchGlow,
+                        ),
+                    ),
                 )
             }
             SettingsSection.Sensors -> {
-                SettingRow(
-                    title = stringResource(R.string.settings_haptic),
-                    hint = stringResource(R.string.settings_haptic_hint),
-                    checked = settings.haptic,
-                    onChecked = onHaptic,
+                SettingGroup(
+                    title = stringResource(R.string.settings_sensors),
+                    accent = SensorAmber,
+                    items = listOf(
+                        SettingItem(
+                            title = stringResource(R.string.settings_haptic),
+                            hint = stringResource(R.string.settings_haptic_hint),
+                            checked = settings.haptic,
+                            onChecked = onHaptic,
+                        ),
+                    ),
                 )
             }
             SettingsSection.About -> AboutPage(Modifier.weight(1f).fillMaxWidth())
@@ -551,6 +578,59 @@ private fun SettingsDivider() {
     )
 }
 
+private val PosterBlue = Color(0xFF3B6EF5)
+private val ColorViolet = Color(0xFF9B6BFF)
+private val DetailGreen = Color(0xFF14A36A)
+private val SensorAmber = Color(0xFFD4920A)
+
+private data class SettingItem(
+    val title: String,
+    val hint: String,
+    val checked: Boolean,
+    val onChecked: (Boolean) -> Unit,
+)
+
+@Composable
+private fun SettingGroup(
+    title: String,
+    accent: Color,
+    items: List<SettingItem>,
+) {
+    Text(
+        text = title,
+        modifier = Modifier.padding(start = PosterGridInset + 4.dp, end = PosterGridInset, bottom = 8.dp),
+        color = accent,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 13.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.4.sp,
+    )
+    Column(
+        modifier = Modifier
+            .padding(horizontal = PosterGridInset)
+            .clip(RoundedCornerShape(20.dp))
+            .background(CinemaSurface),
+    ) {
+        items.forEachIndexed { index, item ->
+            if (index > 0) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 16.dp, end = 16.dp)
+                        .fillMaxWidth()
+                        .height(0.5.dp)
+                        .background(Color.White.copy(alpha = 0.08f)),
+                )
+            }
+            SettingRow(
+                title = item.title,
+                hint = item.hint,
+                checked = item.checked,
+                onChecked = item.onChecked,
+            )
+        }
+    }
+}
+
 @Composable
 private fun SettingRow(
     title: String,
@@ -566,7 +646,7 @@ private fun SettingRow(
                 indication = null,
                 onClick = { onChecked(!checked) },
             )
-            .padding(horizontal = PosterGridInset, vertical = 18.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(

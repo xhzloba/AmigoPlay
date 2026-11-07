@@ -174,7 +174,12 @@
     <string name="bookmark_remove">Убрать из избранного</string>
     <string name="nav_settings">Настройки</string>
     <string name="settings_interface">Интерфейс</string>
+    <string name="settings_group_posters">Обложки</string>
+    <string name="settings_group_color">Цвет</string>
+    <string name="settings_group_detail">Деталка</string>
     <string name="settings_sensors">Сенсоры</string>
+    <string name="settings_hero_colors">Цвет с обложки на главной</string>
+    <string name="settings_hero_colors_hint">Свечение и цвет play у главного слайдера берутся с обложки. Выключено — без цветного свечения.</string>
     <string name="settings_extract_colors">Цвета с обложки</string>
     <string name="settings_extract_colors_hint">Ретушь в деталке берётся из постера. Включено — цвета с кадра выключаются. Оба выключены — цвет фона.</string>
     <string name="settings_extract_backdrop">Цвета с кадра</string>

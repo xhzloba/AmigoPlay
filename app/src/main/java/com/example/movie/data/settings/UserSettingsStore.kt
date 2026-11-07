@@ -27,6 +27,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         )
     }
 
+    override fun setHeroPosterColors(enabled: Boolean) = write { it.copy(heroPosterColors = enabled) }
+
     override fun setShowLogos(enabled: Boolean) = write { it.copy(showLogos = enabled) }
 
     override fun setAutoBackdrop(enabled: Boolean) = write { it.copy(autoBackdrop = enabled) }
@@ -48,6 +50,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         prefs.edit()
             .putBoolean(KEY_COLORS, next.extractColors)
             .putBoolean(KEY_BACKDROP_COLORS, next.extractBackdrop)
+            .putBoolean(KEY_HERO_COLORS, next.heroPosterColors)
             .putBoolean(KEY_LOGOS, next.showLogos)
             .putBoolean(KEY_BACKDROP, next.autoBackdrop)
             .putBoolean(KEY_WATCH_GLOW, next.watchGlow)
@@ -63,6 +66,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
     private fun read(): UserSettings = UserSettings(
         extractColors = prefs.getBoolean(KEY_COLORS, true),
         extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
+        heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, true),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
         watchGlow = prefs.getBoolean(KEY_WATCH_GLOW, false),
@@ -77,6 +81,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val FILE = "user_settings"
         const val KEY_COLORS = "extract_colors"
         const val KEY_BACKDROP_COLORS = "extract_backdrop"
+        const val KEY_HERO_COLORS = "hero_poster_colors"
         const val KEY_LOGOS = "show_logos"
         const val KEY_BACKDROP = "auto_backdrop"
         const val KEY_WATCH_GLOW = "watch_glow"
