@@ -110,23 +110,9 @@ internal fun ResumeItem.progressCaption(): String {
     return if (season != null && episode != null) "$season×$episode · $clock" else clock
 }
 
-internal fun Movie.resumeSeed(franchiseId: Int): ResumeItem? {
-    val poster = posterUrl?.takeIf { it.isNotBlank() } ?: return null
-    if (franchiseId <= 0) return null
-    val series = kind == ContentKind.Series || type == "serial" || type == "multserial"
-    return ResumeItem(
-        id = id,
-        title = title,
-        posterUrl = poster,
-        year = year,
-        type = type.favoriteType(series),
-        genres = genres,
-        overview = overview,
-        ratingKp = ratingKp,
-        ratingImdb = ratingImdb,
-        logoUrl = logoUrl,
-        franchiseId = franchiseId,
-    )
+internal fun ResumeItem.played(): Boolean {
+    if (positionMs >= 10_000L) return true
+    return marks.any { it.durationMs > 1L }
 }
 
 internal fun MovieDetail.toResume(

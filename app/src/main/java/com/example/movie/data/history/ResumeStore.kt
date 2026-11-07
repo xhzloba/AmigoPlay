@@ -7,6 +7,7 @@ import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.episodeFinished
 import com.example.movie.domain.model.combineMarks
 import com.example.movie.domain.model.episodeMarks
+import com.example.movie.domain.model.played
 import com.example.movie.domain.model.fullyWatched
 import com.example.movie.domain.model.isUnreleased
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -105,12 +106,7 @@ class ResumeStore(context: Context) {
         forget(id)
     }
 
-    fun watchSeasons(
-        id: String,
-        seasons: List<FranchiseSeason>,
-        selected: Set<Int>,
-        seed: ResumeItem? = null,
-    ): Boolean {
+    fun watchSeasons(id: String, seasons: List<FranchiseSeason>, selected: Set<Int>): Boolean {
         if (id.isBlank() || selected.isEmpty() || seasons.isEmpty()) return false
         val current = itemsState.value
         val previous = current.firstOrNull { it.id == id }
@@ -119,30 +115,15 @@ class ResumeStore(context: Context) {
         val pickedAll = seasons.all { it.number in selected }
         val done = pickedAll || seasons.fullyWatched(merged)
         keepMarks(id, merged)
-        if (done) {
+        if (done || previous == null || !previous.played()) {
             if (previous != null) write(current.filter { it.id != id })
-            return true
+            return done
         }
         val next = nextOpen(seasons, merged) ?: run {
-            if (previous != null) write(current.filter { it.id != id })
+            write(current.filter { it.id != id })
             return true
         }
         val now = System.currentTimeMillis()
-        if (previous == null) {
-            val poster = seed?.posterUrl
-            if (seed == null || seed.franchiseId <= 0 || poster.isNullOrBlank()) return false
-            val created = seed.copy(
-                id = id,
-                season = next.first,
-                episode = next.second,
-                positionMs = 0L,
-                durationMs = 0L,
-                marks = merged,
-                updatedAt = now,
-            )
-            write((listOf(created) + current.filter { it.id != id }).take(CAP))
-            return false
-        }
         val same = previous.season == next.first && previous.episode == next.second
         val updated = previous.copy(
             marks = merged,
@@ -171,8 +152,13 @@ class ResumeStore(context: Context) {
 
     private fun read(): List<ResumeItem> {
         val raw = prefs.getString(KEY, null) ?: return emptyList()
-        return runCatching { json.decodeFromString<List<ResumeItem>>(raw) }.getOrDefault(emptyList())
+        val valid = runCatching { json.decodeFromString<List<ResumeItem>>(raw) }.getOrDefault(emptyList())
             .filter { it.id.isNotBlank() && it.franchiseId > 0 && !it.posterUrl.isNullOrBlank() }
+        val played = valid.filter { it.played() }
+        if (played.size != valid.size) {
+            prefs.edit().putString(KEY, json.encodeToString(played)).commit()
+        }
+        return played
     }
 
     private fun keepMarks(id: String, marks: List<EpisodeProgress>) {

@@ -63,7 +63,6 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.airedDone
 import com.example.movie.domain.model.combineMarks
 import com.example.movie.domain.model.episodeMarks
-import com.example.movie.domain.model.resumeSeed
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.CinemaBlack
@@ -101,7 +100,6 @@ private fun Modifier.holdSheet(): Modifier = pointerInput(Unit) {
 internal fun SeasonWatchSheet(
     movie: Movie,
     knownSeasons: List<FranchiseSeason> = emptyList(),
-    franchiseId: Int? = null,
     onDismiss: () -> Unit,
 ) {
     val container = LocalAppContainer.current
@@ -112,18 +110,15 @@ internal fun SeasonWatchSheet(
     val tick = rememberHapticTick()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var attempt by remember { mutableIntStateOf(0) }
-    var franchise by remember { mutableIntStateOf(franchiseId ?: 0) }
     var seasons by remember { mutableStateOf(knownSeasons.takeIf { it.isNotEmpty() }) }
     var failed by remember { mutableStateOf(false) }
     var picked by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var seeded by remember { mutableStateOf(false) }
     var applying by remember { mutableStateOf(false) }
     LaunchedEffect(movie.id, attempt) {
-        if (attempt == 0 && !seasons.isNullOrEmpty() && franchise > 0) return@LaunchedEffect
+        if (attempt == 0 && !seasons.isNullOrEmpty()) return@LaunchedEffect
         failed = false
-        val franchiseLoaded = container.loadFranchise(movie.id)
-        franchiseLoaded?.id?.takeIf { it > 0 }?.let { franchise = it }
-        val loaded = franchiseLoaded?.seasons.orEmpty()
+        val loaded = container.loadFranchise(movie.id)?.seasons.orEmpty()
         if (loaded.isEmpty()) {
             seasons = null
             failed = true
@@ -248,12 +243,7 @@ internal fun SeasonWatchSheet(
                             if (applying || picked.isEmpty()) return@Button
                             tick?.invoke()
                             applying = true
-                            val finished = resumeStore.watchSeasons(
-                                movie.id,
-                                loaded,
-                                picked,
-                                movie.resumeSeed(franchise),
-                            )
+                            val finished = resumeStore.watchSeasons(movie.id, loaded, picked)
                             if (finished) watched.add(movie.toSaved()) else watched.remove(movie.id)
                             onDismiss()
                         },
