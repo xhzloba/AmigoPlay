@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -44,6 +45,9 @@ import androidx.compose.ui.zIndex
 import com.example.movie.ui.theme.CinemaBlack
 import kotlin.math.roundToInt
 import com.example.movie.di.LocalAppContainer
+import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.presentation.common.ShelfNoticeHost
+import com.example.movie.presentation.common.ShelfNotices
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.detail.DetailRoute
 import com.example.movie.presentation.home.MoviePeek
@@ -80,6 +84,9 @@ class MainActivity : ComponentActivity() {
                 CompositionLocalProvider(LocalAppUpdate provides updates) {
                 MovieTheme {
                     NavigationGesture()
+                    val noticeScope = rememberCoroutineScope()
+                    val notices = remember(noticeScope) { ShelfNotices(noticeScope) }
+                    CompositionLocalProvider(LocalShelfNotices provides notices) {
                     val session by rememberSaveable { mutableIntStateOf(0) }
                     var splash by rememberSaveable { mutableStateOf(true) }
                     var revealed by remember { mutableStateOf(false) }
@@ -137,6 +144,12 @@ class MainActivity : ComponentActivity() {
                         }
                         var tabName by rememberSaveable { mutableStateOf("Home") }
                         var detailPeek by remember { mutableStateOf<Movie?>(null) }
+                        SideEffect {
+                            notices.jump = {
+                                tabName = "Favorites"
+                                stack.clear()
+                            }
+                        }
                         LaunchedEffect(openedId) { detailPeek = null }
                         val shellCovers = covering && presented.size == 1
                         Box(
@@ -196,6 +209,7 @@ class MainActivity : ComponentActivity() {
                         }
                         }
                         if (!splash || revealed) AppUpdateHost()
+                        ShelfNoticeHost()
                         if (splash) {
                             SplashScreen(
                                 onReveal = { revealed = true },
@@ -203,6 +217,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
                 }
                 }
             }

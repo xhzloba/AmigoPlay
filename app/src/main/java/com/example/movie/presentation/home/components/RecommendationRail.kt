@@ -48,7 +48,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
@@ -98,8 +97,8 @@ internal fun RailTitle(
             text = title,
             color = Color(0xFFB4B4B8),
             fontWeight = FontWeight.Normal,
-            fontSize = 16.sp,
-            lineHeight = 21.sp,
+            fontSize = CategoryTabFontSize,
+            lineHeight = CategoryTabLineHeight,
             letterSpacing = CategoryTabLetterSpacing,
         )
         if (onClick != null) {
@@ -108,7 +107,7 @@ internal fun RailTitle(
                 imageVector = ShellIcons.chevron,
                 contentDescription = null,
                 tint = Color(0xFFB4B4B8),
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
     }

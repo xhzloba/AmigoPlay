@@ -91,6 +91,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
+import com.example.movie.presentation.common.LocalShelfNotices
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.SavedTitle
 import com.example.movie.domain.model.progressCaption
@@ -168,6 +169,11 @@ internal fun FavoritesScreen(
     val watched by container.watched.items.collectAsStateWithLifecycle()
     val resume by container.resume.items.collectAsStateWithLifecycle()
     var libraryName by rememberSaveable { mutableStateOf(LibrarySection.Favorites.name) }
+    val notices = LocalShelfNotices.current
+    LaunchedEffect(notices.openRequest) {
+        if (notices.openRequest == 0) return@LaunchedEffect
+        if (LibrarySection.entries.any { it.name == notices.section }) libraryName = notices.section
+    }
     val library = LibrarySection.entries.firstOrNull { it.name == libraryName } ?: LibrarySection.Favorites
     val items = when (library) {
         LibrarySection.Favorites -> favorites

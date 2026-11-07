@@ -146,6 +146,9 @@ import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
+import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.presentation.common.NoticeShelfFavorites
+import com.example.movie.presentation.common.NoticeShelfWatched
 import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.haptic.HapticOnChange
@@ -555,6 +558,19 @@ private fun DetailContent(
                 watching = WatchRequest(id)
             }
             val seasonList = detail.franchise?.seasons.orEmpty()
+            val series = seasonList.isNotEmpty() ||
+                detail.franchise?.series == true ||
+                detail.type == "serial" ||
+                detail.type == "multserial"
+            val notices = LocalShelfNotices.current
+            val addedFavorite = stringResource(
+                if (series) R.string.notice_favorite_series else R.string.notice_favorite_movie,
+            )
+            val removedFavorite = stringResource(
+                if (series) R.string.notice_favorite_series_off else R.string.notice_favorite_movie_off,
+            )
+            val addedWatched = stringResource(R.string.notice_watched_movie)
+            val removedWatched = stringResource(R.string.notice_watched_movie_off)
             WatchBar(
                 wash = paintWash,
                 glow = if (settings.watchGlow) watchGlow else null,
@@ -583,7 +599,13 @@ private fun DetailContent(
                         circle = ActionCircle,
                         onClick = {
                             tick?.invoke()
+                            val adding = detail.id !in savedIds
                             favorites.toggle(detail.toSaved())
+                            if (adding) watched.remove(detail.id)
+                            notices.show(
+                                if (adding) addedFavorite else removedFavorite,
+                                NoticeShelfFavorites,
+                            )
                         },
                     )
                 }
@@ -594,20 +616,18 @@ private fun DetailContent(
                         seen = seen,
                         onClick = {
                             tick?.invoke()
-                            val series = seasonList.isNotEmpty() ||
-                                detail.franchise?.series == true ||
-                                detail.type == "serial" ||
-                                detail.type == "multserial"
                             when {
                                 series -> seasonWatch = true
                                 seen -> {
                                     resumeStore.clearMarks(detail.id)
                                     watched.toggle(detail.toSaved())
+                                    notices.show(removedWatched, NoticeShelfWatched)
                                 }
                                 else -> {
                                     resumeStore.forget(detail.id)
                                     watched.add(detail.toSaved())
                                     favorites.remove(detail.id)
+                                    notices.show(addedWatched, NoticeShelfWatched)
                                 }
                             }
                         },

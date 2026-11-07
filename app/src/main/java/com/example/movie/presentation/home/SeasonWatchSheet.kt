@@ -48,6 +48,8 @@ import com.example.movie.domain.model.combineMarks
 import com.example.movie.domain.model.episodeMarks
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.HandleSheet
+import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.presentation.common.NoticeShelfWatched
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.PlayBlue
@@ -64,6 +66,9 @@ internal fun SeasonWatchSheet(
     val resume by resumeStore.items.collectAsStateWithLifecycle()
     val kept by resumeStore.kept.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
+    val notices = LocalShelfNotices.current
+    val addedWatched = stringResource(R.string.notice_watched_series)
+    val removedWatched = stringResource(R.string.notice_watched_series_off)
     var attempt by remember { mutableIntStateOf(0) }
     var seasons by remember { mutableStateOf(knownSeasons.takeIf { it.isNotEmpty() }) }
     var failed by remember { mutableStateOf(false) }
@@ -182,8 +187,10 @@ internal fun SeasonWatchSheet(
                             if (finished) {
                                 watched.add(movie.toSaved())
                                 favorites.remove(movie.id)
-                            } else {
+                                notices.show(addedWatched, NoticeShelfWatched)
+                            } else if (movie.id in watched.ids.value) {
                                 watched.remove(movie.id)
+                                notices.show(removedWatched, NoticeShelfWatched)
                             }
                             onDismiss()
                         },
@@ -221,8 +228,10 @@ internal fun SeasonWatchSheet(
                                     if (applying) return@clickable
                                     tick?.invoke()
                                     applying = true
+                                    val wasWatched = movie.id in watched.ids.value
                                     resumeStore.resetProgress(movie.id)
                                     watched.remove(movie.id)
+                                    if (wasWatched) notices.show(removedWatched, NoticeShelfWatched)
                                     onDismiss()
                                 },
                             )

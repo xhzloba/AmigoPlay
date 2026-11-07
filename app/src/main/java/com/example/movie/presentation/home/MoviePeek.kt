@@ -77,6 +77,9 @@ import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.resumeClock
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkFilled
+import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.presentation.common.NoticeShelfFavorites
+import com.example.movie.presentation.common.NoticeShelfWatched
 import com.example.movie.presentation.common.BookmarkOutline
 import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
@@ -172,6 +175,15 @@ private fun MovieMenu(
     val resume by LocalAppContainer.current.resume.items.collectAsStateWithLifecycle()
     val continued = resume.firstOrNull { it.id == movie.id }
     val tick = rememberHapticTick()
+    val notices = LocalShelfNotices.current
+    val addedFavorite = stringResource(
+        if (movie.seriesTitle()) R.string.notice_favorite_series else R.string.notice_favorite_movie,
+    )
+    val removedFavorite = stringResource(
+        if (movie.seriesTitle()) R.string.notice_favorite_series_off else R.string.notice_favorite_movie_off,
+    )
+    val addedWatched = stringResource(R.string.notice_watched_movie)
+    val removedWatched = stringResource(R.string.notice_watched_movie_off)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -231,7 +243,13 @@ private fun MovieMenu(
                 label = stringResource(if (saved) R.string.menu_favorite_remove else R.string.menu_favorite_add),
                 onClick = {
                     tick?.invoke()
+                    val adding = !saved
                     favorites.toggle(movie.toSaved())
+                    if (adding) watched.remove(movie.id)
+                    notices.show(
+                        if (adding) addedFavorite else removedFavorite,
+                        NoticeShelfFavorites,
+                    )
                     onDismiss()
                 },
             )
@@ -246,12 +264,14 @@ private fun MovieMenu(
                         seen -> {
                             resumeStore.clearMarks(movie.id)
                             watched.toggle(movie.toSaved())
+                            notices.show(removedWatched, NoticeShelfWatched)
                             onDismiss()
                         }
                         else -> {
                             resumeStore.forget(movie.id)
                             watched.add(movie.toSaved())
                             favorites.remove(movie.id)
+                            notices.show(addedWatched, NoticeShelfWatched)
                             onDismiss()
                         }
                     }

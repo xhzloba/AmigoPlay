@@ -84,6 +84,7 @@ import com.example.movie.presentation.home.HomeSection
 import com.example.movie.presentation.home.HomeViewModel
 import com.example.movie.presentation.home.SearchPage
 import com.example.movie.presentation.home.SectionRoute
+import com.example.movie.presentation.common.LocalShelfNotices
 import com.example.movie.presentation.home.MoviePeek
 import com.example.movie.presentation.settings.SettingsRoute
 import com.example.movie.presentation.update.LocalAppUpdate
@@ -175,6 +176,15 @@ fun AppShell(
     }
     var catalogListKey by rememberSaveable { mutableStateOf<String?>(null) }
     var genresType by rememberSaveable { mutableStateOf<String?>(null) }
+    val notices = LocalShelfNotices.current
+    LaunchedEffect(notices.openRequest) {
+        if (notices.openRequest == 0) return@LaunchedEffect
+        peek = null
+        sectionName = null
+        catalogListKey = null
+        genresType = null
+        if (homeState.searchOpen) homeViewModel.closeSearch()
+    }
     val genresVeil = remember { Animatable(0f) }
     var genresShown by remember { mutableStateOf(false) }
     var genresHold by remember { mutableStateOf<String?>(null) }

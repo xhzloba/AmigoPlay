@@ -74,6 +74,14 @@
     <string name="action_unseen">Не смотрел</string>
     <string name="action_share">Поделиться</string>
     <string name="action_more">Дополнительно</string>
+    <string name="notice_watched_movie">Фильм добавлен в просмотренное</string>
+    <string name="notice_watched_series">Сериал добавлен в просмотренное</string>
+    <string name="notice_watched_movie_off">Фильм убран из просмотренного</string>
+    <string name="notice_watched_series_off">Сериал убран из просмотренного</string>
+    <string name="notice_favorite_movie">Фильм добавлен в избранное</string>
+    <string name="notice_favorite_series">Сериал добавлен в избранное</string>
+    <string name="notice_favorite_movie_off">Фильм убран из избранного</string>
+    <string name="notice_favorite_series_off">Сериал убран из избранного</string>
     <string name="menu_comment">Комментарий</string>
     <string name="menu_open_detail">Перейти</string>
     <string name="runtime_hours_minutes">%1$dч %2$dм</string>
