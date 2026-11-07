@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "1.69.17",
+            fixed = listOf(
+                "Обновление качается в фоне. Свернули приложение или закрыли окно — загрузка не сбрасывается. В шторке шкала, процент и скорость, в статус-баре значок загрузки. Когда файл скачан, можно сразу поставить.",
+            ),
+        ),
+        Release(
             version = "1.69.16",
             fixed = listOf(
                 "Заголовки полок снова прежнего размера.",

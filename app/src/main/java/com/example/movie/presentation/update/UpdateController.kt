@@ -1,9 +1,15 @@
 package com.example.movie.presentation.update
 
+import android.Manifest
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -16,17 +22,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.example.movie.BuildConfig
-import com.example.movie.data.update.ApkUpdateInstaller
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.AppRelease
 import com.example.movie.domain.model.DownloadProgress
 import com.example.movie.domain.model.UpdateProbe
 import com.example.movie.domain.usecase.CheckAppUpdateUseCase
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.io.File
 
 internal enum class UpdatePhase {
     Ready,
@@ -42,7 +45,6 @@ internal enum class UpdateNotice {
 @Stable
 internal class UpdateController(
     private val check: CheckAppUpdateUseCase,
-    private val installer: ApkUpdateInstaller,
     private val scope: CoroutineScope,
     private val postponed: MutableState<Boolean>,
 ) {
@@ -52,10 +54,16 @@ internal class UpdateController(
         private set
     var sheet by mutableStateOf(false)
         private set
-    var phase by mutableStateOf(UpdatePhase.Ready)
-        private set
-    var progress by mutableStateOf(DownloadProgress())
-        private set
+    var phase: UpdatePhase
+        get() = UpdateDownloadHub.phase
+        private set(value) {
+            UpdateDownloadHub.phase = value
+        }
+    var progress: DownloadProgress
+        get() = UpdateDownloadHub.progress
+        private set(value) {
+            UpdateDownloadHub.progress = value
+        }
     var checking by mutableStateOf(false)
         private set
     var notice by mutableStateOf<UpdateNotice?>(null)
@@ -66,7 +74,6 @@ internal class UpdateController(
 
     private var lookupJob: Job? = null
     private var lookupToken = 0
-    private var downloadJob: Job? = null
 
     fun refresh(present: Boolean) {
         val ticket = ++lookupToken
@@ -102,10 +109,6 @@ internal class UpdateController(
     }
 
     fun postpone() {
-        downloadJob?.cancel()
-        downloadJob = null
-        phase = UpdatePhase.Ready
-        progress = DownloadProgress()
         postponed.value = true
         sheet = false
     }
@@ -120,28 +123,39 @@ internal class UpdateController(
             context.startActivity(intent)
             return
         }
-        if (downloadJob?.isActive == true && phase == UpdatePhase.Downloading) return
-        downloadJob?.cancel()
-        downloadJob = scope.launch {
-            phase = UpdatePhase.Downloading
-            progress = DownloadProgress()
-            try {
-                val file = installer.download(
-                    url = item.apkUrl,
-                    destination = File(context.cacheDir, "updates/update.apk"),
-                    onProgress = { progress = it },
-                )
-                installer.install(context, file)
-                phase = UpdatePhase.Ready
-                progress = DownloadProgress()
-                sheet = false
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                phase = UpdatePhase.Failed
-            }
+        if (phase == UpdatePhase.Downloading) return
+        val activity = context.findActivity()
+        if (
+            activity != null &&
+            ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_REQUEST,
+            )
         }
+        phase = UpdatePhase.Downloading
+        progress = DownloadProgress()
+        val intent = Intent(context, UpdateDownloadService::class.java)
+            .putExtra(UpdateDownloadService.EXTRA_URL, item.apkUrl)
+        runCatching { ContextCompat.startForegroundService(context, intent) }
+            .onFailure { phase = UpdatePhase.Failed }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+private const val NOTIFICATION_REQUEST = 70
+
+internal object UpdateDownloadHub {
+    var phase by mutableStateOf(UpdatePhase.Ready)
+    var progress by mutableStateOf(DownloadProgress())
 }
 
 internal val LocalAppUpdate = staticCompositionLocalOf<UpdateController> {
@@ -156,7 +170,6 @@ internal fun rememberUpdateController(): UpdateController {
     val controller = remember(container) {
         UpdateController(
             check = container.checkAppUpdate,
-            installer = container.apkInstaller,
             scope = scope,
             postponed = postponed,
         )

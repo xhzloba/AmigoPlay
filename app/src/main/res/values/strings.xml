@@ -210,5 +210,7 @@
     <string name="update_action">Обновить</string>
     <string name="update_later">Позже</string>
     <string name="update_downloading">Загрузка</string>
+    <string name="update_notification_title">Обновление AmigoPlay</string>
+    <string name="update_notification_ready">Нажмите, чтобы установить</string>
     <string name="update_failed">Не удалось скачать</string>
 </resources>
