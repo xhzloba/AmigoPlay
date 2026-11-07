@@ -40,7 +40,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-private const val ArmMillis = 160L
 private const val HoldMillis = 450L
 private const val PressMillis = 110L
 private const val PressInMillis = 70
@@ -187,7 +186,7 @@ internal fun Modifier.holdToPeek(
             true
         }
     }.pointerInput(Unit) {
-        val slop = viewConfiguration.touchSlop * 0.45f
+        val slop = viewConfiguration.touchSlop
         var pressEpoch = 0
         coroutineScope {
             awaitEachGesture {
@@ -196,13 +195,8 @@ internal fun Modifier.holdToPeek(
                 val originFinger = fingerOnScreen(window, down)
                 val started = System.nanoTime()
                 val pressToken = ++pressEpoch
-                var armed = false
-                val arm = launch {
-                    delay(ArmMillis)
-                    waves[0]?.press(origin)
-                    presser[0].invoke(true)
-                    armed = true
-                }
+                waves[0]?.press(origin)
+                presser[0].invoke(true)
                 val buzz = launch {
                     delay(BuzzMillis)
                     motor[0]?.start()
@@ -226,14 +220,9 @@ internal fun Modifier.holdToPeek(
                         @Suppress("UNREACHABLE_CODE")
                         false
                     }
-                    arm.cancel()
                     if (tapped == false) {
                         draggedAway = true
                     } else if (tapped == true) {
-                        if (!armed) {
-                            waves[0]?.press(origin)
-                            presser[0].invoke(true)
-                        }
                         val elapsed = (System.nanoTime() - started) / 1_000_000
                         if (elapsed < PressMillis) releaseDelay = PressMillis - elapsed
                         openDetail = true
@@ -248,7 +237,6 @@ internal fun Modifier.holdToPeek(
                         }
                     }
                 } finally {
-                    arm.cancel()
                     buzz.cancel()
                     motor[0]?.stop()
                     if (draggedAway) waves[0]?.kill() else waves[0]?.release()
