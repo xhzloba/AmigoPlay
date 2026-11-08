@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.2.2",
+            fixed = listOf(
+                "Чёрная закладка в белом кружке на обложке чуть меньше. Кружок того же размера, что галочка просмотренного, внизу справа.",
+            ),
+        ),
+        Release(
             version = "2.2.1",
             fixed = listOf(
                 "Скачивание обновления повторяет попытку, если GitHub отвечает ошибкой. Одна такая ошибка больше не пишет сразу «Не удалось скачать».",

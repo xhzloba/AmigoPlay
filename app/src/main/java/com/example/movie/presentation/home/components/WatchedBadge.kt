@@ -72,7 +72,7 @@ internal fun FavoriteBadge(modifier: Modifier = Modifier) {
 }
 
 private fun DrawScope.favoriteMark(): Path {
-    val inset = 4.6.dp.toPx()
+    val inset = 5.4.dp.toPx()
     val left = inset
     val top = inset
     val width = size.width - inset * 2
