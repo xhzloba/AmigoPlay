@@ -1221,14 +1221,25 @@ private fun WatchBar(
 ) {
     val play = wash.playColor()
     val travel = remember(glowKey) { Animatable(0f) }
+    val appear = remember(glowKey) { Animatable(if (qualityReady) 1f else 0f) }
+    LaunchedEffect(qualityReady) {
+        appear.animateTo(
+            if (qualityReady) 1f else 0f,
+            tween(durationMillis = 520, easing = FastOutSlowInEasing),
+        )
+    }
     LaunchedEffect(glowKey, glow) {
         if (glow == null) {
             travel.snapTo(0f)
             return@LaunchedEffect
         }
+        snapshotFlow { appear.value }.first { it >= 0.995f }
         travel.snapTo(0f)
         travel.animateTo(1f, tween(1600, easing = LinearEasing))
     }
+    val livePulse = photoPulse()
+    var heldPulse by remember(glowKey) { mutableFloatStateOf(livePulse) }
+    if (!qualityReady && heldPulse != livePulse) heldPulse = livePulse
     val borderT = travel.value
     val borderReveal = (borderT / 0.72f).coerceIn(0f, 1f)
     val borderAlpha = if (borderT <= 0.72f) 1f else ((1f - borderT) / 0.28f).coerceIn(0f, 1f)
@@ -1245,7 +1256,7 @@ private fun WatchBar(
     val shownResume = if (qualityReady) resume else null
     val barHeight by animateDpAsState(
         targetValue = if (shownResume == null) 72.dp else 84.dp,
-        animationSpec = tween(360),
+        animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing),
         label = "watch-bar",
     )
     Box(
@@ -1261,22 +1272,11 @@ private fun WatchBar(
                 }
             },
     ) {
-        Crossfade(
-            targetState = qualityReady,
-            animationSpec = tween(360),
-            label = "watch-bar",
-            modifier = Modifier.fillMaxSize(),
-        ) { ready ->
-            if (!ready) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.White.copy(alpha = photoPulse())),
-                )
-            } else {
+        if (qualityReady) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
+                        .graphicsLayer { alpha = appear.value }
                         .background(
                             Brush.horizontalGradient(
                                 0f to Color.Black.copy(alpha = 0.38f),
@@ -1385,7 +1385,13 @@ private fun WatchBar(
                         )
                     }
                 }
-            }
+        }
+        if (appear.value < 1f) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = heldPulse * (1f - appear.value))),
+            )
         }
     }
 }
