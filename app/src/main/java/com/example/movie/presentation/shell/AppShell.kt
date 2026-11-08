@@ -117,6 +117,7 @@ fun AppShell(
     onMovieClick: (String) -> Unit,
     handleBack: Boolean = true,
     session: Int = 0,
+    alertsRequest: Int = 0,
 ) {
     val tab = AppTab.valueOf(tabName)
     val keyboard = LocalSoftwareKeyboardController.current
@@ -274,6 +275,9 @@ fun AppShell(
     val alertsVeil = remember { Animatable(0f) }
     var alertsShown by remember { mutableStateOf(false) }
     val openAlerts = { alertsOpen = true }
+    LaunchedEffect(alertsRequest) {
+        if (alertsRequest > 0) alertsOpen = true
+    }
     LaunchedEffect(alertsOpen) {
         if (alertsOpen) {
             alertsShown = true
@@ -492,6 +496,7 @@ fun AppShell(
         if (alertsShown) {
             AlertsScreen(
                 onMovieClick = onMovieClick,
+                onMoviePeek = { peek = it },
                 onBack = { alertsOpen = false },
                 modifier = Modifier
                     .fillMaxSize()

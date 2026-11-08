@@ -405,8 +405,15 @@ private fun DetailContent(
     LaunchedEffect(detail.id, detail.franchise, alertIds) {
         if (detail.id !in alertIds) return@LaunchedEffect
         val sub = releaseWatch.store.subs.value.firstOrNull { it.id == detail.id } ?: return@LaunchedEffect
+        val franchise = detail.franchise
+        val finished = franchise?.series == true &&
+            franchise.serialStatus.equals("offline", ignoreCase = true)
+        if (finished && !sub.awaitingPlayer) {
+            releaseWatch.store.disarm(detail.id)
+            return@LaunchedEffect
+        }
         if (sub.airedKey.isNotEmpty()) return@LaunchedEffect
-        val snapshot = detail.franchise?.releaseSnapshot() ?: return@LaunchedEffect
+        val snapshot = franchise?.releaseSnapshot() ?: return@LaunchedEffect
         releaseWatch.store.arm(
             sub.copy(airedKey = snapshot.key, nextEpochDay = snapshot.nextEpochDay),
         )
@@ -616,13 +623,21 @@ private fun DetailContent(
                 RatingsRow(detail)
             }
             Spacer(Modifier.height(22.dp))
-            val watchId = detail.franchise?.id
-            val online = !franchiseReady || watchId != null
-            LaunchedEffect(watchRequested, watchId) {
-                val id = watchId ?: return@LaunchedEffect
+            val watchId = detail.franchise?.watchId
+            val notifyRelease = franchiseReady && watchId == null
+            val online = !notifyRelease && (!franchiseReady || watchId != null)
+            val finished = detail.franchise?.series == true &&
+                detail.franchise?.serialStatus.equals("offline", ignoreCase = true)
+            val notifyArmed = detail.id in alertIds
+            LaunchedEffect(watchRequested, watchId, franchiseReady) {
                 if (!watchRequested) return@LaunchedEffect
-                watchRequested = false
-                watching = WatchRequest(id)
+                val id = watchId
+                if (id != null) {
+                    watchRequested = false
+                    watching = WatchRequest(id)
+                } else if (franchiseReady) {
+                    watchRequested = false
+                }
             }
             val seasonList = detail.franchise?.seasons.orEmpty()
             val series = seasonList.isNotEmpty() ||
@@ -638,14 +653,29 @@ private fun DetailContent(
             )
             val alertOn = stringResource(R.string.notice_alert_on)
             val alertOff = stringResource(R.string.notice_alert_off)
+            val releaseOn = stringResource(R.string.notice_release_on)
+            val releaseOff = stringResource(R.string.notice_release_off)
             val addedWatched = stringResource(R.string.notice_watched_movie)
             val removedWatched = stringResource(R.string.notice_watched_movie_off)
             WatchBar(
                 wash = paintWash,
                 glow = if (settings.watchGlow && online) watchGlow else null,
                 glowKey = detail.id,
-                resume = continued,
+                resume = if (notifyRelease) null else continued,
                 available = online,
+                notify = notifyRelease,
+                notifyArmed = notifyArmed,
+                onNotify = {
+                    tick?.invoke()
+                    if (notifyArmed) {
+                        releaseWatch.store.disarm(detail.id)
+                        notices.show(releaseOff, NoticeShelfFavorites)
+                    } else {
+                        releaseWatch.store.arm(detail.releaseSub(awaiting = true))
+                        context.askNotifyPermission()
+                        notices.show(releaseOn, NoticeShelfFavorites)
+                    }
+                },
                 onWatch = {
                     if (!online) return@WatchBar
                     tick?.invoke()
@@ -704,7 +734,7 @@ private fun DetailContent(
                         },
                     )
                 }
-                if (series) {
+                if (series && !notifyRelease && !finished) {
                     val armed = detail.id in alertIds
                     ActionSlot(stringResource(R.string.action_alert)) {
                         BellButton(armed = armed) {
@@ -713,16 +743,7 @@ private fun DetailContent(
                                 releaseWatch.store.disarm(detail.id)
                                 notices.show(alertOff, NoticeShelfFavorites)
                             } else {
-                                val snapshot = detail.franchise?.releaseSnapshot()
-                                releaseWatch.store.arm(
-                                    SeriesSub(
-                                        id = detail.id,
-                                        title = detail.title,
-                                        posterUrl = detail.posterUrl,
-                                        airedKey = snapshot?.key.orEmpty(),
-                                        nextEpochDay = snapshot?.nextEpochDay,
-                                    ),
-                                )
+                                releaseWatch.store.arm(detail.releaseSub(awaiting = false))
                                 context.askNotifyPermission()
                                 notices.show(alertOn, NoticeShelfFavorites)
                             }
@@ -759,7 +780,7 @@ private fun DetailContent(
                     detail,
                     onPlayTrailer = { playingTrailer = it },
                     onPlayEpisode = { season, episode ->
-                        val id = detail.franchise?.id ?: return@FranchiseBlock
+                        val id = detail.franchise?.watchId ?: return@FranchiseBlock
                         watching = WatchRequest(id, season, episode)
                     },
                     marks = progressMarks,
@@ -822,7 +843,7 @@ private fun DetailContent(
                     marks = progressMarks,
                     onPlay = { season, episode ->
                         episodesOpen = false
-                        val id = franchise.id ?: return@EpisodeSheet
+                        val id = franchise.watchId ?: return@EpisodeSheet
                         watching = WatchRequest(id, season, episode)
                     },
                     onDismiss = { episodesOpen = false },
@@ -946,6 +967,9 @@ private fun WatchBar(
     glowKey: String,
     resume: ResumeItem?,
     available: Boolean,
+    notify: Boolean = false,
+    notifyArmed: Boolean = false,
+    onNotify: () -> Unit = {},
     onWatch: () -> Unit,
 ) {
     val play = wash.playColor()
@@ -1000,7 +1024,22 @@ private fun WatchBar(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             val logoHeight = if (resume == null) 26.dp else 22.dp
-            Box(
+            if (notify) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (notifyArmed) Color.White else Color.White.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = ShellIcons.bell,
+                        contentDescription = stringResource(R.string.action_alert),
+                        tint = if (notifyArmed) Color.Black else Color.White,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            } else Box(
                 modifier = Modifier.height(logoHeight),
                 contentAlignment = Alignment.CenterStart,
             ) {
@@ -1028,7 +1067,9 @@ private fun WatchBar(
                 }
             }
             val ink = logoHeight * WatchLogoAspect * WatchLogoInkLeft
-            if (resume == null) {
+            if (notify) {
+                Unit
+            } else if (resume == null) {
                 Spacer(Modifier.height(2.dp))
                 WatchCaption(start = ink)
             } else {
@@ -1037,11 +1078,11 @@ private fun WatchBar(
             }
         }
         Button(
-            onClick = onWatch,
-            enabled = available,
+            onClick = if (notify) onNotify else onWatch,
+            enabled = available || notify,
             modifier = Modifier.height(44.dp),
             shape = RoundedCornerShape(22.dp),
-            contentPadding = PaddingValues(horizontal = if (available && resume == null) 18.dp else 14.dp),
+            contentPadding = PaddingValues(horizontal = if (notify) 14.dp else if (available && resume == null) 18.dp else 14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = Color.Black,
@@ -1052,12 +1093,13 @@ private fun WatchBar(
             Text(
                 text = stringResource(
                     when {
+                        notify -> R.string.watch_notify
                         !available -> R.string.watch_unavailable
                         resume == null -> R.string.watch_now
                         else -> R.string.watch_resume
                     },
                 ),
-                fontSize = 15.sp,
+                fontSize = if (notify) 14.sp else 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
             )
@@ -1088,6 +1130,25 @@ private fun DrawScope.drawWatchBorder(color: Color, widthPx: Float, reveal: Floa
         path = segment,
         color = color,
         style = Stroke(width = widthPx, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+}
+
+private fun MovieDetail.releaseSub(awaiting: Boolean): SeriesSub {
+    val series = franchise?.series == true ||
+        franchise?.seasons?.isNotEmpty() == true ||
+        type == "serial" ||
+        type == "multserial"
+    val snapshot = if (awaiting) null else franchise?.releaseSnapshot()
+    return SeriesSub(
+        id = id,
+        title = title,
+        posterUrl = posterUrl,
+        year = year,
+        type = type.ifBlank { if (series) "serial" else "movie" },
+        airedKey = if (awaiting) "pending" else snapshot?.key.orEmpty(),
+        nextEpochDay = snapshot?.nextEpochDay,
+        awaitingPlayer = awaiting,
+        feedSeen = !awaiting,
     )
 }
 

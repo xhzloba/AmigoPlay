@@ -84,6 +84,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
+import com.example.movie.domain.model.pending
 import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -346,8 +347,10 @@ internal fun BrandRow(
 @Composable
 internal fun HeaderBell(onClick: () -> Unit) {
     val tick = rememberHapticTick()
-    val alerts by LocalAppContainer.current.releaseWatch.store.alerts.collectAsStateWithLifecycle()
-    val count = alerts.count { !it.read }
+    val store = LocalAppContainer.current.releaseWatch.store
+    val alerts by store.alerts.collectAsStateWithLifecycle()
+    val shelves by store.shelves.collectAsStateWithLifecycle()
+    val count = alerts.count { !it.read } + shelves.count { it.pending() }
     Box(
         modifier = Modifier
             .size(40.dp)

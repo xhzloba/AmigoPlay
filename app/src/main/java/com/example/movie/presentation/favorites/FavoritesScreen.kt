@@ -78,6 +78,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -94,6 +95,7 @@ import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.common.LocalShelfNotices
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.SavedTitle
+import com.example.movie.domain.model.SeriesSub
 import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.model.toSaved
@@ -168,6 +170,7 @@ internal fun FavoritesScreen(
     val favorites by container.favorites.items.collectAsStateWithLifecycle()
     val watched by container.watched.items.collectAsStateWithLifecycle()
     val resume by container.resume.items.collectAsStateWithLifecycle()
+    val alerts by container.releaseWatch.store.subs.collectAsStateWithLifecycle()
     var libraryName by rememberSaveable { mutableStateOf(LibrarySection.Favorites.name) }
     val notices = LocalShelfNotices.current
     LaunchedEffect(notices.openRequest) {
@@ -179,6 +182,7 @@ internal fun FavoritesScreen(
         LibrarySection.Favorites -> favorites
         LibrarySection.Continue -> resume.map { it.toSaved() }
         LibrarySection.Watched -> watched
+        LibrarySection.Alerts -> alerts.map { it.toLibrary() }
         LibrarySection.Actors -> emptyList()
     }
     var tabName by rememberSaveable { mutableStateOf(FavoriteTab.All.name) }
@@ -240,9 +244,13 @@ internal fun FavoritesScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = stringResource(R.string.catalog_empty),
+                        text = stringResource(
+                            if (library == LibrarySection.Alerts) R.string.library_alerts_empty else R.string.catalog_empty,
+                        ),
+                        modifier = Modifier.padding(horizontal = 32.dp),
                         color = CinemaMuted,
                         fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
                         lineHeight = 22.sp,
                     )
                 }
@@ -396,8 +404,17 @@ private enum class LibrarySection(@StringRes val label: Int) {
     Favorites(R.string.nav_favorites),
     Continue(R.string.section_continue),
     Watched(R.string.favorites_watched),
+    Alerts(R.string.library_alerts),
     Actors(R.string.favorites_actors),
 }
+
+private fun SeriesSub.toLibrary(): SavedTitle = SavedTitle(
+    id = id,
+    title = title,
+    posterUrl = posterUrl,
+    year = year,
+    type = type.ifBlank { "serial" },
+)
 
 @Composable
 private fun LibraryMenu(

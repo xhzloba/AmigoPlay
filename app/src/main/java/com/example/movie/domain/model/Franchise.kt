@@ -2,6 +2,7 @@ package com.example.movie.domain.model
 
 data class Franchise(
     val id: Int? = null,
+    val playable: Boolean = false,
     val directors: List<String> = emptyList(),
     val screenwriters: List<String> = emptyList(),
     val producers: List<String> = emptyList(),
@@ -27,7 +28,9 @@ data class Franchise(
     val seasons: List<FranchiseSeason> = emptyList(),
     val kinopoiskId: Int? = null,
     val imdbId: String? = null,
-)
+) {
+    val watchId: Int? get() = id?.takeIf { playable }
+}
 
 data class FranchiseTrailer(
     val name: String,

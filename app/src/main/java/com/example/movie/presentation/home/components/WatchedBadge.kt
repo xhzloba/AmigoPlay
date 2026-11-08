@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.settings.LocalUserSettings
-import com.example.movie.ui.theme.CinemaBlack
 import com.example.movie.ui.theme.PlayBlue
 
 internal val WatchedBadgeHang = 8.dp
@@ -42,10 +41,7 @@ internal fun WatchedBadge(modifier: Modifier = Modifier) {
             .size(22.dp)
             .offset(x = (-4).dp, y = 6.dp),
     ) {
-        val ring = 2.dp.toPx()
-        val outer = size.minDimension / 2f
-        drawCircle(color = CinemaBlack, radius = outer)
-        drawCircle(color = PlayBlue, radius = outer - ring)
+        drawCircle(color = PlayBlue, radius = size.minDimension / 2f)
         val mark = Path().apply {
             moveTo(size.width * 8.3f / 24f, size.height * 12.2f / 24f)
             lineTo(size.width * 10.9f / 24f, size.height * 14.8f / 24f)

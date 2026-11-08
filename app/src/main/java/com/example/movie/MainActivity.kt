@@ -148,13 +148,20 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         var tabName by rememberSaveable { mutableStateOf("Home") }
+                        var alertsRequest by remember { mutableIntStateOf(0) }
                         val activity = this@MainActivity
                         LaunchedEffect(splash, activity.openRequest) {
                             if (splash) return@LaunchedEffect
-                            val movie = activity.intent?.getStringExtra(EXTRA_MOVIE) ?: return@LaunchedEffect
-                            activity.intent.removeExtra(EXTRA_MOVIE)
-                            container.releaseWatch.store.markMovie(movie)
-                            if (stack.lastOrNull() != movie) stack.add(movie)
+                            val movie = activity.intent?.getStringExtra(EXTRA_MOVIE)
+                            if (!movie.isNullOrBlank()) {
+                                activity.intent.removeExtra(EXTRA_MOVIE)
+                                container.releaseWatch.store.markMovie(movie)
+                                if (stack.lastOrNull() != movie) stack.add(movie)
+                            }
+                            if (activity.intent?.getBooleanExtra(EXTRA_ALERTS, false) == true) {
+                                activity.intent.removeExtra(EXTRA_ALERTS)
+                                alertsRequest++
+                            }
                         }
                         var detailPeek by remember { mutableStateOf<Movie?>(null) }
                         SideEffect {
@@ -177,6 +184,7 @@ class MainActivity : ComponentActivity() {
                                 onMovieClick = { id -> if (stack.lastOrNull() != id) stack.add(id) },
                                 handleBack = openedId == null,
                                 session = session,
+                                alertsRequest = alertsRequest,
                             )
                         }
                         BackHandler(enabled = openedId != null) {
@@ -280,6 +288,7 @@ class MainActivity : ComponentActivity() {
         const val SESSION_PREFS = "session"
         const val KEY_CLOSED = "closed"
         const val EXTRA_MOVIE = "open_movie"
+        const val EXTRA_ALERTS = "open_alerts"
     }
 }
 

@@ -32,6 +32,7 @@ internal object ShellIcons {
     val chevron: ImageVector = chevron(forward = true)
     val back: ImageVector = chevron(forward = false)
     val person: ImageVector = person()
+    val gear: ImageVector = gearIcon()
 }
 
 private fun filled(name: String, vararg paths: String): ImageVector =
@@ -147,6 +148,57 @@ private fun PathBuilder.mic() {
     moveTo(12f, 16.6f)
     lineTo(12f, 20.6f)
 }
+
+private fun gearIcon(): ImageVector = ImageVector.Builder(
+    name = "gear",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(
+        fill = SolidColor(Color.Black),
+        pathFillType = PathFillType.EvenOdd,
+    ) {
+        moveTo(11.01f, 5.78f)
+        lineTo(10.51f, 2.62f)
+        lineTo(13.49f, 2.62f)
+        lineTo(12.99f, 5.78f)
+        lineTo(15.7f, 6.9f)
+        lineTo(17.58f, 4.31f)
+        lineTo(19.69f, 6.42f)
+        lineTo(17.1f, 8.3f)
+        lineTo(18.22f, 11.01f)
+        lineTo(21.38f, 10.51f)
+        lineTo(21.38f, 13.49f)
+        lineTo(18.22f, 12.99f)
+        lineTo(17.1f, 15.7f)
+        lineTo(19.69f, 17.58f)
+        lineTo(17.58f, 19.69f)
+        lineTo(15.7f, 17.1f)
+        lineTo(12.99f, 18.22f)
+        lineTo(13.49f, 21.38f)
+        lineTo(10.51f, 21.38f)
+        lineTo(11.01f, 18.22f)
+        lineTo(8.3f, 17.1f)
+        lineTo(6.42f, 19.69f)
+        lineTo(4.31f, 17.58f)
+        lineTo(6.9f, 15.7f)
+        lineTo(5.78f, 12.99f)
+        lineTo(2.62f, 13.49f)
+        lineTo(2.62f, 10.51f)
+        lineTo(5.78f, 11.01f)
+        lineTo(6.9f, 8.3f)
+        lineTo(4.31f, 6.42f)
+        lineTo(6.42f, 4.31f)
+        lineTo(8.3f, 6.9f)
+        close()
+        moveTo(15.05f, 12f)
+        arcTo(3.05f, 3.05f, 0f, true, true, 8.95f, 12f)
+        arcTo(3.05f, 3.05f, 0f, true, true, 15.05f, 12f)
+        close()
+    }
+}.build()
 
 private fun person(): ImageVector = ImageVector.Builder(
     name = "person",

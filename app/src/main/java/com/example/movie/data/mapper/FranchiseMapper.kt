@@ -18,6 +18,7 @@ internal fun TimelineDto.kpId(): Int? = kpId.asInt()
 
 internal fun FranchiseDto.toFranchise(): Franchise? {
     if (kinopoiskId.asInt() == null && slogan.isNullOrBlank() && seasons.asObjects().isEmpty()) return null
+    var episodePlayer = false
     val seasonList = seasons.asObjects().mapNotNull { season ->
         val number = season["season"].asInt() ?: return@mapNotNull null
         FranchiseSeason(
@@ -25,6 +26,7 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
             posterUrl = season.string("poster"),
             episodes = season["episodes"].asObjects().mapNotNull { episode ->
                 val index = episode["episode"].asInt() ?: return@mapNotNull null
+                if (episode.string("iframe_url")?.startsWith("http") == true) episodePlayer = true
                 FranchiseEpisode(
                     number = index,
                     name = episode.string("name"),
@@ -35,6 +37,7 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
     }.sortedBy { it.number }
     return Franchise(
         id = id.asInt(),
+        playable = iframeUrl.clean()?.startsWith("http") == true || episodePlayer,
         directors = director.names(),
         screenwriters = screenwriter.names(),
         producers = producer.names(),

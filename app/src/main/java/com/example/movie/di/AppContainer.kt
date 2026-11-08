@@ -113,6 +113,7 @@ class AppContainer(context: Context) {
         store = ReleaseWatchStore(context),
         movies = movieRepository,
         notify = { alert -> ReleaseNotifier.post(context, alert) },
+        notifyShelf = { kind, count -> ReleaseNotifier.postShelf(context, kind, count) },
         foreground = { AppForeground.shown.get() },
     )
 

@@ -11,6 +11,9 @@ data class SeriesSub(
     val airedKey: String = "",
     val nextEpochDay: Long? = null,
     val feedSeen: Boolean = true,
+    val awaitingPlayer: Boolean = false,
+    val type: String = "serial",
+    val year: Int? = null,
 )
 
 @Serializable
@@ -24,6 +27,7 @@ data class SeriesAlert(
     val at: Long,
     val read: Boolean = false,
     val feed: Boolean = false,
+    val available: Boolean = false,
 )
 
 internal data class AiredEpisode(val season: Int, val episode: Int) : Comparable<AiredEpisode> {
