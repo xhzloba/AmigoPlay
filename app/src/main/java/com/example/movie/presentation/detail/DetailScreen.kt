@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.aspectRatio
@@ -34,6 +35,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.padding
@@ -53,7 +55,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -64,6 +65,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,9 +82,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -106,6 +110,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -137,6 +142,8 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.palette.PosterWash
 import com.example.movie.presentation.palette.posterWash
+import com.example.movie.data.player.TrailerSources
+import com.example.movie.data.player.fetchTrailerSources
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.combineMarks
@@ -147,6 +154,7 @@ import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
+import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.common.LocalShelfNotices
 import android.Manifest
 import android.app.Activity
@@ -188,6 +196,23 @@ import kotlin.math.roundToInt
 import java.util.Locale
 
 private val ActionCircle = Color.Black.copy(alpha = 0.16f)
+
+private const val TrailerPath =
+    "M42 24C42 31.2328 38.3435 37.6115 32.7782 41.3886C33.1935 41.2738 33.602 41.1447 34 41C45.1693 36.9384 47 32 47 32L48 35C48 35 44.3832 40.459 34.5 43.5C28 45.5 21 45 21 45C9.40202 45 0 35.598 0 24C0 12.402 9.40202 3 21 3C32.598 3 42 12.402 42 24ZM21 19C24.3137 19 27 16.3137 27 13C27 9.68629 24.3137 7 21 7C17.6863 7 15 9.68629 15 13C15 16.3137 17.6863 19 21 19ZM10 30C13.3137 30 16 27.3137 16 24C16 20.6863 13.3137 18 10 18C6.68629 18 4 20.6863 4 24C4 27.3137 6.68629 30 10 30ZM38 24C38 27.3137 35.3137 30 32 30C28.6863 30 26 27.3137 26 24C26 20.6863 28.6863 18 32 18C35.3137 18 38 20.6863 38 24ZM21 26C22.1046 26 23 25.1046 23 24C23 22.8954 22.1046 22 21 22C19.8954 22 19 22.8954 19 24C19 25.1046 19.8954 26 21 26ZM27 35C27 38.3137 24.3137 41 21 41C17.6863 41 15 38.3137 15 35C15 31.6863 17.6863 29 21 29C24.3137 29 27 31.6863 27 35Z"
+
+private val TrailerGlyph: ImageVector = ImageVector.Builder(
+    name = "trailers",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 48f,
+    viewportHeight = 48f,
+).apply {
+    addPath(
+        pathData = PathParser().parsePathString(TrailerPath).toNodes(),
+        pathFillType = PathFillType.EvenOdd,
+        fill = SolidColor(Color.Black),
+    )
+}.build()
 
 private val WatchedOutline: ImageVector = ImageVector.Builder(
     name = "watchedOutline",
@@ -297,6 +322,74 @@ private fun RowScope.ActionSlot(label: String, content: @Composable () -> Unit) 
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@Composable
+private fun TrailerPickSheet(
+    trailers: List<FranchiseTrailer>,
+    onPick: (FranchiseTrailer) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val tick = rememberHapticTick()
+    HandleSheet(onDismiss = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.franchise_trailers),
+                modifier = Modifier.padding(horizontal = 22.dp),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(14.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp),
+            ) {
+                trailers.forEach { trailer ->
+                    val caption = trailer.season?.let { stringResource(R.string.franchise_trailer_season, it) }
+                        ?: trailer.name.ifBlank { stringResource(R.string.franchise_trailers) }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    tick?.invoke()
+                                    onPick(trailer)
+                                },
+                            )
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = TrailerGlyph,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.92f),
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(Modifier.width(14.dp))
+                        Text(
+                            text = caption,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -440,8 +533,56 @@ private fun DetailContent(
     val scope = rememberCoroutineScope()
     var frame by remember(detail.id, backdrops) { mutableIntStateOf(0) }
     var frameReady by remember(detail.id, frame) { mutableStateOf(false) }
-    LaunchedEffect(detail.id, frame, backdrops, settings.autoBackdrop) {
-        if (!settings.autoBackdrop || backdrops.size < 2) return@LaunchedEffect
+    var wantTrailer by remember(detail.id) { mutableStateOf(false) }
+    var trailerSheet by remember(detail.id) { mutableStateOf(false) }
+    var trailerUrl by remember(detail.id) { mutableStateOf<String?>(null) }
+    var trailerPlay by remember(detail.id) { mutableIntStateOf(0) }
+    var trailerMedia by remember(detail.id) { mutableStateOf<TrailerSources?>(null) }
+    var trailerFrame by remember(detail.id) { mutableStateOf(false) }
+    var holdTrailer by remember(detail.id) { mutableStateOf(false) }
+    val trailerOn = wantTrailer && trailerMedia != null
+    LaunchedEffect(trailerOn) {
+        if (trailerOn) {
+            holdTrailer = true
+        } else {
+            delay(700)
+            trailerFrame = false
+            holdTrailer = false
+        }
+    }
+    val trailerStill = remember(detail.id) { Animatable(1f) }
+    LaunchedEffect(trailerOn, trailerFrame) {
+        trailerStill.animateTo(
+            if (trailerOn && trailerFrame) 0f else 1f,
+            tween(durationMillis = 700),
+        )
+    }
+    val trailerPage = trailerUrl
+    val trailerLoading = wantTrailer && !trailerFrame
+    LaunchedEffect(wantTrailer, trailerPage, trailerPlay) {
+        if (!wantTrailer) return@LaunchedEffect
+        val page = trailerPage
+        if (page == null) {
+            wantTrailer = false
+            return@LaunchedEffect
+        }
+        val direct = withContext(Dispatchers.IO) {
+            try {
+                fetchTrailerSources(page)
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                throw cancel
+            } catch (_: Exception) {
+                null
+            }
+        }
+        if (!wantTrailer) return@LaunchedEffect
+        if (direct == null) wantTrailer = false else trailerMedia = direct
+    }
+    LaunchedEffect(watching) {
+        if (watching != null) wantTrailer = false
+    }
+    LaunchedEffect(detail.id, frame, backdrops, settings.autoBackdrop, wantTrailer) {
+        if (!settings.autoBackdrop || backdrops.size < 2 || wantTrailer) return@LaunchedEffect
         snapshotFlow { frameReady }.first { it }
         val next = backdrops[(frame + 1) % backdrops.size]
         val incoming = async {
@@ -509,6 +650,15 @@ private fun DetailContent(
     val shadeTravel = with(density) { 200.dp.toPx() }
     val shade = (scroll.value / shadeTravel).coerceIn(0f, 1f)
     val backdropAlpha = if (colored) 1f - shade else 1f
+    LaunchedEffect(wantTrailer) {
+        if (!wantTrailer) return@LaunchedEffect
+        val origin = scroll.value
+        snapshotFlow { scroll.value }.first { it != origin }
+        trailerStill.snapTo(1f)
+        trailerFrame = false
+        holdTrailer = false
+        wantTrailer = false
+    }
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
@@ -530,15 +680,55 @@ private fun DetailContent(
         val heroHeight = maxHeight * 0.72f
         val contentTop = maxHeight * 0.44f
         val textWidth = maxWidth - DetailInset * 2
+        if (backdrops.isNotEmpty() || (wantTrailer && trailerMedia != null)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(heroHeight),
+            ) {
+                val media = trailerMedia
+                if (holdTrailer && media != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(contentTop)
+                            .clipToBounds(),
+                    ) {
+                        key(trailerPlay) {
+                            BackdropTrailer(
+                                url = media.video,
+                                audio = media.audio,
+                                referer = trailerPage,
+                                modifier = Modifier.fillMaxSize(),
+                                onReady = { trailerFrame = true },
+                                onFailed = { wantTrailer = false },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (holdTrailer && trailerFrame) {
+            TrailerEdgeFade(
+                wash = paintWash,
+                alpha = washAlpha,
+                bottomFraction = 0.44f,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         if (backdrops.isNotEmpty()) {
             Box(
                 modifier = Modifier
-                    .graphicsLayer { alpha = 1f - pageAlpha }
                     .fillMaxWidth()
-                    .height(heroHeight)
-                    .graphicsLayer { alpha = backdropAlpha },
+                    .height(heroHeight),
             ) {
-                if (manualBackdrop) {
+                Box(
+                    modifier = Modifier
+                        .graphicsLayer { alpha = (1f - pageAlpha) * backdropAlpha * trailerStill.value }
+                        .fillMaxSize(),
+                ) {
+                    if (manualBackdrop) {
                     HorizontalPager(
                         state = pagerState,
                         userScrollEnabled = false,
@@ -579,6 +769,21 @@ private fun DetailContent(
                         )
                     }
                 }
+                }
+            }
+        }
+        if (trailerLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(contentTop),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.5.dp,
+                    modifier = Modifier.size(36.dp),
+                )
             }
         }
         if (manualBackdrop) {
@@ -605,8 +810,8 @@ private fun DetailContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(contentTop)
-                    .pointerInput(manualBackdrop, backdrops.size) {
-                        if (!manualBackdrop) return@pointerInput
+                    .pointerInput(manualBackdrop, backdrops.size, wantTrailer) {
+                        if (!manualBackdrop || wantTrailer) return@pointerInput
                         detectHorizontalDragGestures(
                             onHorizontalDrag = { change, drag ->
                                 change.consume()
@@ -762,8 +967,31 @@ private fun DetailContent(
                         RoundAction(Icons.Filled.Share)
                     }
                 }
-                ActionSlot(stringResource(R.string.menu_list)) {
-                    RoundAction(Icons.Filled.List)
+                val trailers = detail.franchise?.trailers.orEmpty()
+                ActionSlot(stringResource(R.string.franchise_trailers)) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(ActionCircle)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                enabled = trailers.isNotEmpty(),
+                                onClick = {
+                                    tick?.invoke()
+                                    trailerSheet = true
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = TrailerGlyph,
+                            contentDescription = stringResource(R.string.franchise_trailers),
+                            tint = Color.White.copy(alpha = if (trailers.isEmpty()) 0.35f else 0.92f),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
                 ActionSlot(stringResource(R.string.action_more)) {
                     RoundAction(Icons.Filled.MoreVert)
@@ -834,6 +1062,20 @@ private fun DetailContent(
                     modifier = pageModifier,
                 )
             }
+        }
+        if (trailerSheet) {
+            TrailerPickSheet(
+                trailers = detail.franchise?.trailers.orEmpty(),
+                onPick = { trailer ->
+                    trailerSheet = false
+                    trailerMedia = null
+                    trailerFrame = false
+                    trailerUrl = trailer.url
+                    trailerPlay += 1
+                    wantTrailer = true
+                },
+                onDismiss = { trailerSheet = false },
+            )
         }
         if (seasonWatch) {
             SeasonWatchSheet(
@@ -1741,6 +1983,34 @@ private fun Int.asRuntime(): String {
     }
 }
 
+private const val BackdropFadeStart = 0.58f
+
+@Composable
+private fun TrailerEdgeFade(
+    wash: PosterWash,
+    alpha: Float,
+    bottomFraction: Float,
+    modifier: Modifier = Modifier,
+) {
+    if (alpha <= 0.01f) return
+    Canvas(modifier) {
+        val bottom = size.height * bottomFraction
+        val fadeTop = bottom * 0.62f
+        drawContext.canvas.saveLayer(Rect(0f, fadeTop, size.width, bottom + 2f), Paint())
+        drawPosterWash(wash, alpha)
+        drawRect(
+            brush = Brush.verticalGradient(
+                0f to Color.Transparent,
+                fadeTop / size.height to Color.Transparent,
+                (fadeTop + (bottom - fadeTop) * 0.55f) / size.height to Color.Black.copy(alpha = 0.45f),
+                bottom / size.height to Color.Black,
+            ),
+            blendMode = BlendMode.DstIn,
+        )
+        drawContext.canvas.restore()
+    }
+}
+
 @Composable
 private fun BackdropStill(
     url: String,
@@ -1765,7 +2035,7 @@ private fun BackdropStill(
                 drawRect(
                     brush = Brush.verticalGradient(
                         0f to Color.Black,
-                        0.58f to Color.Black,
+                        BackdropFadeStart to Color.Black,
                         0.74f to Color.Black.copy(alpha = 0.4f),
                         0.9f to Color.Transparent,
                         1f to Color.Transparent,

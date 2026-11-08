@@ -77,6 +77,18 @@ internal fun parseLiftEmbed(
     return WatchPlayback(single)
 }
 
+internal data class TrailerSources(val video: String, val audio: String?)
+
+internal fun fetchTrailerSources(pageUrl: String): TrailerSources {
+    val master = fetchLiftStream(pageUrl).stream.url
+    if (!master.substringBefore('?').endsWith(".m3u8")) return TrailerSources(master, null)
+    val text = fetchText(master, pageUrl) ?: return TrailerSources(master, null)
+    return TrailerSources(
+        video = mediaPlaylist(master, text) ?: master,
+        audio = audioPlaylist(master, text),
+    )
+}
+
 internal fun fetchLiftStream(pageUrl: String): WatchPlayback {
     val page = pageUrl.toHttpUrlOrNull()
     val request = Request.Builder()
@@ -193,6 +205,51 @@ internal fun manifestHeights(manifest: String): Set<Int> {
     return heights
 }
 
+private fun fetchText(url: String, pageUrl: String): String? = runCatching {
+    val origin = pageUrl.toHttpUrlOrNull()
+    val request = Request.Builder()
+        .url(url)
+        .header("User-Agent", LIFT_USER_AGENT)
+        .apply {
+            if (origin != null) header("Referer", "${origin.scheme}://${origin.host}/")
+        }
+        .build()
+    client.newCall(request).execute().use { response ->
+        if (!response.isSuccessful) return null
+        response.body?.string()
+    }
+}.getOrNull()
+
+private fun mediaPlaylist(master: String, text: String): String? {
+    val base = master.toHttpUrlOrNull() ?: return null
+    val lines = text.lines()
+    val variants = ArrayList<Pair<Int, String>>()
+    for (index in lines.indices) {
+        val line = lines[index].trim()
+        if (!line.startsWith("#EXT-X-STREAM-INF")) continue
+        val height = hlsResolution.find(line)?.groupValues?.get(2)?.toIntOrNull() ?: 0
+        val next = lines.getOrNull(index + 1)?.trim().orEmpty()
+        if (next.isEmpty() || next.startsWith("#")) continue
+        val absolute = base.resolve(next)?.toString() ?: continue
+        variants += height to absolute
+    }
+    if (variants.isEmpty()) return null
+    return variants.filter { it.first in 1..720 }.maxByOrNull { it.first }?.second
+        ?: variants.minByOrNull { it.first }?.second
+}
+
+private fun audioPlaylist(master: String, text: String): String? {
+    val base = master.toHttpUrlOrNull() ?: return null
+    val line = text.lineSequence().firstOrNull { row ->
+        row.startsWith("#EXT-X-MEDIA") &&
+            "TYPE=AUDIO" in row &&
+            "DEFAULT=YES" in row &&
+            "failover" !in row
+    } ?: return null
+    val uri = Regex("""URI="([^"]+)"""").find(line)?.groupValues?.get(1) ?: return null
+    return base.resolve(uri)?.toString()
+}
+
 private fun fetchHeights(url: String): Set<Int> = runCatching {
     val request = Request.Builder().url(url).header("User-Agent", LIFT_USER_AGENT).build()
     client.newCall(request).execute().use { response ->
@@ -266,4 +323,7 @@ private fun JsonObject.int(key: String): Int? {
     return value.intOrNull ?: value.contentOrNull?.toIntOrNull()
 }
 
+private val unicodeEscape = Regex("""\\u([0-9a-fA-F]{4})""")
+
 private fun String.cleanUrl(): String = replace("\\/", "/")
+    .replace(unicodeEscape) { match -> match.groupValues[1].toInt(16).toChar().toString() }
