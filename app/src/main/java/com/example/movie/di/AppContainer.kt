@@ -21,6 +21,7 @@ import com.example.movie.AppForeground
 import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.WatchCheck
 import com.example.movie.presentation.alerts.ReleaseNotifier
+import com.example.movie.presentation.alerts.ReleaseWatchReceiver
 import com.example.movie.domain.model.UserSettingsRepository
 import com.example.movie.domain.usecase.CheckAppUpdateUseCase
 import com.example.movie.domain.usecase.GetHomeShelvesUseCase
@@ -121,6 +122,7 @@ class AppContainer(context: Context) {
         notify = { alert -> ReleaseNotifier.post(context, alert) },
         notifyShelf = { kind, count -> ReleaseNotifier.postShelf(context, kind, count) },
         foreground = { AppForeground.shown.get() },
+        reschedule = { ReleaseWatchReceiver.schedule(context) },
     )
 
     val apkInstaller: ApkUpdateInstaller = ApkUpdateInstaller(

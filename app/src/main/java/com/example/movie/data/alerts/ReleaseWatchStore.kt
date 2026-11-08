@@ -88,6 +88,11 @@ class ReleaseWatchStore(context: Context) {
         writeAlerts(alertsState.value.map { if (it.movieId == movieId) it.copy(read = true) else it })
     }
 
+    fun markSeriesChecked(at: Long) = synchronized(gate) {
+        if (at == feedState.value.seriesCheckedAt) return
+        writeFeed(feedState.value.copy(seriesCheckedAt = at))
+    }
+
     fun setInterval(hours: Int) = synchronized(gate) {
         if (hours !in FeedKind.intervals || hours == feedState.value.intervalHours) return
         writeFeed(feedState.value.copy(intervalHours = hours))

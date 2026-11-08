@@ -19,18 +19,36 @@ class ReleaseWatch(
     private val notify: (SeriesAlert) -> Unit,
     private val notifyShelf: (kind: String, count: Int) -> Unit,
     private val foreground: () -> Boolean,
+    private val reschedule: () -> Unit,
 ) {
     private val gate = Mutex()
 
     suspend fun refresh() {
         store.purge(System.currentTimeMillis())
-        if (store.subs.value.isEmpty() && !store.feed.value.anyOn) return
-        gate.withLock {
-            val held = mutableSetOf<String>()
-            if (store.subs.value.isNotEmpty()) refreshSeries(held)
-            if (store.feed.value.anyOn) refreshFeeds(held)
+        try {
+            if (store.subs.value.isEmpty() && !store.feed.value.anyOn) return
+            gate.withLock {
+                val held = mutableSetOf<String>()
+                val now = System.currentTimeMillis()
+                val interval = watchIntervalMs()
+                if (store.subs.value.isNotEmpty() && due(store.feed.value.seriesCheckedAt, now, interval)) {
+                    refreshSeries(held)
+                    store.markSeriesChecked(now)
+                }
+                if (store.feed.value.anyOn) refreshFeeds(held)
+            }
+        } finally {
+            reschedule()
         }
     }
+
+    private fun watchIntervalMs(): Long {
+        val hours = store.feed.value.intervalHours.takeIf { it in FeedKind.intervals } ?: 6
+        return hours * 60L * 60L * 1000L
+    }
+
+    private fun due(polledAt: Long, now: Long, interval: Long): Boolean =
+        polledAt == 0L || now - polledAt >= interval
 
     private suspend fun refreshSeries(held: MutableSet<String>) {
         val today = LocalDate.now()

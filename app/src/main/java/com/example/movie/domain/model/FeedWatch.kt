@@ -9,6 +9,7 @@ data class FeedWatch(
     val seriesUpdates: Boolean = false,
     val movieFresh: Boolean = false,
     val seriesFresh: Boolean = false,
+    val seriesCheckedAt: Long = 0,
 ) {
     fun enabled(kind: String): Boolean = when (kind) {
         FeedKind.MovieUpdates -> movieUpdates

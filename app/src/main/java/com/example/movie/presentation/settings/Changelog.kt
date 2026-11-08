@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.8.1",
+            fixed = listOf(
+                "Интервал проверки новинок и колокольчика тикает в фоне. Вход в приложение его не сбрасывает. Шторка приходит, когда приложения нет на экране.",
+            ),
+        ),
+        Release(
             version = "2.8.0",
             added = listOf(
                 "Если есть и IMDb, и Кинопоиск, под жанрами общий рейтинг в процентах. Ниже 55 зелёная иконка, от 55 красная. Один рейтинг или ни одного — процента нет.",
