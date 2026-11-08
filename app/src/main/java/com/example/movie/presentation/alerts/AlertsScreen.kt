@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -119,6 +120,28 @@ internal fun AlertsScreen(
                 lineHeight = 24.sp,
             )
             Spacer(Modifier.weight(1f))
+            if (alerts.isNotEmpty() || shown.isNotEmpty()) {
+                val context = LocalContext.current
+                Text(
+                    text = stringResource(R.string.alerts_clear),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                tick?.invoke()
+                                store.clearNotices()
+                                ReleaseNotifier.dismissAll(context)
+                            },
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    color = Color(0xFF4DA3FF),
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
             Text(
                 text = stringResource(R.string.alerts_feed_every, feed.intervalHours),
                 modifier = Modifier

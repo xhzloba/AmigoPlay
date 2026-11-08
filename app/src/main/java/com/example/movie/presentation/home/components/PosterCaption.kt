@@ -26,7 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaMuted
 
-internal val PosterCaptionBlock = 46.dp
+internal val PosterCaptionBlock = 38.dp
 
 @Composable
 internal fun posterTitlesOn(): Boolean {
@@ -49,7 +49,7 @@ internal fun posterGridColumns(): Int = if (largePostersOn()) 2 else 3
 @Composable
 internal fun PosterCaption(title: String, year: Int?, modifier: Modifier = Modifier) {
     val style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-    Column(modifier.padding(top = 10.dp)) {
+    Column(modifier.padding(top = 2.dp)) {
         Text(
             text = title,
             color = Color.White,
@@ -74,9 +74,9 @@ internal fun PosterCaption(title: String, year: Int?, modifier: Modifier = Modif
 
 @Composable
 internal fun PosterCaptionSkeleton(modifier: Modifier = Modifier) {
-    // Те же слоты, что у PosterCaption: 10.dp, строка 15.sp, 4.dp, строка 15.sp.
+    // Те же слоты, что у PosterCaption: 2.dp, строка 15.sp, 4.dp, строка 15.sp.
     // Иначе нижние ряды подпрыгивают, когда скелетон сменяется текстом.
-    Column(modifier.padding(top = 10.dp)) {
+    Column(modifier.padding(top = 2.dp)) {
         CaptionBar(0.82f, 11.dp, 0.10f, FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
         CaptionBar(0.36f, 10.dp, 0.06f, FontWeight.Normal)

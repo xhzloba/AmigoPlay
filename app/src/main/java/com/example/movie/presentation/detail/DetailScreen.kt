@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.clickable
@@ -56,7 +57,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -78,6 +78,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -116,6 +117,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -125,6 +127,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -192,6 +195,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import java.util.Locale
 
@@ -305,16 +309,22 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
+private fun String.asActionLines(): String {
+    if (contains(' ') || contains('\n') || length < 11) return this
+    val cut = (length * 0.55f).toInt().coerceIn(5, length - 4)
+    return take(cut) + "\n" + drop(cut)
+}
+
 @Composable
 private fun RowScope.ActionSlot(label: String, content: @Composable () -> Unit) {
     Column(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier.width(58.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         content()
         Spacer(Modifier.height(6.dp))
         Text(
-            text = label,
+            text = label.asActionLines(),
             color = Color.White.copy(alpha = 0.78f),
             fontSize = 9.sp,
             lineHeight = 11.sp,
@@ -825,9 +835,28 @@ private fun DetailContent(
                         )
                     },
             )
-            LogoOrTitle(detail)
-            Spacer(Modifier.height(16.dp))
-            MetaRow(detail)
+            var inkBelow by remember(detail.id, detail.logoUrl) { mutableStateOf(0.dp) }
+            val logoLift by animateDpAsState(
+                targetValue = inkBelow,
+                animationSpec = tween(180),
+                label = "logo-gap",
+            )
+            Layout(
+                content = {
+                    LogoOrTitle(detail, onInkBelow = { inkBelow = it })
+                    MetaRow(detail)
+                },
+            ) { measurables, constraints ->
+                val logo = measurables[0].measure(constraints)
+                val meta = measurables[1].measure(constraints)
+                val gap = LogoMetaGap.roundToPx()
+                val metaY = (logo.height + gap - logoLift.roundToPx()).coerceAtLeast(gap)
+                val logoX = ((constraints.maxWidth - logo.width) / 2).coerceAtLeast(0)
+                layout(constraints.maxWidth, metaY + meta.height) {
+                    logo.place(logoX, 0)
+                    meta.place(0, metaY)
+                }
+            }
             if (detail.ratingImdb != null || detail.ratingKp != null) {
                 Spacer(Modifier.height(16.dp))
                 RatingsRow(detail)
@@ -899,9 +928,10 @@ private fun DetailContent(
                     }
                 },
             )
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.Top,
             ) {
                 val seen = detail.id in watchedIds
@@ -961,10 +991,6 @@ private fun DetailContent(
                             }
                         }
                     }
-                } else {
-                    ActionSlot(stringResource(R.string.action_share)) {
-                        RoundAction(Icons.Filled.Share)
-                    }
                 }
                 val trailers = detail.franchise?.trailers.orEmpty()
                 ActionSlot(stringResource(R.string.franchise_trailers)) {
@@ -996,9 +1022,29 @@ private fun DetailContent(
                     RoundAction(Icons.Filled.MoreVert)
                 }
             }
-            if (detail.overview.isNotBlank()) {
+            val director = detail.franchise?.directors
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?.joinToString(", ")
+                .orEmpty()
+                .ifBlank { detail.director.trim() }
+            if (detail.overview.isNotBlank() || director.isNotBlank()) {
                 Spacer(Modifier.height(22.dp))
-                Overview(text = detail.overview, width = textWidth)
+                if (detail.overview.isNotBlank()) {
+                    Overview(text = detail.overview, width = textWidth)
+                }
+                if (director.isNotBlank()) {
+                    if (detail.overview.isNotBlank()) Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.detail_director, director),
+                        color = Color(0xFFA1A1A6),
+                        fontSize = 12.sp,
+                        lineHeight = 15.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             if (detail.cast.isNotEmpty()) {
                 Spacer(Modifier.height(28.dp))
@@ -1513,8 +1559,9 @@ private fun ResumeCaption(item: ResumeItem, start: Dp) {
 }
 
 @Composable
-private fun LogoOrTitle(detail: MovieDetail) {
+private fun LogoOrTitle(detail: MovieDetail, onInkBelow: (Dp) -> Unit) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
     var failed by remember(detail.id, detail.logoUrl) {
         mutableStateOf(detail.logoUrl.isNullOrBlank())
     }
@@ -1522,8 +1569,8 @@ private fun LogoOrTitle(detail: MovieDetail) {
         var ready by remember(detail.id, detail.logoUrl) { mutableStateOf(false) }
         Box(
             modifier = Modifier
-                .height(84.dp)
-                .width(300.dp),
+                .height(DetailLogoHeight)
+                .width(DetailLogoWidth),
             contentAlignment = Alignment.Center,
         ) {
             MovieLogoShadow(
@@ -1536,12 +1583,19 @@ private fun LogoOrTitle(detail: MovieDetail) {
                 contentDescription = stringResource(R.string.logo_content_description, detail.title),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.Center,
-                onSuccess = { ready = true },
-                onError = { failed = true },
+                onSuccess = { state ->
+                    ready = true
+                    onInkBelow(state.result.inkBelow(density, DetailLogoWidth, DetailLogoHeight))
+                },
+                onError = {
+                    failed = true
+                    onInkBelow(0.dp)
+                },
                 modifier = Modifier.fillMaxSize(),
             )
         }
     } else {
+        SideEffect { onInkBelow(0.dp) }
         Text(
             text = detail.title,
             color = Color.White,
@@ -1555,6 +1609,35 @@ private fun LogoOrTitle(detail: MovieDetail) {
     }
 }
 
+private val DetailLogoWidth = 300.dp
+private val DetailLogoHeight = 84.dp
+private val LogoMetaGap = 8.dp
+
+private fun SuccessResult.inkBelow(density: Density, maxWidth: Dp, maxHeight: Dp): Dp {
+    val raw = (drawable as? BitmapDrawable)?.bitmap ?: return 0.dp
+    val bitmap = if (raw.config == android.graphics.Bitmap.Config.HARDWARE) {
+        raw.copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return 0.dp
+    } else {
+        raw
+    }
+    val width = bitmap.width
+    val height = bitmap.height
+    if (width <= 0 || height <= 0) return 0.dp
+    val row = IntArray(width)
+    var bottom = height - 1
+    while (bottom > 0) {
+        bitmap.getPixels(row, 0, width, 0, bottom, width, 1)
+        if (row.any { it ushr 24 > 24 }) break
+        bottom--
+    }
+    val maxW = with(density) { maxWidth.toPx() }
+    val maxH = with(density) { maxHeight.toPx() }
+    val scale = min(maxW / width, maxH / height)
+    val scaledHeight = height * scale
+    val below = (maxH - scaledHeight) / 2f + (height - 1 - bottom) * scale
+    return with(density) { below.toDp() }.coerceAtLeast(0.dp)
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MetaRow(detail: MovieDetail) {
@@ -1565,7 +1648,7 @@ private fun MetaRow(detail: MovieDetail) {
     val ageLabel = detail.age?.let { stringResource(R.string.age_badge, it) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val gap = with(density) { 12.dp.roundToPx() }
-        val agePad = with(density) { 12.dp.roundToPx() }
+        val agePad = with(density) { 18.dp.roundToPx() }
         var width = 0
         var count = 0
         ageLabel?.let { label ->
@@ -1626,17 +1709,17 @@ private fun MetaFacts(detail: MovieDetail, genres: String) {
         detail.age?.let { age ->
             Box(
                 modifier = Modifier
-                    .height(20.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.16f))
-                    .padding(horizontal = 6.dp),
+                    .height(22.dp)
+                    .border(1.dp, Color.White.copy(alpha = 0.72f), RoundedCornerShape(6.dp))
+                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 7.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = stringResource(R.string.age_badge, age),
                     color = Color.White,
                     fontSize = 12.sp,
-                    lineHeight = 12.sp,
+                    lineHeight = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -1701,19 +1784,19 @@ private fun Overview(text: String, width: Dp) {
     val canExpand = remember(text, widthPx) {
         measurer.measure(
             text = text,
-            style = TextStyle(fontSize = 16.sp, lineHeight = 23.sp),
+            style = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
             overflow = TextOverflow.Ellipsis,
-            maxLines = 4,
+            maxLines = 3,
             constraints = Constraints(maxWidth = widthPx.coerceAtLeast(0)),
         ).hasVisualOverflow
     }
     Text(
         text = text,
-        color = Color.White.copy(alpha = 0.92f),
-        fontSize = 16.sp,
-        lineHeight = 23.sp,
+        color = Color.White,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
         textAlign = TextAlign.Start,
-        maxLines = if (expanded) Int.MAX_VALUE else 4,
+        maxLines = if (expanded) Int.MAX_VALUE else 3,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .fillMaxWidth()
@@ -1820,8 +1903,8 @@ private fun CastRow(cast: List<CastMember>) {
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         items(cast, key = { it.id to it.name }) { member ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(92.dp)) {
-                PersonPhoto(url = member.photoUrl, name = member.name, size = 92.dp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(112.dp)) {
+                PersonPhoto(url = member.photoUrl, name = member.name, size = 112.dp)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = member.name,

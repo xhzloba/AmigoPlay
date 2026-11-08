@@ -73,6 +73,16 @@ class ReleaseWatchStore(context: Context) {
         return true
     }
 
+    fun clearNotices() = synchronized(gate) {
+        if (alertsState.value.isNotEmpty()) writeAlerts(emptyList())
+        val shelves = shelvesState.value
+        if (shelves.any { it.cards.isNotEmpty() }) {
+            writeShelves(shelves.map { shelf ->
+                if (shelf.cards.isEmpty()) shelf else shelf.copy(cards = emptyList(), read = true)
+            })
+        }
+    }
+
     fun markMovie(movieId: String) {
         if (alertsState.value.none { it.movieId == movieId && !it.read }) return
         writeAlerts(alertsState.value.map { if (it.movieId == movieId) it.copy(read = true) else it })

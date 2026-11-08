@@ -2,7 +2,9 @@ package com.example.movie.presentation.home
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -41,9 +43,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 private const val HoldMillis = 450L
-private const val PressMillis = 110L
-private const val PressInMillis = 70
-private const val PressOutMillis = 160
+private const val PressMillis = 60L
+private const val PressOutMillis = 70
 private const val BuzzMillis = 280L
 
 internal class PosterWave {
@@ -91,7 +92,10 @@ internal fun Modifier.posterWave(wave: PosterWave, light: Boolean = false): Modi
             radius.snapTo(0.18f)
             ink.snapTo(1f)
             val grow = launch {
-                radius.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+                radius.animateTo(
+                    1f,
+                    spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium),
+                )
             }
             snapshotFlow { wave.killed to wave.released }.first { it.first || it.second }
             if (wave.killed) {
@@ -100,7 +104,8 @@ internal fun Modifier.posterWave(wave: PosterWave, light: Boolean = false): Modi
                 ink.snapTo(0f)
             } else {
                 grow.join()
-                ink.animateTo(0f, tween(150, easing = FastOutSlowInEasing))
+                if (!gate.isCompleted) gate.complete(Unit)
+                ink.animateTo(0f, tween(80, easing = FastOutSlowInEasing))
                 radius.snapTo(0f)
             }
         } finally {
@@ -144,9 +149,9 @@ internal fun Modifier.posterWave(wave: PosterWave, light: Boolean = false): Modi
 internal fun rememberPressScale(pressed: Boolean): Float {
     return animateFloatAsState(
         targetValue = if (pressed) 0.968f else 1f,
-        animationSpec = tween(
-            durationMillis = if (pressed) PressInMillis else PressOutMillis,
-            easing = FastOutSlowInEasing,
+        animationSpec = spring(
+            dampingRatio = 0.62f,
+            stiffness = 2800f,
         ),
         label = "press-in",
     ).value

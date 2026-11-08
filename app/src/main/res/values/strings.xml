@@ -85,6 +85,7 @@
     <string name="notice_alert_on">Сообщим, когда выйдет новая серия</string>
     <string name="notice_alert_off">Больше не сообщим о новых сериях</string>
     <string name="alerts_empty">Колокольчик на сериале — про новую серию. Шестерёнка — новинки и обновления каталога.</string>
+    <string name="alerts_clear">Очистить</string>
     <string name="alerts_episode">Сезон %1$d, серия %2$d</string>
     <string name="alerts_feed">Вышло обновление на AmigoPlay</string>
     <string name="alerts_settings">Настройки уведомлений</string>
@@ -127,6 +128,7 @@
     <string name="franchise_finished">Закончен</string>
     <string name="franchise_airing">В эфире</string>
     <string name="franchise_director">Режиссёр</string>
+    <string name="detail_director">Режиссёр %1$s</string>
     <string name="franchise_writers">Сценаристы</string>
     <string name="franchise_producers">Продюсеры</string>
     <string name="franchise_operator">Оператор</string>

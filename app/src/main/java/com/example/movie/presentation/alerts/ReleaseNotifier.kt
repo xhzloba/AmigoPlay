@@ -44,6 +44,10 @@ internal object ReleaseNotifier {
         manager.notify(alert.movieId.hashCode(), note)
     }
 
+    fun dismissAll(context: Context) {
+        context.getSystemService(NotificationManager::class.java)?.cancelAll()
+    }
+
     fun postShelf(context: Context, kind: String, count: Int) {
         val manager = manager(context) ?: return
         val open = Intent(context, MainActivity::class.java)

@@ -18,7 +18,7 @@ import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.PlayBlue
 
-internal val WatchedBadgeHang = 8.dp
+internal val WatchedBadgeHang = 6.dp
 
 @Composable
 internal fun rememberWatchedIds(): Set<String> {

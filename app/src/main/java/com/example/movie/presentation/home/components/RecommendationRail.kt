@@ -176,6 +176,7 @@ internal fun RecommendationRailSkeleton(
                                 .clip(PosterShape)
                                 .background(Color.White.copy(alpha = 0.08f)),
                         )
+                        Spacer(Modifier.height(WatchedBadgeHang))
                         if (showTitles) PosterCaptionSkeleton()
                     }
                 }
