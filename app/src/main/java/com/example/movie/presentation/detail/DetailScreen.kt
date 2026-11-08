@@ -13,6 +13,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -31,8 +32,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,7 +57,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -99,13 +97,9 @@ import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -120,9 +114,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -203,6 +198,22 @@ private val ActionCircle = Color.Black.copy(alpha = 0.16f)
 
 private const val TrailerPath =
     "M42 24C42 31.2328 38.3435 37.6115 32.7782 41.3886C33.1935 41.2738 33.602 41.1447 34 41C45.1693 36.9384 47 32 47 32L48 35C48 35 44.3832 40.459 34.5 43.5C28 45.5 21 45 21 45C9.40202 45 0 35.598 0 24C0 12.402 9.40202 3 21 3C32.598 3 42 12.402 42 24ZM21 19C24.3137 19 27 16.3137 27 13C27 9.68629 24.3137 7 21 7C17.6863 7 15 9.68629 15 13C15 16.3137 17.6863 19 21 19ZM10 30C13.3137 30 16 27.3137 16 24C16 20.6863 13.3137 18 10 18C6.68629 18 4 20.6863 4 24C4 27.3137 6.68629 30 10 30ZM38 24C38 27.3137 35.3137 30 32 30C28.6863 30 26 27.3137 26 24C26 20.6863 28.6863 18 32 18C35.3137 18 38 20.6863 38 24ZM21 26C22.1046 26 23 25.1046 23 24C23 22.8954 22.1046 22 21 22C19.8954 22 19 22.8954 19 24C19 25.1046 19.8954 26 21 26ZM27 35C27 38.3137 24.3137 41 21 41C17.6863 41 15 38.3137 15 35C15 31.6863 17.6863 29 21 29C24.3137 29 27 31.6863 27 35Z"
+
+private const val PlexPlayPath =
+    "M13.5 42C13.1022 42 12.7206 41.842 12.4393 41.5607C12.158 41.2794 12 40.8978 12 40.5V7.49999C12 7.23932 12.0679 6.98314 12.197 6.75671C12.3262 6.53028 12.5121 6.34141 12.7365 6.20873C12.9609 6.07605 13.216 6.00413 13.4766 6.00006C13.7372 5.99599 13.9944 6.05992 14.2229 6.18554L44.2228 22.6855C44.4582 22.815 44.6545 23.0052 44.7912 23.2364C44.9279 23.4676 45.0001 23.7313 45.0001 23.9999C45.0001 24.2685 44.9279 24.5322 44.7912 24.7634C44.6545 24.9946 44.4582 25.1849 44.2228 25.3143L14.2229 41.8143C14.0014 41.9361 13.7527 41.9999 13.5 42Z"
+
+private val PlexPlay: ImageVector = ImageVector.Builder(
+    name = "plexPlay",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 48f,
+    viewportHeight = 48f,
+).apply {
+    addPath(
+        pathData = PathParser().parsePathString(PlexPlayPath).toNodes(),
+        fill = SolidColor(Color.Black),
+    )
+}.build()
 
 private val TrailerGlyph: ImageVector = ImageVector.Builder(
     name = "trailers",
@@ -857,10 +868,6 @@ private fun DetailContent(
                     meta.place(0, metaY)
                 }
             }
-            if (detail.ratingImdb != null || detail.ratingKp != null) {
-                Spacer(Modifier.height(16.dp))
-                RatingsRow(detail)
-            }
             Spacer(Modifier.height(22.dp))
             val watchId = detail.franchise?.watchId
             val notifyRelease = franchiseReady && unavailable
@@ -897,7 +904,6 @@ private fun DetailContent(
             val addedWatched = stringResource(R.string.notice_watched_movie)
             val removedWatched = stringResource(R.string.notice_watched_movie_off)
             WatchBar(
-                wash = paintWash,
                 glow = if (settings.watchGlow && franchiseReady && online) watchGlow else null,
                 glowKey = detail.id,
                 resume = if (notifyRelease) null else continued,
@@ -1251,9 +1257,11 @@ private fun CastPage(cast: List<CastMember>, onBack: () -> Unit, modifier: Modif
     }
 }
 
+private val WatchPillHeight = 40.dp
+private val WatchPillShape = RoundedCornerShape(20.dp)
+
 @Composable
 private fun WatchBar(
-    wash: PosterWash,
     glow: Color?,
     glowKey: String,
     resume: ResumeItem?,
@@ -1265,7 +1273,6 @@ private fun WatchBar(
     onNotify: () -> Unit = {},
     onWatch: () -> Unit,
 ) {
-    val play = wash.playColor()
     val travel = remember(glowKey) { Animatable(0f) }
     val appear = remember(glowKey) { Animatable(if (qualityReady) 1f else 0f) }
     LaunchedEffect(qualityReady) {
@@ -1289,27 +1296,33 @@ private fun WatchBar(
     val borderT = travel.value
     val borderReveal = (borderT / 0.72f).coerceIn(0f, 1f)
     val borderAlpha = if (borderT <= 0.72f) 1f else ((1f - borderT) / 0.28f).coerceIn(0f, 1f)
-    val context = LocalContext.current
-    val logo = remember {
-        val options = android.graphics.BitmapFactory.Options().apply { inScaled = false }
-        val source = android.graphics.BitmapFactory.decodeResource(
-            context.resources,
-            R.drawable.amigoplay_logo,
-            options,
-        )
-        source.splitWatchLogo()
+    val shownResume = if (qualityReady && available) resume else null
+    val solid = available || (notify && !notifyArmed)
+    val ink = if (solid) Color.Black else Color.White
+    val label = when {
+        notify && notifyArmed -> R.string.watch_notify_on
+        notify -> R.string.watch_notify
+        !available -> R.string.watch_unavailable
+        shownResume == null -> R.string.watch_now
+        else -> R.string.section_continue
     }
-    val shownResume = if (qualityReady) resume else null
-    val barHeight by animateDpAsState(
-        targetValue = if (shownResume == null) 72.dp else 84.dp,
-        animationSpec = tween(durationMillis = 520, easing = FastOutSlowInEasing),
-        label = "watch-bar",
-    )
     Box(
         Modifier
             .fillMaxWidth()
-            .height(barHeight)
-            .clip(RoundedCornerShape(18.dp))
+            .height(WatchPillHeight)
+            .clip(WatchPillShape)
+            .background(if (solid) Color.White else Color.White.copy(alpha = if (notifyArmed) 0.14f else 0.08f))
+            .then(
+                if (solid) {
+                    Modifier
+                } else {
+                    Modifier.border(
+                        1.dp,
+                        Color.White.copy(alpha = if (notifyArmed) 0.72f else 0.28f),
+                        WatchPillShape,
+                    )
+                },
+            )
             .drawWithContent {
                 drawContent()
                 if (qualityReady && glow != null && borderAlpha > 0.01f && borderReveal > 0f) {
@@ -1319,118 +1332,97 @@ private fun WatchBar(
             },
     ) {
         if (qualityReady) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = appear.value }
-                        .background(
-                            Brush.horizontalGradient(
-                                0f to Color.Black.copy(alpha = 0.38f),
-                                1f to Color.Black.copy(alpha = 0.10f),
-                            ),
-                        )
-                        .padding(start = 16.dp, end = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        val logoHeight = if (shownResume == null) 26.dp else 22.dp
-                        if (notify) {
+            val qualityChip = quality?.takeIf { available && it.isNotBlank() }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = appear.value }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        enabled = available || notify,
+                        onClick = { if (notify) onNotify() else onWatch() },
+                    ),
+            ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (available || notify) {
+                    Icon(
+                        imageVector = if (notify) ShellIcons.bell else PlexPlay,
+                        contentDescription = null,
+                        tint = ink,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(label),
+                        color = ink.copy(alpha = if (!available && !notify) 0.5f else 1f),
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    )
+                    if (shownResume != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = shownResume.progressCaption(),
+                                color = Color.Black.copy(alpha = 0.55f),
+                                fontSize = 11.sp,
+                                lineHeight = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            )
+                            Spacer(Modifier.width(6.dp))
                             Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(if (notifyArmed) Color.White else Color.White.copy(alpha = 0.16f)),
-                                contentAlignment = Alignment.Center,
+                                Modifier
+                                    .width(36.dp)
+                                    .height(2.dp)
+                                    .clip(RoundedCornerShape(1.dp))
+                                    .background(Color.Black.copy(alpha = 0.16f)),
                             ) {
-                                Icon(
-                                    imageVector = ShellIcons.bell,
-                                    contentDescription = stringResource(R.string.action_alert),
-                                    tint = if (notifyArmed) Color.Black else Color.White,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier.height(logoHeight),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .aspectRatio(WatchLogoAspect, matchHeightConstraintsFirst = true),
-                                ) {
-                                    Canvas(Modifier.matchParentSize()) {
-                                        drawImage(
-                                            image = logo.amigo,
-                                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                                            filterQuality = FilterQuality.High,
-                                            colorFilter = ColorFilter.tint(Color.White),
-                                        )
-                                    }
-                                    Canvas(Modifier.matchParentSize()) {
-                                        drawImage(
-                                            image = logo.play,
-                                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                                            filterQuality = FilterQuality.High,
-                                            colorFilter = ColorFilter.tint(play),
-                                        )
-                                    }
-                                }
-                                if (!quality.isNullOrBlank()) {
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = quality,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(7.dp))
-                                            .background(Color.White.copy(alpha = 0.14f))
-                                            .padding(horizontal = 7.dp, vertical = 3.dp),
-                                        color = Color.White,
-                                        fontSize = 11.sp,
-                                        lineHeight = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        letterSpacing = 0.6.sp,
-                                        maxLines = 1,
+                                if (shownResume.fraction > 0f) {
+                                    Box(
+                                        Modifier
+                                            .fillMaxWidth(shownResume.fraction.coerceIn(0.04f, 1f))
+                                            .height(2.dp)
+                                            .background(Color.Black),
                                     )
                                 }
                             }
-                            val ink = logoHeight * WatchLogoAspect * WatchLogoInkLeft
-                            if (shownResume == null) {
-                                Spacer(Modifier.height(2.dp))
-                                WatchCaption(start = ink)
-                            } else {
-                                Spacer(Modifier.height(6.dp))
-                                ResumeCaption(item = shownResume, start = ink)
-                            }
                         }
                     }
-                    Button(
-                        onClick = if (notify) onNotify else onWatch,
-                        enabled = available || notify,
-                        modifier = Modifier.height(44.dp),
-                        shape = RoundedCornerShape(22.dp),
-                        contentPadding = PaddingValues(horizontal = if (notify) 14.dp else if (available && shownResume == null) 18.dp else 14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = Color.Black,
-                            disabledContainerColor = Color.White.copy(alpha = 0.28f),
-                            disabledContentColor = Color.Black.copy(alpha = 0.55f),
-                        ),
-                    ) {
-                        Text(
-                            text = stringResource(
-                                when {
-                                    notify -> R.string.watch_notify
-                                    !available -> R.string.watch_unavailable
-                                    shownResume == null -> R.string.watch_now
-                                    else -> R.string.watch_resume
-                                },
-                            ),
-                            fontSize = if (notify) 14.sp else 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                        )
-                    }
                 }
+            }
+            if (qualityChip != null) {
+                Text(
+                    text = qualityChip,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = 14.dp)
+                        .graphicsLayer { alpha = appear.value }
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.08f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                    color = Color.Black,
+                    fontSize = 11.sp,
+                    lineHeight = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.3.sp,
+                    maxLines = 1,
+                )
+            }
+            }
         }
         if (appear.value < 1f) {
             Box(
@@ -1444,7 +1436,7 @@ private fun WatchBar(
 
 private fun DrawScope.drawWatchBorder(color: Color, widthPx: Float, reveal: Float) {
     val inset = widthPx / 2f + 0.6.dp.toPx()
-    val radius = (18.dp.toPx() - inset).coerceAtLeast(0f)
+    val radius = (size.height / 2f - inset).coerceAtLeast(0f)
     val outline = Path().apply {
         addRoundRect(
             RoundRect(
@@ -1484,78 +1476,6 @@ private fun MovieDetail.releaseSub(awaiting: Boolean): SeriesSub {
         awaitingPlayer = awaiting,
         feedSeen = !awaiting,
     )
-}
-
-private const val WatchLogoAspect = 754f / 186f
-private const val WatchLogoInkLeft = 29f / 754f
-
-@Composable
-private fun WatchCaption(start: Dp) {
-    val text = stringResource(R.string.watch_free)
-    val style = TextStyle(
-        color = Color.White.copy(alpha = 0.72f),
-        fontSize = 11.sp,
-        lineHeight = 13.sp,
-    )
-    val measurer = rememberTextMeasurer()
-    val density = LocalDensity.current
-    val bearing = measurer.measure(text.take(1), style = style, maxLines = 1)
-        .getBoundingBox(0)
-        .left
-    Text(
-        text = text,
-        modifier = Modifier
-            .padding(start = start)
-            .offset(x = with(density) { -bearing.toDp() }),
-        style = style,
-        maxLines = 1,
-    )
-}
-
-@Composable
-private fun ResumeCaption(item: ResumeItem, start: Dp) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(start = start, end = 12.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.section_continue),
-            color = Color.White.copy(alpha = 0.72f),
-            fontSize = 11.sp,
-            lineHeight = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(3.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = item.progressCaption(),
-                color = Color.White,
-                fontSize = 12.sp,
-                lineHeight = 14.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.28f)),
-            ) {
-                if (item.fraction > 0f) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth(item.fraction.coerceIn(0.04f, 1f))
-                            .height(3.dp)
-                            .background(Color.White),
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -1693,6 +1613,10 @@ private fun MetaRow(detail: MovieDetail) {
                     textAlign = TextAlign.Center,
                 )
             }
+            if (detail.ratingImdb != null || detail.ratingKp != null) {
+                Spacer(Modifier.height(8.dp))
+                RatingLine(detail)
+            }
         }
     }
 }
@@ -1737,6 +1661,55 @@ private fun MetaFacts(detail: MovieDetail, genres: String) {
 }
 
 @Composable
+private fun RatingLine(detail: MovieDetail) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        detail.ratingImdb?.let { score ->
+            ImdbScore(
+                score = score,
+                color = Color.White,
+                iconHeight = 12.dp,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+            )
+        }
+        detail.ratingKp?.let { score ->
+            KpScore(
+                score = score,
+                color = Color.White,
+                iconSize = 12.dp,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Normal,
+            )
+        }
+        val imdb = detail.ratingImdb
+        val kp = detail.ratingKp
+        if (imdb != null && kp != null) {
+            ScoreBlend(((imdb + kp) * 5f).roundToInt().coerceIn(0, 100))
+        }
+    }
+}
+
+@Composable
+private fun ScoreBlend(percent: Int) {
+    val high = percent >= 55
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painter = painterResource(if (high) R.drawable.ic_rating_high else R.drawable.ic_rating_low),
+            contentDescription = null,
+            modifier = Modifier
+                .height(14.dp)
+                .aspectRatio(if (high) 42f / 48f else 52f / 48f),
+        )
+        Spacer(Modifier.width(4.dp))
+        MetaText("$percent%")
+    }
+}
+
+@Composable
 private fun MetaText(value: String) {
     Text(
         text = value,
@@ -1746,34 +1719,6 @@ private fun MetaText(value: String) {
         fontWeight = FontWeight.Normal,
         textAlign = TextAlign.Center,
     )
-}
-
-@Composable
-private fun RatingsRow(detail: MovieDetail) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        detail.ratingImdb?.let { score ->
-            ImdbScore(
-                score = score,
-                color = Color.White,
-                iconHeight = 15.dp,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Normal,
-            )
-        }
-        detail.ratingKp?.let { score ->
-            KpScore(
-                score = score,
-                color = Color.White,
-                iconSize = 15.dp,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Normal,
-            )
-        }
-    }
 }
 
 @Composable
@@ -2204,31 +2149,4 @@ private fun PosterWash.playColor(): Color {
         best = Color(android.graphics.Color.HSVToColor(hsv))
     }
     return if (bestSat < 0.12f) PlayBlue else best
-}
-
-private data class WatchLogo(val amigo: ImageBitmap, val play: ImageBitmap)
-
-private fun android.graphics.Bitmap.splitWatchLogo(): WatchLogo {
-    val pixels = IntArray(width * height)
-    getPixels(pixels, 0, width, 0, 0, width, height)
-    val amigo = IntArray(pixels.size)
-    val play = IntArray(pixels.size)
-    for (index in pixels.indices) {
-        val color = pixels[index]
-        val alpha = color ushr 24
-        if (alpha < 8) continue
-        val red = (color shr 16) and 0xFF
-        val green = (color shr 8) and 0xFF
-        val blue = color and 0xFF
-        val mask = (alpha shl 24) or 0x00FFFFFF
-        if (blue > red + 12 && blue >= green) play[index] = mask else amigo[index] = mask
-    }
-    recycle()
-    return WatchLogo(amigo.toMask(width, height), play.toMask(width, height))
-}
-
-private fun IntArray.toMask(width: Int, height: Int): ImageBitmap {
-    val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
-    bitmap.setPixels(this, 0, width, 0, 0, width, height)
-    return bitmap.asImageBitmap()
 }

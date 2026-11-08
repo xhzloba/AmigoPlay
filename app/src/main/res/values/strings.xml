@@ -19,6 +19,7 @@
     <string name="watch_now">Смотреть</string>
     <string name="watch_unavailable">Недоступно</string>
     <string name="watch_notify">Уведомить о выходе</string>
+    <string name="watch_notify_on">Сообщим о выходе</string>
     <string name="notice_release_on">Сообщим, когда можно будет смотреть</string>
     <string name="notice_release_off">Больше не напомним о выходе</string>
     <string name="alerts_available">Уже можно смотреть</string>
