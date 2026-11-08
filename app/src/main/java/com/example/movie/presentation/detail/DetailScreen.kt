@@ -340,6 +340,7 @@ fun DetailScreen(
     when {
         detail != null -> DetailContent(
             detail = detail,
+            franchiseReady = state.franchiseReady,
             onOpenMovie = onOpenMovie,
             onMoviePeek = onMoviePeek,
             modifier = modifier,
@@ -367,6 +368,7 @@ private data class WatchRequest(
 @Composable
 private fun DetailContent(
     detail: MovieDetail,
+    franchiseReady: Boolean,
     onOpenMovie: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
@@ -615,6 +617,7 @@ private fun DetailContent(
             }
             Spacer(Modifier.height(22.dp))
             val watchId = detail.franchise?.id
+            val online = !franchiseReady || watchId != null
             LaunchedEffect(watchRequested, watchId) {
                 val id = watchId ?: return@LaunchedEffect
                 if (!watchRequested) return@LaunchedEffect
@@ -639,10 +642,12 @@ private fun DetailContent(
             val removedWatched = stringResource(R.string.notice_watched_movie_off)
             WatchBar(
                 wash = paintWash,
-                glow = if (settings.watchGlow) watchGlow else null,
+                glow = if (settings.watchGlow && online) watchGlow else null,
                 glowKey = detail.id,
                 resume = continued,
+                available = online,
                 onWatch = {
+                    if (!online) return@WatchBar
                     tick?.invoke()
                     if (seasonList.isNotEmpty()) {
                         episodesOpen = true
@@ -940,6 +945,7 @@ private fun WatchBar(
     glow: Color?,
     glowKey: String,
     resume: ResumeItem?,
+    available: Boolean,
     onWatch: () -> Unit,
 ) {
     val play = wash.playColor()
@@ -1032,16 +1038,25 @@ private fun WatchBar(
         }
         Button(
             onClick = onWatch,
+            enabled = available,
             modifier = Modifier.height(44.dp),
             shape = RoundedCornerShape(22.dp),
-            contentPadding = PaddingValues(horizontal = if (resume == null) 18.dp else 14.dp),
+            contentPadding = PaddingValues(horizontal = if (available && resume == null) 18.dp else 14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = Color.Black,
+                disabledContainerColor = Color.White.copy(alpha = 0.28f),
+                disabledContentColor = Color.Black.copy(alpha = 0.55f),
             ),
         ) {
             Text(
-                text = stringResource(if (resume == null) R.string.watch_now else R.string.watch_resume),
+                text = stringResource(
+                    when {
+                        !available -> R.string.watch_unavailable
+                        resume == null -> R.string.watch_now
+                        else -> R.string.watch_resume
+                    },
+                ),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,

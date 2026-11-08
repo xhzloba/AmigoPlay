@@ -17,6 +17,7 @@
     <string name="catalog_genres">Жанры</string>
     <string name="poster_content_description">Постер «%1$s»</string>
     <string name="watch_now">Смотреть</string>
+    <string name="watch_unavailable">Недоступно</string>
     <string name="watch_resume">Продолжить</string>
     <string name="player_settings">Настройки</string>
     <string name="player_episodes">Серии</string>
@@ -73,7 +74,7 @@
     <string name="action_seen">Смотрел</string>
     <string name="action_unseen">Не смотрел</string>
     <string name="action_share">Поделиться</string>
-    <string name="action_alert">Серии</string>
+    <string name="action_alert">Уведомление</string>
     <string name="notice_alert_on">Сообщим, когда выйдет новая серия</string>
     <string name="notice_alert_off">Больше не сообщим о новых сериях</string>
     <string name="alerts_empty">Нажмите колокольчик на сериале. Когда выйдет серия, она появится здесь.</string>

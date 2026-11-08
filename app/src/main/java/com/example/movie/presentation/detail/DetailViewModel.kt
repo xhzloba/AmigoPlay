@@ -30,10 +30,13 @@ class DetailViewModel(
             getMovieDetail(movieId)
                 .onSuccess { detail ->
                     _state.value = DetailUiState(detail = detail, phase = DetailPhase.Ready)
-                    val extra = loadFranchise(movieId) ?: return@onSuccess
+                    val extra = loadFranchise(movieId)
                     val current = _state.value.detail
                     if (current?.id == movieId) {
-                        _state.value = _state.value.copy(detail = current.copy(franchise = extra))
+                        _state.value = _state.value.copy(
+                            detail = if (extra != null) current.copy(franchise = extra) else current,
+                            franchiseReady = true,
+                        )
                     }
                 }
                 .onFailure { error ->
