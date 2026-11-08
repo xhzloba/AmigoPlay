@@ -2,6 +2,7 @@ package com.example.movie.data.remote.dto
 
 import com.example.movie.data.update.ReleaseVersions
 import com.example.movie.domain.model.AppRelease
+import com.example.movie.domain.model.UpdateProbe
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -41,4 +42,14 @@ internal fun GithubReleaseDto.toRelease(currentCode: Int): AppRelease? {
         notes = body.trim().replace("\r\n", "\n"),
         apkUrl = apk.downloadUrl() ?: return null,
     )
+}
+
+internal fun List<GithubReleaseDto>.toProbe(currentCode: Int): UpdateProbe {
+    val published = filterNot { it.draft }
+    val newer = published.mapNotNull { it.toRelease(currentCode) }.maxByOrNull { it.versionCode }
+    if (newer != null) return UpdateProbe.Available(newer)
+    val newest = published.mapNotNull {
+        ReleaseVersions.codeOf(it.tagName) ?: ReleaseVersions.codeOf(it.name)
+    }.maxOrNull()
+    return if (newest != null && newest <= currentCode) UpdateProbe.Current else UpdateProbe.Unavailable
 }

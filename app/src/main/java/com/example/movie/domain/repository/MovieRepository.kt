@@ -5,6 +5,7 @@ import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.domain.model.Shelf
+import com.example.movie.domain.model.WatchCheck
 
 interface MovieRepository {
     suspend fun getShelves(): Result<List<Shelf>>
@@ -17,5 +18,7 @@ interface MovieRepository {
 
     suspend fun getMovie(id: String): Result<MovieDetail>
 
-    suspend fun franchise(id: String): Franchise?
+    suspend fun franchise(id: String, title: String? = null, year: Int? = null): Franchise?
+
+    suspend fun watchCheck(id: String, title: String? = null, year: Int? = null): WatchCheck
 }

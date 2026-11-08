@@ -19,6 +19,7 @@ import com.example.movie.data.update.ApkUpdateInstaller
 import com.example.movie.data.update.GithubUpdateRepository
 import com.example.movie.AppForeground
 import com.example.movie.domain.model.Franchise
+import com.example.movie.domain.model.WatchCheck
 import com.example.movie.presentation.alerts.ReleaseNotifier
 import com.example.movie.domain.model.UserSettingsRepository
 import com.example.movie.domain.usecase.CheckAppUpdateUseCase
@@ -73,6 +74,7 @@ class AppContainer(context: Context) {
         franchiseApi = franchiseApi,
         token = BuildConfig.VOKINO_TOKEN,
         franchiseToken = BuildConfig.FRANCHISE_TOKEN,
+        http = client,
     )
 
     val getHomeShelves: GetHomeShelvesUseCase = GetHomeShelvesUseCase(movieRepository)
@@ -85,8 +87,12 @@ class AppContainer(context: Context) {
 
     val getMovieDetail: GetMovieDetailUseCase = GetMovieDetailUseCase(movieRepository)
 
-    val loadFranchise: suspend (String) -> Franchise? = { id ->
-        movieRepository.franchise(id)
+    val loadFranchise: suspend (String, String?, Int?) -> Franchise? = { id, title, year ->
+        movieRepository.franchise(id, title, year)
+    }
+
+    val watchCheck: suspend (String, String?, Int?) -> WatchCheck = { id, title, year ->
+        movieRepository.watchCheck(id, title, year)
     }
 
     private val githubApi: GithubApi = Retrofit.Builder()

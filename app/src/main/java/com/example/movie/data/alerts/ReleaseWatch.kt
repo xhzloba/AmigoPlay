@@ -53,7 +53,7 @@ class ReleaseWatch(
             val unseeded = sub.airedKey.isEmpty()
             if (feed != null && !inFeed && sub.feedSeen) store.markFeed(sub.id, false)
             if (!dateDue && !inFeed && !unseeded) continue
-            val franchise = movies.franchise(sub.id) ?: continue
+            val franchise = movies.franchise(sub.id, sub.title, sub.year) ?: continue
             val snapshot = franchise.releaseSnapshot(today)
             val aired = shouldAlert(sub.airedKey, snapshot)
             var told = false
@@ -115,7 +115,7 @@ class ReleaseWatch(
         fresh: Set<String>?,
         held: MutableSet<String>,
     ) {
-        val franchise = movies.franchise(sub.id)
+        val franchise = movies.franchise(sub.id, sub.title, sub.year)
         val listed = updates?.contains(sub.id) == true || fresh?.contains(sub.id) == true
         if (franchise?.watchId != null) {
             val alert = SeriesAlert(

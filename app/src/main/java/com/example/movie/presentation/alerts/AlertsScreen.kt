@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -71,6 +72,7 @@ internal fun AlertsScreen(
     val store = LocalAppContainer.current.releaseWatch.store
     val alerts by store.alerts.collectAsStateWithLifecycle()
     val shelves by store.shelves.collectAsStateWithLifecycle()
+    val feed by store.feed.collectAsStateWithLifecycle()
     val shown = FeedKind.all.mapNotNull { kind ->
         shelves.firstOrNull { it.kind == kind && it.cards.isNotEmpty() && it.kept() }
     }
@@ -115,6 +117,17 @@ internal fun AlertsScreen(
                 fontWeight = FontWeight.Normal,
                 fontSize = 18.sp,
                 lineHeight = 24.sp,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.alerts_feed_every, feed.intervalHours),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF2C2C30))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                color = Color.White,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
             )
             Box(
                 modifier = Modifier

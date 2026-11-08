@@ -78,7 +78,7 @@ internal fun SeasonWatchSheet(
     LaunchedEffect(movie.id, attempt) {
         if (attempt == 0 && !seasons.isNullOrEmpty()) return@LaunchedEffect
         failed = false
-        val loaded = container.loadFranchise(movie.id)?.seasons.orEmpty()
+        val loaded = container.loadFranchise(movie.id, movie.title, movie.year)?.seasons.orEmpty()
         if (loaded.isEmpty()) {
             seasons = null
             failed = true

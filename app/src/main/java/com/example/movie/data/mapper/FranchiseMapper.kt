@@ -17,7 +17,13 @@ import kotlinx.serialization.json.intOrNull
 internal fun TimelineDto.kpId(): Int? = kpId.asInt()
 
 internal fun FranchiseDto.toFranchise(): Franchise? {
-    if (kinopoiskId.asInt() == null && slogan.isNullOrBlank() && seasons.asObjects().isEmpty()) return null
+    if (
+        id.asInt() == null &&
+        kinopoiskId.asInt() == null &&
+        iframeUrl.clean()?.startsWith("http") != true &&
+        slogan.isNullOrBlank() &&
+        seasons.asObjects().isEmpty()
+    ) return null
     var episodePlayer = false
     val seasonList = seasons.asObjects().mapNotNull { season ->
         val number = season["season"].asInt() ?: return@mapNotNull null
@@ -38,6 +44,7 @@ internal fun FranchiseDto.toFranchise(): Franchise? {
     return Franchise(
         id = id.asInt(),
         playable = iframeUrl.clean()?.startsWith("http") == true || episodePlayer,
+        quality = quality.watchQuality(),
         directors = director.names(),
         screenwriters = screenwriter.names(),
         producers = producer.names(),
@@ -108,6 +115,11 @@ private fun JsonElement?.asInt(): Int? = when (this) {
 }
 
 private fun String?.clean(): String? = this?.trim()?.takeIf { it.isNotEmpty() && it != "null" && it != "—" }
+
+private fun String?.watchQuality(): String? {
+    val raw = clean() ?: return null
+    return raw.substringBefore('(').trim().take(16).takeIf { it.isNotEmpty() }
+}
 
 private fun String.stripTags(): String =
     replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")

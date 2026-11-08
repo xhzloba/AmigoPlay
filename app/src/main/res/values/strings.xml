@@ -90,6 +90,7 @@
     <string name="alerts_feed_title">Обновления</string>
     <string name="alerts_feed_interval">Как часто проверять</string>
     <string name="alerts_feed_hour">%1$d ч</string>
+    <string name="alerts_feed_every">Раз в %1$d ч</string>
     <string name="alerts_feed_hint">Выключенная полка держится сутки, потом пропадает.</string>
     <string name="alerts_cat_series_updates">Обновление сериалов</string>
     <string name="alerts_cat_movie_updates">Обновление фильмов</string>

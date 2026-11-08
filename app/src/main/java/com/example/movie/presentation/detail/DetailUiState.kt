@@ -13,4 +13,5 @@ data class DetailUiState(
     val detail: MovieDetail? = null,
     val phase: DetailPhase = DetailPhase.Loading,
     val franchiseReady: Boolean = false,
+    val unavailable: Boolean = false,
 )

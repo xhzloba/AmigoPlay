@@ -3,6 +3,7 @@ package com.example.movie.domain.model
 data class Franchise(
     val id: Int? = null,
     val playable: Boolean = false,
+    val quality: String? = null,
     val directors: List<String> = emptyList(),
     val screenwriters: List<String> = emptyList(),
     val producers: List<String> = emptyList(),
@@ -50,3 +51,9 @@ data class FranchiseEpisode(
     val name: String?,
     val release: String?,
 )
+
+sealed interface WatchCheck {
+    data class Ready(val franchise: Franchise) : WatchCheck
+    data object Missing : WatchCheck
+    data object Unknown : WatchCheck
+}

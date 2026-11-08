@@ -4,6 +4,7 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -332,6 +333,7 @@ internal fun Modifier.edgeToEdge(inset: Dp): Modifier = layout { measurable, con
 fun DetailScreen(
     state: DetailUiState,
     onRetry: () -> Unit,
+    onResolveWatch: () -> Unit,
     onOpenMovie: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
@@ -341,6 +343,8 @@ fun DetailScreen(
         detail != null -> DetailContent(
             detail = detail,
             franchiseReady = state.franchiseReady,
+            unavailable = state.unavailable,
+            onResolveWatch = onResolveWatch,
             onOpenMovie = onOpenMovie,
             onMoviePeek = onMoviePeek,
             modifier = modifier,
@@ -369,6 +373,8 @@ private data class WatchRequest(
 private fun DetailContent(
     detail: MovieDetail,
     franchiseReady: Boolean,
+    unavailable: Boolean,
+    onResolveWatch: () -> Unit,
     onOpenMovie: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
@@ -624,8 +630,8 @@ private fun DetailContent(
             }
             Spacer(Modifier.height(22.dp))
             val watchId = detail.franchise?.watchId
-            val notifyRelease = franchiseReady && watchId == null
-            val online = !notifyRelease && (!franchiseReady || watchId != null)
+            val notifyRelease = franchiseReady && unavailable
+            val online = !notifyRelease
             val finished = detail.franchise?.series == true &&
                 detail.franchise?.serialStatus.equals("offline", ignoreCase = true)
             val notifyArmed = detail.id in alertIds
@@ -659,9 +665,11 @@ private fun DetailContent(
             val removedWatched = stringResource(R.string.notice_watched_movie_off)
             WatchBar(
                 wash = paintWash,
-                glow = if (settings.watchGlow && online) watchGlow else null,
+                glow = if (settings.watchGlow && franchiseReady && online) watchGlow else null,
                 glowKey = detail.id,
                 resume = if (notifyRelease) null else continued,
+                quality = detail.franchise?.quality,
+                qualityReady = franchiseReady,
                 available = online,
                 notify = notifyRelease,
                 notifyArmed = notifyArmed,
@@ -683,7 +691,7 @@ private fun DetailContent(
                         episodesOpen = true
                     } else {
                         val id = watchId
-                        if (id != null) watching = WatchRequest(id) else watchRequested = true
+                        if (id != null) watching = WatchRequest(id) else onResolveWatch()
                     }
                 },
             )
@@ -966,6 +974,8 @@ private fun WatchBar(
     glow: Color?,
     glowKey: String,
     resume: ResumeItem?,
+    quality: String? = null,
+    qualityReady: Boolean = false,
     available: Boolean,
     notify: Boolean = false,
     notifyArmed: Boolean = false,
@@ -995,116 +1005,151 @@ private fun WatchBar(
         )
         source.splitWatchLogo()
     }
-    val barHeight = if (resume == null) 72.dp else 84.dp
+    val shownResume = if (qualityReady) resume else null
+    val barHeight by animateDpAsState(
+        targetValue = if (shownResume == null) 72.dp else 84.dp,
+        animationSpec = tween(360),
+        label = "watch-bar",
+    )
     Box(
         Modifier
             .fillMaxWidth()
             .height(barHeight)
+            .clip(RoundedCornerShape(18.dp))
             .drawWithContent {
                 drawContent()
-                if (glow != null && borderAlpha > 0.01f && borderReveal > 0f) {
+                if (qualityReady && glow != null && borderAlpha > 0.01f && borderReveal > 0f) {
                     drawWatchBorder(glow.copy(alpha = borderAlpha * 0.4f), 2.dp.toPx(), borderReveal)
                     drawWatchBorder(glow.copy(alpha = borderAlpha), 1.1.dp.toPx(), borderReveal)
                 }
             },
     ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(barHeight)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.horizontalGradient(
-                    0f to Color.Black.copy(alpha = 0.38f),
-                    1f to Color.Black.copy(alpha = 0.10f),
-                ),
-            )
-            .padding(start = 16.dp, end = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            val logoHeight = if (resume == null) 26.dp else 22.dp
-            if (notify) {
+        Crossfade(
+            targetState = qualityReady,
+            animationSpec = tween(360),
+            label = "watch-bar",
+            modifier = Modifier.fillMaxSize(),
+        ) { ready ->
+            if (!ready) {
                 Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(if (notifyArmed) Color.White else Color.White.copy(alpha = 0.16f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = ShellIcons.bell,
-                        contentDescription = stringResource(R.string.action_alert),
-                        tint = if (notifyArmed) Color.Black else Color.White,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            } else Box(
-                modifier = Modifier.height(logoHeight),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .aspectRatio(WatchLogoAspect, matchHeightConstraintsFirst = true),
-                ) {
-                    Canvas(Modifier.matchParentSize()) {
-                        drawImage(
-                            image = logo.amigo,
-                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                            filterQuality = FilterQuality.High,
-                            colorFilter = ColorFilter.tint(Color.White),
-                        )
-                    }
-                    Canvas(Modifier.matchParentSize()) {
-                        drawImage(
-                            image = logo.play,
-                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                            filterQuality = FilterQuality.High,
-                            colorFilter = ColorFilter.tint(play),
-                        )
-                    }
-                }
-            }
-            val ink = logoHeight * WatchLogoAspect * WatchLogoInkLeft
-            if (notify) {
-                Unit
-            } else if (resume == null) {
-                Spacer(Modifier.height(2.dp))
-                WatchCaption(start = ink)
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = photoPulse())),
+                )
             } else {
-                Spacer(Modifier.height(6.dp))
-                ResumeCaption(item = resume, start = ink)
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.horizontalGradient(
+                                0f to Color.Black.copy(alpha = 0.38f),
+                                1f to Color.Black.copy(alpha = 0.10f),
+                            ),
+                        )
+                        .padding(start = 16.dp, end = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        val logoHeight = if (shownResume == null) 26.dp else 22.dp
+                        if (notify) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(if (notifyArmed) Color.White else Color.White.copy(alpha = 0.16f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = ShellIcons.bell,
+                                    contentDescription = stringResource(R.string.action_alert),
+                                    tint = if (notifyArmed) Color.Black else Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        } else {
+                            Row(
+                                modifier = Modifier.height(logoHeight),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .aspectRatio(WatchLogoAspect, matchHeightConstraintsFirst = true),
+                                ) {
+                                    Canvas(Modifier.matchParentSize()) {
+                                        drawImage(
+                                            image = logo.amigo,
+                                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                                            filterQuality = FilterQuality.High,
+                                            colorFilter = ColorFilter.tint(Color.White),
+                                        )
+                                    }
+                                    Canvas(Modifier.matchParentSize()) {
+                                        drawImage(
+                                            image = logo.play,
+                                            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                                            filterQuality = FilterQuality.High,
+                                            colorFilter = ColorFilter.tint(play),
+                                        )
+                                    }
+                                }
+                                if (!quality.isNullOrBlank()) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = quality,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(7.dp))
+                                            .background(Color.White.copy(alpha = 0.14f))
+                                            .padding(horizontal = 7.dp, vertical = 3.dp),
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        lineHeight = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        letterSpacing = 0.6.sp,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
+                            val ink = logoHeight * WatchLogoAspect * WatchLogoInkLeft
+                            if (shownResume == null) {
+                                Spacer(Modifier.height(2.dp))
+                                WatchCaption(start = ink)
+                            } else {
+                                Spacer(Modifier.height(6.dp))
+                                ResumeCaption(item = shownResume, start = ink)
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = if (notify) onNotify else onWatch,
+                        enabled = available || notify,
+                        modifier = Modifier.height(44.dp),
+                        shape = RoundedCornerShape(22.dp),
+                        contentPadding = PaddingValues(horizontal = if (notify) 14.dp else if (available && shownResume == null) 18.dp else 14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color.Black,
+                            disabledContainerColor = Color.White.copy(alpha = 0.28f),
+                            disabledContentColor = Color.Black.copy(alpha = 0.55f),
+                        ),
+                    ) {
+                        Text(
+                            text = stringResource(
+                                when {
+                                    notify -> R.string.watch_notify
+                                    !available -> R.string.watch_unavailable
+                                    shownResume == null -> R.string.watch_now
+                                    else -> R.string.watch_resume
+                                },
+                            ),
+                            fontSize = if (notify) 14.sp else 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                        )
+                    }
+                }
             }
         }
-        Button(
-            onClick = if (notify) onNotify else onWatch,
-            enabled = available || notify,
-            modifier = Modifier.height(44.dp),
-            shape = RoundedCornerShape(22.dp),
-            contentPadding = PaddingValues(horizontal = if (notify) 14.dp else if (available && resume == null) 18.dp else 14.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black,
-                disabledContainerColor = Color.White.copy(alpha = 0.28f),
-                disabledContentColor = Color.Black.copy(alpha = 0.55f),
-            ),
-        ) {
-            Text(
-                text = stringResource(
-                    when {
-                        notify -> R.string.watch_notify
-                        !available -> R.string.watch_unavailable
-                        resume == null -> R.string.watch_now
-                        else -> R.string.watch_resume
-                    },
-                ),
-                fontSize = if (notify) 14.sp else 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
-        }
-    }
     }
 }
 

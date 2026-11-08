@@ -21,6 +21,7 @@ internal data class FranchiseDto(
     @SerialName("rate_mpaa") val rateMpaa: String? = null,
     @SerialName("serial_status") val serialStatus: String? = null,
     val type: String? = null,
+    val quality: String? = null,
     @SerialName("iframe_url") val iframeUrl: String? = null,
     @SerialName("kinopoisk_id") val kinopoiskId: JsonElement? = null,
     @SerialName("imdb_id") val imdbId: JsonElement? = null,
@@ -39,4 +40,17 @@ internal data class FranchiseDto(
     val facts: JsonElement? = null,
     @SerialName("shooting_photos") val shootingPhotos: JsonElement? = null,
     val seasons: JsonElement? = null,
+)
+
+@Serializable
+internal data class FranchiseListDto(
+    val results: List<FranchiseHitDto> = emptyList(),
+)
+
+@Serializable
+internal data class FranchiseHitDto(
+    val id: Int? = null,
+    val name: String? = null,
+    @SerialName("origin_name") val originName: String? = null,
+    val year: Int? = null,
 )

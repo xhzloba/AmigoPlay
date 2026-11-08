@@ -20,7 +20,7 @@ fun DetailRoute(
         DetailViewModel(
             movieId = movieId,
             getMovieDetail = container.getMovieDetail,
-            loadFranchise = container.loadFranchise,
+            watchCheck = container.watchCheck,
         )
     }
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -31,6 +31,7 @@ fun DetailRoute(
     DetailScreen(
         state = state,
         onRetry = viewModel::retry,
+        onResolveWatch = viewModel::resolveWatch,
         onOpenMovie = onOpenMovie,
         onMoviePeek = onMoviePeek,
     )
