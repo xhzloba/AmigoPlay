@@ -63,9 +63,23 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         state.value = next
     }
 
-    private fun read(): UserSettings = UserSettings(
-        extractColors = prefs.getBoolean(KEY_COLORS, true),
-        extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
+    private fun read(): UserSettings {
+        if (!prefs.contains(KEY_FRAME_DEFAULT)) {
+            val oldPosterDefault = prefs.getBoolean(KEY_COLORS, true) &&
+                !prefs.getBoolean(KEY_BACKDROP_COLORS, false)
+            prefs.edit()
+                .putBoolean(KEY_FRAME_DEFAULT, true)
+                .apply {
+                    if (oldPosterDefault) {
+                        putBoolean(KEY_COLORS, false)
+                        putBoolean(KEY_BACKDROP_COLORS, true)
+                    }
+                }
+                .commit()
+        }
+        return UserSettings(
+        extractColors = prefs.getBoolean(KEY_COLORS, false),
+        extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, true),
         heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, true),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
@@ -75,12 +89,14 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         largePosters = prefs.getBoolean(KEY_LARGE_POSTERS, false),
         playerLogo = prefs.getBoolean(KEY_PLAYER_LOGO, true),
         watchedBadge = prefs.getBoolean(KEY_WATCHED_BADGE, true),
-    )
+        )
+    }
 
     private companion object {
         const val FILE = "user_settings"
         const val KEY_COLORS = "extract_colors"
         const val KEY_BACKDROP_COLORS = "extract_backdrop"
+        const val KEY_FRAME_DEFAULT = "frame_color_default"
         const val KEY_HERO_COLORS = "hero_poster_colors"
         const val KEY_LOGOS = "show_logos"
         const val KEY_BACKDROP = "auto_backdrop"

@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.4.1",
+            fixed = listOf(
+                "В настройках по умолчанию включены «Цвета с кадра», «Цвета с обложки» выключены. Если стоял старый дефолт, переключится само. Свой выбор не трогается.",
+            ),
+        ),
+        Release(
             version = "2.4.0",
             added = listOf(
                 "На плашке «Смотреть» рядом с логотипом качество из франшизы, если оно есть. Пока идёт проверка, на месте плашки один скелетон, потом она появляется целиком.",
