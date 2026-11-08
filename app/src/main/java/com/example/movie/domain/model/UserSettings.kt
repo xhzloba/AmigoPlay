@@ -13,6 +13,13 @@ data class UserSettings(
     val showPosterTitles: Boolean = false,
     val largePosters: Boolean = false,
     val playerLogo: Boolean = true,
+    val playerSpeed: Float = 1f,
+    val playerPicture: String = "fit",
+    val playerDelayUs: Long = 0L,
+    val playerBrightness: Float? = null,
+    val playerUnderCamera: Boolean = false,
+    val playerAutoNext: Boolean = true,
+    val playerHdr: Boolean = true,
     val watchedBadge: Boolean = true,
 )
 
@@ -38,6 +45,20 @@ interface UserSettingsRepository {
     fun setLargePosters(enabled: Boolean)
 
     fun setPlayerLogo(enabled: Boolean)
+
+    fun setPlayerSpeed(speed: Float)
+
+    fun setPlayerPicture(mode: String)
+
+    fun setPlayerDelayUs(delayUs: Long)
+
+    fun setPlayerBrightness(brightness: Float?)
+
+    fun setPlayerUnderCamera(enabled: Boolean)
+
+    fun setPlayerAutoNext(enabled: Boolean)
+
+    fun setPlayerHdr(enabled: Boolean)
 
     fun setWatchedBadge(enabled: Boolean)
 }

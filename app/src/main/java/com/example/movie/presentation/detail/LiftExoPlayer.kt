@@ -77,6 +77,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -199,7 +200,7 @@ internal fun LiftExoPlayer(
     var tracks by remember(player) { mutableStateOf(player.currentTracks) }
     var page by remember(player) { mutableStateOf<PlayerPage?>(null) }
     var fromSettings by remember(player) { mutableStateOf(false) }
-    var picture by remember(player) { mutableStateOf(PictureMode.Fit) }
+    var picture by remember(player) { mutableStateOf(settings.playerPicture.toPictureMode()) }
     var chrome by remember(player) { mutableStateOf(true) }
     var locked by remember(player) { mutableStateOf(false) }
     var poke by remember(player) { mutableIntStateOf(0) }
@@ -208,10 +209,12 @@ internal fun LiftExoPlayer(
     var position by remember(player) { mutableLongStateOf(0L) }
     var duration by remember(player) { mutableLongStateOf(0L) }
     var scrubbing by remember(player) { mutableStateOf(false) }
-    var delayUs by remember(player) { mutableLongStateOf(0L) }
-    var brightness by remember(player) { mutableStateOf<Float?>(null) }
-    var autoNext by remember(player) { mutableStateOf(playback.episodes.size > 1) }
-    var underCamera by remember(player) { mutableStateOf(false) }
+    var delayUs by remember(player) { mutableLongStateOf(settings.playerDelayUs) }
+    var brightness by remember(player) { mutableStateOf(settings.playerBrightness) }
+    var autoNext by remember(player) { mutableStateOf(settings.playerAutoNext) }
+    var underCamera by remember(player) { mutableStateOf(settings.playerUnderCamera) }
+    var hdr by remember(player) { mutableStateOf(settings.playerHdr) }
+    var qualityPinned by remember(player) { mutableStateOf(false) }
     var inPip by remember(player) { mutableStateOf(activity.isInPictureInPictureMode) }
     val episode = playback.episodes.firstOrNull { it.stream.sameSource(current) }
     val episodeIndex = playback.episodes.indexOfFirst { it.stream.sameSource(current) }
@@ -239,6 +242,7 @@ internal fun LiftExoPlayer(
         val window = activity.window
         val previous = window.attributes.screenBrightness
         val previousCutout = window.attributes.layoutInDisplayCutoutMode
+        val previousColor = window.colorMode
         val controller = WindowCompat.getInsetsController(window, view)
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controller.hide(WindowInsetsCompat.Type.systemBars())
@@ -250,11 +254,25 @@ internal fun LiftExoPlayer(
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             activity.removeOnPictureInPictureModeChangedListener(pipListener)
             controller.show(WindowInsetsCompat.Type.systemBars())
+            window.colorMode = previousColor
             window.attributes = window.attributes.apply {
                 screenBrightness = previous
                 layoutInDisplayCutoutMode = previousCutout
             }
         }
+    }
+    LaunchedEffect(hdr) {
+        activity.window.colorMode = if (hdr && activity.displaySupportsHdr()) {
+            ActivityInfo.COLOR_MODE_HDR
+        } else {
+            ActivityInfo.COLOR_MODE_DEFAULT
+        }
+    }
+    LaunchedEffect(current.url) {
+        qualityPinned = false
+    }
+    LaunchedEffect(tracks, hdr, qualityPinned) {
+        if (!qualityPinned) player.preferVideoRange(hdr, activity.displaySupportsHdr())
     }
     LaunchedEffect(underCamera) {
         val window = activity.window
@@ -304,6 +322,7 @@ internal fun LiftExoPlayer(
             if (!scrubbing) {
                 position = player.currentPosition.coerceAtLeast(0L)
                 duration = player.duration.takeIf { it > 0 } ?: 0L
+                playing = player.isPlaying
                 val now = android.os.SystemClock.elapsedRealtime()
                 if (duration > 0L && position > 0L && now - reported >= 5_000L) {
                     reported = now
@@ -312,6 +331,9 @@ internal fun LiftExoPlayer(
             }
             delay(250)
         }
+    }
+    LaunchedEffect(player) {
+        player.setPlaybackSpeed(settings.playerSpeed)
     }
     LaunchedEffect(delayUs) {
         delayProcessor.delayUs = delayUs
@@ -392,12 +414,21 @@ internal fun LiftExoPlayer(
             )
         }
         if (!inPip && menu == null && chrome && !locked) {
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f)))
             val chromeInsets = if (underCamera) {
                 WindowInsets.systemBars.union(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
             } else {
                 WindowInsets.systemBars.union(WindowInsets.displayCutout)
             }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.28f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { chrome = false },
+                    ),
+            ) {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -433,7 +464,13 @@ internal fun LiftExoPlayer(
                     onAudio = { open(PlayerPage.Audio, settings = false) },
                     onEpisodes = { open(PlayerPage.Episodes, settings = false) },
                     onSubtitles = { open(PlayerPage.Subtitles, settings = false) },
-                    caption = trackCaption(player, tracks, current.audioNames, current.audioOrder),
+                    caption = trackCaption(
+                        player,
+                        tracks,
+                        current.audioNames,
+                        current.audioOrder,
+                        qualityPinned,
+                    ),
                 )
             }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -464,6 +501,7 @@ internal fun LiftExoPlayer(
                     },
                 )
             }
+            }
         }
         if (!inPip && locked && menu == null) {
             PlayerGlyph(
@@ -490,6 +528,8 @@ internal fun LiftExoPlayer(
                 autoNext = autoNext,
                 underCamera = underCamera,
                 showLogo = settings.playerLogo,
+                hdr = hdr,
+                qualityPinned = qualityPinned,
                 audioNames = current.audioNames,
                 audioOrder = current.audioOrder,
                 onPage = { page = it },
@@ -497,18 +537,41 @@ internal fun LiftExoPlayer(
                     if (fromSettings && page != PlayerPage.Root) page = PlayerPage.Root else closeMenu()
                 },
                 onClose = { closeMenu() },
-                onPicture = { picture = it },
+                onSpeed = { speed ->
+                    player.setPlaybackSpeed(speed)
+                    settingsRepository.setPlayerSpeed(speed)
+                },
+                onPicture = {
+                    picture = it
+                    settingsRepository.setPlayerPicture(it.stored())
+                },
                 onEpisode = { current = it.stream },
                 onAudio = { group, index -> player.switchAudio(group, index) },
                 onDelay = { picked ->
                     delayUs = picked
                     delayProcessor.delayUs = picked
+                    settingsRepository.setPlayerDelayUs(picked)
                     player.seekTo(player.currentPosition)
                 },
-                onBrightness = { brightness = it },
-                onAutoNext = { autoNext = it },
-                onUnderCamera = { underCamera = it },
+                onBrightness = {
+                    brightness = it
+                    settingsRepository.setPlayerBrightness(it)
+                },
+                onAutoNext = {
+                    autoNext = it
+                    settingsRepository.setPlayerAutoNext(it)
+                },
+                onUnderCamera = {
+                    underCamera = it
+                    settingsRepository.setPlayerUnderCamera(it)
+                },
                 onShowLogo = settingsRepository::setPlayerLogo,
+                onHdr = {
+                    hdr = it
+                    qualityPinned = false
+                    settingsRepository.setPlayerHdr(it)
+                },
+                onVideoPinned = { qualityPinned = it },
             )
         }
     }
@@ -523,6 +586,88 @@ private fun ExoPlayer.switchAudio(group: Tracks.Group, index: Int) {
         .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, listOf(index)))
         .build()
     seekTo(at)
+}
+
+private fun Activity.displaySupportsHdr(): Boolean {
+    val display = display ?: return false
+    return display.supportedModes.any { it.supportedHdrTypes.isNotEmpty() }
+}
+
+@OptIn(UnstableApi::class)
+private fun Format.isHdr(): Boolean {
+    val transfer = colorInfo?.colorTransfer ?: Format.NO_VALUE
+    if (transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG) return true
+    if (sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION) return true
+    val codec = codecs ?: return false
+    return codec.startsWith("dvh1") || codec.startsWith("dvhe") || codec.startsWith("dav1")
+}
+
+private data class VideoPick(val group: Tracks.Group, val indices: List<Int>)
+
+@OptIn(UnstableApi::class)
+private fun Tracks.pickVideo(preferHdr: Boolean, displayHdr: Boolean): VideoPick? {
+    data class Item(
+        val group: Tracks.Group,
+        val index: Int,
+        val hdr: Boolean,
+        val withinCaps: Boolean,
+        val pixels: Int,
+        val bitrate: Int,
+    )
+    val items = ArrayList<Item>()
+    groups.forEach { group ->
+        if (group.type != C.TRACK_TYPE_VIDEO) return@forEach
+        for (index in 0 until group.length) {
+            if (!group.isTrackSupported(index, true)) continue
+            val format = group.getTrackFormat(index)
+            val hdr = format.isHdr()
+            items += Item(
+                group = group,
+                index = index,
+                hdr = hdr,
+                withinCaps = group.isTrackSupported(index),
+                pixels = format.width.coerceAtLeast(0) * format.height.coerceAtLeast(0),
+                bitrate = format.bitrate.coerceAtLeast(0),
+            )
+        }
+    }
+    if (items.isEmpty()) return null
+    val wanted = items.filter { item ->
+        item.hdr == preferHdr && (item.withinCaps || (preferHdr && displayHdr && item.hdr))
+    }
+    val pool = wanted.ifEmpty { items.filter { it.withinCaps }.ifEmpty { items } }
+    val best = pool.maxWith(compareBy(Item::withinCaps, Item::pixels, Item::bitrate))
+    val indices = pool.filter { it.group == best.group }.map { it.index }.sorted()
+    return VideoPick(best.group, indices)
+}
+
+@OptIn(UnstableApi::class)
+private fun ExoPlayer.preferVideoRange(preferHdr: Boolean, displayHdr: Boolean) {
+    val picked = currentTracks.pickVideo(preferHdr, displayHdr) ?: return
+    val supported = (0 until picked.group.length).filter { picked.group.isTrackSupported(it, true) }
+    val otherVideo = currentTracks.groups.any { group ->
+        group !== picked.group &&
+            group.type == C.TRACK_TYPE_VIDEO &&
+            (0 until group.length).any { group.isTrackSupported(it, true) }
+    }
+    val desired = if (otherVideo || picked.indices.toSet() != supported.toSet()) picked.indices else emptyList()
+    val videoGroups = currentTracks.groups
+        .filter { it.type == C.TRACK_TYPE_VIDEO }
+        .map { it.mediaTrackGroup }
+        .toSet()
+    val videoOverrides = trackSelectionParameters.overrides.filterKeys { it in videoGroups }
+    val same = if (desired.isEmpty()) {
+        videoOverrides.isEmpty()
+    } else {
+        videoOverrides.size == 1 &&
+            videoOverrides[picked.group.mediaTrackGroup]?.trackIndices?.sorted() == desired
+    }
+    if (same) return
+    val builder = trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+    if (desired.isNotEmpty()) {
+        builder.setOverrideForType(TrackSelectionOverride(picked.group.mediaTrackGroup, desired))
+    }
+    trackSelectionParameters = builder.build()
 }
 
 private fun Context.hostActivity(): ComponentActivity {
@@ -601,10 +746,9 @@ private fun CenterControls(
     onForward: () -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        SeekButton(haze, rewind = true, onClick = onRewind)
+        SeekButton(rewind = true, onClick = onRewind)
         if (hasEpisodes) {
-            GlassCircle(
-                haze = haze,
+            BareControl(
                 modifier = Modifier.padding(start = 8.dp).size(48.dp),
                 onClick = onPrevious,
             ) {
@@ -638,8 +782,7 @@ private fun CenterControls(
             }
         }
         if (hasEpisodes) {
-            GlassCircle(
-                haze = haze,
+            BareControl(
                 modifier = Modifier.padding(end = 8.dp).size(48.dp),
                 onClick = onNext,
             ) {
@@ -651,7 +794,7 @@ private fun CenterControls(
                 )
             }
         }
-        SeekButton(haze, rewind = false, onClick = onForward)
+        SeekButton(rewind = false, onClick = onForward)
     }
 }
 
@@ -714,8 +857,26 @@ private fun GlassCircle(
 }
 
 @Composable
-private fun SeekButton(haze: HazeState, rewind: Boolean, onClick: () -> Unit) {
-    GlassCircle(haze = haze, modifier = Modifier.size(54.dp), onClick = onClick) {
+private fun BareControl(
+    modifier: Modifier,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onClick,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun SeekButton(rewind: Boolean, onClick: () -> Unit) {
+    BareControl(modifier = Modifier.size(54.dp), onClick = onClick) {
         Icon(
             painter = painterResource(R.drawable.ic_player_seek),
             contentDescription = stringResource(if (rewind) R.string.player_rewind else R.string.player_forward),

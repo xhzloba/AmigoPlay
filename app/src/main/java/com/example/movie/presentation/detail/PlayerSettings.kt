@@ -45,6 +45,14 @@ import com.example.movie.data.player.audioTrackLabel
 import com.example.movie.data.player.namedTrackLabel
 import com.example.movie.data.player.videoTrackLabel
 
+internal fun PictureMode.stored(): String = name.lowercase()
+
+internal fun String.toPictureMode(): PictureMode = when (this) {
+    "zoom" -> PictureMode.Zoom
+    "fill" -> PictureMode.Fill
+    else -> PictureMode.Fit
+}
+
 internal enum class PictureMode(val resizeMode: Int, val label: Int) {
     Fit(AspectRatioFrameLayout.RESIZE_MODE_FIT, R.string.player_fit),
     Zoom(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, R.string.player_zoom),
@@ -79,11 +87,14 @@ internal fun PlayerMenu(
     autoNext: Boolean,
     underCamera: Boolean,
     showLogo: Boolean,
+    hdr: Boolean,
+    qualityPinned: Boolean,
     audioNames: List<String>,
     audioOrder: List<Int>,
     onPage: (PlayerPage) -> Unit,
     onBack: () -> Unit,
     onClose: () -> Unit,
+    onSpeed: (Float) -> Unit,
     onPicture: (PictureMode) -> Unit,
     onEpisode: (WatchEpisode) -> Unit,
     onAudio: (Tracks.Group, Int) -> Unit,
@@ -92,6 +103,8 @@ internal fun PlayerMenu(
     onAutoNext: (Boolean) -> Unit,
     onUnderCamera: (Boolean) -> Unit,
     onShowLogo: (Boolean) -> Unit,
+    onHdr: (Boolean) -> Unit,
+    onVideoPinned: (Boolean) -> Unit,
 ) {
     val video = remember(tracks) { rows(tracks, C.TRACK_TYPE_VIDEO) }
     val audio = remember(tracks, audioNames, audioOrder) {
@@ -153,6 +166,10 @@ internal fun PlayerMenu(
                     NavRow(stringResource(R.string.player_picture), stringResource(picture.label)) {
                         onPage(PlayerPage.Scale)
                     }
+                    NavRow(
+                        stringResource(R.string.player_hdr),
+                        stringResource(if (hdr) R.string.player_on else R.string.player_off),
+                    ) { onHdr(!hdr) }
                     NavRow(stringResource(R.string.player_delay), stringResource(delayLabel(delayUs))) {
                         onPage(PlayerPage.Delay)
                     }
@@ -180,12 +197,14 @@ internal fun PlayerMenu(
                     }
                 }
                 PlayerPage.Quality -> {
-                    Choice(stringResource(R.string.player_quality_auto), overrideIndex(player, video.firstOrNull()?.group) == null) {
+                    Choice(stringResource(R.string.player_quality_auto), !qualityPinned) {
+                        onVideoPinned(false)
                         player.selectTrack(C.TRACK_TYPE_VIDEO, null, null)
                         onClose()
                     }
                     if (video.isEmpty()) Missing() else video.forEach { row ->
-                        Choice(row.label, overrideIndex(player, row.group) == row.index) {
+                        Choice(row.label, qualityPinned && overrideIndex(player, row.group) == row.index) {
+                            onVideoPinned(true)
                             player.selectTrack(C.TRACK_TYPE_VIDEO, row.group, row.index)
                             onClose()
                         }
@@ -230,7 +249,7 @@ internal fun PlayerMenu(
                 PlayerPage.Speed -> speeds.forEach { speed ->
                     val label = if (speed == 1f) stringResource(R.string.player_speed_normal) else "${speed}×"
                     Choice(label, player.playbackParameters.speed == speed) {
-                        player.setPlaybackSpeed(speed)
+                        onSpeed(speed)
                         onClose()
                     }
                 }
@@ -344,9 +363,14 @@ internal fun trackCaption(
     tracks: Tracks,
     audioNames: List<String>,
     audioOrder: List<Int>,
+    qualityPinned: Boolean = false,
 ): TrackCaption {
     val video = rows(tracks, C.TRACK_TYPE_VIDEO)
-    val quality = video.firstOrNull { overrideIndex(player, it.group) == it.index }?.label
+    val quality = if (qualityPinned) {
+        video.firstOrNull { overrideIndex(player, it.group) == it.index }?.label
+    } else {
+        null
+    }
     val audio = rows(tracks, C.TRACK_TYPE_AUDIO, audioNames, audioOrder)
         .firstOrNull { it.group.isTrackSelected(it.index) }
         ?.label
@@ -410,7 +434,14 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(text = label, color = Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        if (selected) Text(text = "✓", color = Color.White, fontSize = 18.sp)
+        if (selected) {
+            Icon(
+                painter = painterResource(R.drawable.ic_player_check),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 

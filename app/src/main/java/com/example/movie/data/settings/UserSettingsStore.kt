@@ -43,6 +43,20 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setPlayerLogo(enabled: Boolean) = write { it.copy(playerLogo = enabled) }
 
+    override fun setPlayerSpeed(speed: Float) = write { it.copy(playerSpeed = speed) }
+
+    override fun setPlayerPicture(mode: String) = write { it.copy(playerPicture = mode) }
+
+    override fun setPlayerDelayUs(delayUs: Long) = write { it.copy(playerDelayUs = delayUs) }
+
+    override fun setPlayerBrightness(brightness: Float?) = write { it.copy(playerBrightness = brightness) }
+
+    override fun setPlayerUnderCamera(enabled: Boolean) = write { it.copy(playerUnderCamera = enabled) }
+
+    override fun setPlayerAutoNext(enabled: Boolean) = write { it.copy(playerAutoNext = enabled) }
+
+    override fun setPlayerHdr(enabled: Boolean) = write { it.copy(playerHdr = enabled) }
+
     override fun setWatchedBadge(enabled: Boolean) = write { it.copy(watchedBadge = enabled) }
 
     private fun write(transform: (UserSettings) -> UserSettings) {
@@ -58,6 +72,13 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_POSTER_TITLES, next.showPosterTitles)
             .putBoolean(KEY_LARGE_POSTERS, next.largePosters)
             .putBoolean(KEY_PLAYER_LOGO, next.playerLogo)
+            .putFloat(KEY_PLAYER_SPEED, next.playerSpeed)
+            .putString(KEY_PLAYER_PICTURE, next.playerPicture)
+            .putLong(KEY_PLAYER_DELAY, next.playerDelayUs)
+            .putFloat(KEY_PLAYER_BRIGHTNESS, next.playerBrightness ?: -1f)
+            .putBoolean(KEY_PLAYER_UNDER_CAMERA, next.playerUnderCamera)
+            .putBoolean(KEY_PLAYER_AUTO_NEXT, next.playerAutoNext)
+            .putBoolean(KEY_PLAYER_HDR, next.playerHdr)
             .putBoolean(KEY_WATCHED_BADGE, next.watchedBadge)
             .commit()
         state.value = next
@@ -88,6 +109,13 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         showPosterTitles = prefs.getBoolean(KEY_POSTER_TITLES, false),
         largePosters = prefs.getBoolean(KEY_LARGE_POSTERS, false),
         playerLogo = prefs.getBoolean(KEY_PLAYER_LOGO, true),
+        playerSpeed = prefs.getFloat(KEY_PLAYER_SPEED, 1f),
+        playerPicture = prefs.getString(KEY_PLAYER_PICTURE, "fit") ?: "fit",
+        playerDelayUs = prefs.getLong(KEY_PLAYER_DELAY, 0L),
+        playerBrightness = prefs.getFloat(KEY_PLAYER_BRIGHTNESS, -1f).takeIf { it in 0f..1f },
+        playerUnderCamera = prefs.getBoolean(KEY_PLAYER_UNDER_CAMERA, false),
+        playerAutoNext = prefs.getBoolean(KEY_PLAYER_AUTO_NEXT, true),
+        playerHdr = prefs.getBoolean(KEY_PLAYER_HDR, true),
         watchedBadge = prefs.getBoolean(KEY_WATCHED_BADGE, true),
         )
     }
@@ -105,6 +133,13 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_POSTER_TITLES = "poster_titles"
         const val KEY_LARGE_POSTERS = "large_posters"
         const val KEY_PLAYER_LOGO = "player_logo"
+        const val KEY_PLAYER_SPEED = "player_speed"
+        const val KEY_PLAYER_PICTURE = "player_picture"
+        const val KEY_PLAYER_DELAY = "player_delay_us"
+        const val KEY_PLAYER_BRIGHTNESS = "player_brightness"
+        const val KEY_PLAYER_UNDER_CAMERA = "player_under_camera"
+        const val KEY_PLAYER_AUTO_NEXT = "player_auto_next"
+        const val KEY_PLAYER_HDR = "player_hdr"
         const val KEY_WATCHED_BADGE = "watched_badge"
     }
 }

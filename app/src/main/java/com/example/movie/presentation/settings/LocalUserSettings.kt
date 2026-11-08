@@ -33,5 +33,19 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setPlayerLogo(enabled: Boolean) = Unit
 
+    override fun setPlayerSpeed(speed: Float) = Unit
+
+    override fun setPlayerPicture(mode: String) = Unit
+
+    override fun setPlayerDelayUs(delayUs: Long) = Unit
+
+    override fun setPlayerBrightness(brightness: Float?) = Unit
+
+    override fun setPlayerUnderCamera(enabled: Boolean) = Unit
+
+    override fun setPlayerAutoNext(enabled: Boolean) = Unit
+
+    override fun setPlayerHdr(enabled: Boolean) = Unit
+
     override fun setWatchedBadge(enabled: Boolean) = Unit
 }
