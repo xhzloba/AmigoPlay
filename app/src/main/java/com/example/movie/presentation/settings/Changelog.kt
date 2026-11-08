@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.0.0",
+            fixed = listOf(
+                "Досмотренная серия сразу уходит из «Продолжить просмотр» и из строки под логотипом. В списке серий она остаётся отмеченной. В «Просмотренное» сериал попадает, когда досмотрены все вышедшие серии.",
+            ),
+        ),
+        Release(
             version = "1.69.20",
             added = listOf(
                 "На сериале вместо «Поделиться» колокольчик. Включили — сообщим, когда выйдет серия новее той, что уже есть.",

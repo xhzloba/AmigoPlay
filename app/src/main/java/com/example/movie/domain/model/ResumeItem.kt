@@ -110,6 +110,13 @@ internal fun ResumeItem.progressCaption(): String {
     return if (season != null && episode != null) "$season×$episode · $clock" else clock
 }
 
+internal fun ResumeItem.episodeDone(): Boolean {
+    val season = season ?: return false
+    val episode = episode ?: return false
+    val mark = marks.firstOrNull { it.season == season && it.episode == episode }
+    return mark?.completed == true || episodeFinished(positionMs, durationMs)
+}
+
 internal fun ResumeItem.played(): Boolean {
     if (positionMs >= 10_000L) return true
     return marks.any { it.durationMs > 1L }

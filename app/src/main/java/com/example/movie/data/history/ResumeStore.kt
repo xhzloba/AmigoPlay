@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.movie.domain.model.EpisodeProgress
 import com.example.movie.domain.model.FranchiseSeason
 import com.example.movie.domain.model.ResumeItem
+import com.example.movie.domain.model.episodeDone
 import com.example.movie.domain.model.episodeFinished
 import com.example.movie.domain.model.combineMarks
 import com.example.movie.domain.model.episodeMarks
@@ -32,6 +33,24 @@ class ResumeStore(context: Context) {
 
     val items: StateFlow<List<ResumeItem>> = itemsState.asStateFlow()
     val kept: StateFlow<Map<String, List<EpisodeProgress>>> = keptState.asStateFlow()
+
+    init {
+        val open = ArrayList<ResumeItem>(itemsState.value.size)
+        var kept = keptState.value
+        var parked = false
+        for (item in itemsState.value) {
+            if (!item.episodeDone()) {
+                open += item
+                continue
+            }
+            parked = true
+            kept = kept + (item.id to combineMarks(item.episodeMarks(), kept[item.id].orEmpty()))
+        }
+        if (parked) {
+            write(open)
+            writeKept(kept)
+        }
+    }
 
     fun record(item: ResumeItem, seriesDone: (ResumeItem) -> Boolean = { false }): Boolean {
         if (item.id.isBlank() || item.franchiseId <= 0 || item.posterUrl.isNullOrBlank()) return false
@@ -64,8 +83,8 @@ class ResumeStore(context: Context) {
                 )
                 val finished = seriesDone(stored)
                 val rest = current.filter { it.id != item.id }
-                if (finished) keepMarks(stored.id, stored.episodeMarks())
-                write(if (finished) rest else (listOf(stored) + rest).take(CAP))
+                if (completed) keepMarks(stored.id, stored.episodeMarks())
+                write(if (completed) rest else (listOf(stored) + rest).take(CAP))
                 return finished
             }
         }

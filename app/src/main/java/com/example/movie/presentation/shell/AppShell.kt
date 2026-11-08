@@ -550,9 +550,11 @@ fun AppShell(
                         scope.launch {
                             val seasons = container.getMovieDetail(next.id).getOrNull()?.franchise?.seasons.orEmpty()
                             aired = seasons
-                            val stored = container.resume.items.value.firstOrNull { it.id == next.id } ?: return@launch
-                            if (seasons.fullyWatched(stored.episodeMarks())) {
-                                container.watched.add(stored.toSaved())
+                            val stored = container.resume.items.value.firstOrNull { it.id == next.id }
+                            val marks = stored?.episodeMarks()
+                                ?: container.resume.kept.value[next.id].orEmpty()
+                            if (seasons.fullyWatched(marks)) {
+                                container.watched.add((stored ?: next).toSaved())
                                 container.favorites.remove(next.id)
                                 container.resume.forget(next.id)
                             }
