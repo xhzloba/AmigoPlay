@@ -1989,7 +1989,7 @@ private fun TrailerEdgeFade(
     if (alpha <= 0.01f) return
     Canvas(modifier) {
         val bottom = size.height * bottomFraction
-        val fadeTop = bottom * 0.62f
+        val fadeTop = bottom * 0.74f
         drawContext.canvas.saveLayer(Rect(0f, fadeTop, size.width, bottom + 2f), Paint())
         drawPosterWash(wash, alpha)
         drawRect(
