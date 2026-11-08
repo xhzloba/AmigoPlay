@@ -76,16 +76,19 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import com.example.movie.R
+import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Shelf
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.shell.ShellIcons
+import com.example.movie.presentation.update.CountBadge
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.PlayBlue
 
@@ -133,6 +136,7 @@ internal fun CategoryTabs(
     border: Color = Color.White.copy(alpha = 0.22f),
     onSelect: (String) -> Unit,
     onSearch: () -> Unit,
+    onAlerts: () -> Unit = {},
     hat: Boolean = false,
     mustache: Boolean = false,
     onMenuSettled: () -> Unit = {},
@@ -180,7 +184,13 @@ internal fun CategoryTabs(
         val side = maxWidth / 2
         Column {
             if (showBrand) {
-                BrandRow(play = play.value, onSearch = onSearch, hat = hat, mustache = mustache)
+                BrandRow(
+                    play = play.value,
+                    onSearch = onSearch,
+                    onAlerts = onAlerts,
+                    hat = hat,
+                    mustache = mustache,
+                )
                 Spacer(Modifier.height(12.dp))
             }
             CompositionLocalProvider(LocalOverscrollConfiguration provides OverscrollConfiguration()) {
@@ -294,6 +304,7 @@ private fun ShelfCapsule(
 internal fun BrandRow(
     play: Color,
     onSearch: () -> Unit,
+    onAlerts: () -> Unit = {},
     hat: Boolean = false,
     mustache: Boolean = false,
     blend: Animatable<Float, AnimationVector1D>? = null,
@@ -308,6 +319,7 @@ internal fun BrandRow(
     ) {
         BrandWordmark(play = play, blend = blend, hat = hat, mustache = mustache)
         Spacer(Modifier.weight(1f))
+        HeaderBell(onAlerts)
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -326,6 +338,41 @@ internal fun BrandRow(
                 contentDescription = stringResource(R.string.search),
                 tint = Color.White,
                 modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+@Composable
+internal fun HeaderBell(onClick: () -> Unit) {
+    val tick = rememberHapticTick()
+    val alerts by LocalAppContainer.current.releaseWatch.store.alerts.collectAsStateWithLifecycle()
+    val count = alerts.count { !it.read }
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {
+                    tick?.invoke()
+                    onClick()
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = ShellIcons.bell,
+            contentDescription = stringResource(R.string.nav_alerts),
+            tint = Color.White,
+            modifier = Modifier.size(22.dp),
+        )
+        if (count > 0) {
+            CountBadge(
+                count = count,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-2).dp, y = 4.dp),
             )
         }
     }
@@ -549,10 +596,11 @@ private fun IntArray.toMask(width: Int, height: Int): ImageBitmap {
 @Composable
 fun CategoryTabsSkeleton(
     onSearch: () -> Unit,
+    onAlerts: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        BrandRow(play = PlayBlue, onSearch = onSearch)
+        BrandRow(play = PlayBlue, onSearch = onSearch, onAlerts = onAlerts)
         Spacer(Modifier.height(12.dp))
         LazyRow(
             contentPadding = PaddingValues(start = HomeContentInset, end = HomeContentInset),

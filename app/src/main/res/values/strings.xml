@@ -73,6 +73,13 @@
     <string name="action_seen">Смотрел</string>
     <string name="action_unseen">Не смотрел</string>
     <string name="action_share">Поделиться</string>
+    <string name="action_alert">Серии</string>
+    <string name="notice_alert_on">Сообщим, когда выйдет новая серия</string>
+    <string name="notice_alert_off">Больше не сообщим о новых сериях</string>
+    <string name="alerts_empty">Нажмите колокольчик на сериале. Когда выйдет серия, она появится здесь.</string>
+    <string name="alerts_episode">Сезон %1$d, серия %2$d</string>
+    <string name="alerts_feed">Вышло обновление на AmigoPlay</string>
+    <string name="alert_channel">Новые серии</string>
     <string name="action_more">Дополнительно</string>
     <string name="notice_watched_movie">Фильм добавлен в просмотренное</string>
     <string name="notice_watched_series">Сериал добавлен в просмотренное</string>
@@ -158,6 +165,7 @@
     <string name="nav_home">Главная</string>
     <string name="nav_catalog">Каталог</string>
     <string name="nav_favorites">Мое</string>
+    <string name="nav_alerts">Уведомление</string>
     <string name="favorites_watched">Просмотрено</string>
     <string name="favorites_actors">Актеры</string>
     <string name="favorites_genres">Жанры</string>

@@ -1,5 +1,6 @@
 package com.example.movie
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -58,8 +59,12 @@ import com.example.movie.presentation.update.AppUpdateHost
 import com.example.movie.presentation.update.LocalAppUpdate
 import com.example.movie.presentation.update.rememberUpdateController
 import com.example.movie.ui.theme.MovieTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    var openRequest by mutableStateOf(0)
+        private set
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val prefs = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
         val closed = prefs.getBoolean(KEY_CLOSED, false)
@@ -143,6 +148,14 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         var tabName by rememberSaveable { mutableStateOf("Home") }
+                        val activity = this@MainActivity
+                        LaunchedEffect(splash, activity.openRequest) {
+                            if (splash) return@LaunchedEffect
+                            val movie = activity.intent?.getStringExtra(EXTRA_MOVIE) ?: return@LaunchedEffect
+                            activity.intent.removeExtra(EXTRA_MOVIE)
+                            container.releaseWatch.store.markMovie(movie)
+                            if (stack.lastOrNull() != movie) stack.add(movie)
+                        }
                         var detailPeek by remember { mutableStateOf<Movie?>(null) }
                         SideEffect {
                             notices.jump = {
@@ -224,6 +237,29 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openRequest++
+    }
+
+    override fun onStart() {
+        super.onStart()
+        AppForeground.shown.set(true)
+        refreshReleases()
+    }
+
+    override fun onStop() {
+        AppForeground.shown.set(false)
+        if (!isChangingConfigurations) refreshReleases()
+        super.onStop()
+    }
+
+    private fun refreshReleases() {
+        val app = application as MovieApplication
+        app.scope.launch { app.container.releaseWatch.refresh() }
+    }
+
     override fun onResume() {
         super.onResume()
         WindowInsetsControllerCompat(window, window.decorView)
@@ -240,9 +276,10 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
-    private companion object {
+    internal companion object {
         const val SESSION_PREFS = "session"
         const val KEY_CLOSED = "closed"
+        const val EXTRA_MOVIE = "open_movie"
     }
 }
 

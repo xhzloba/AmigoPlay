@@ -24,6 +24,7 @@ internal object ShellIcons {
     val settings: ImageVector = sliders()
     val media: ImageVector = icon(filled = false) { media() }
     val search: ImageVector = icon(filled = false) { magnifier() }
+    val bell: ImageVector = icon(filled = false) { bell() }
     val genres: ImageVector = genreTag()
     val mic: ImageVector = icon(filled = false) { mic() }
     val close: ImageVector = icon(filled = false) { cross() }
@@ -169,6 +170,16 @@ private fun person(): ImageVector = ImageVector.Builder(
         curveTo(15.2f, 13.4f, 17.5f, 15.1f, 18.3f, 19.6f)
     }
 }.build()
+
+private fun PathBuilder.bell() {
+    moveTo(4.2f, 16.4f)
+    curveTo(6.4f, 16.4f, 6.9f, 11.5f, 7.5f, 9.4f)
+    curveTo(8.3f, 6.1f, 9.9f, 4.2f, 12f, 4.2f)
+    curveTo(14.1f, 4.2f, 15.7f, 6.1f, 16.5f, 9.4f)
+    curveTo(17.1f, 11.5f, 17.6f, 16.4f, 20.4f, 16.4f)
+    moveTo(10.2f, 16.4f)
+    curveTo(10.55f, 22.05f, 13.45f, 22.05f, 13.8f, 16.4f)
+}
 
 private fun PathBuilder.magnifier() {
     moveTo(16.6f, 10.4f)

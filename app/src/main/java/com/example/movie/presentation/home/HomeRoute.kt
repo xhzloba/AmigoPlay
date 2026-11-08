@@ -15,6 +15,7 @@ fun HomeRoute(
     onOpenSection: (HomeSection) -> Unit,
     onPlayResume: (String) -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
+    onOpenAlerts: () -> Unit = {},
     presentSearch: Boolean = true,
     session: Int = 0,
 ) {
@@ -43,6 +44,7 @@ fun HomeRoute(
         onMoviePeek = onMoviePeek,
         onRetry = viewModel::retry,
         onOpenSearch = viewModel::openSearch,
+        onOpenAlerts = onOpenAlerts,
         onSearchQuery = viewModel::search,
         onCloseSearch = viewModel::closeSearch,
         onClearRecent = viewModel::clearRecent,

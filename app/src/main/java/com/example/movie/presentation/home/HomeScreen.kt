@@ -98,6 +98,7 @@ fun HomeScreen(
     onMoviePeek: (Movie) -> Unit,
     onRetry: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenAlerts: () -> Unit = {},
     onSearchQuery: (String) -> Unit,
     onCloseSearch: () -> Unit,
     onClearRecent: () -> Unit,
@@ -168,8 +169,9 @@ fun HomeScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             when (val phase = state.phase) {
-                HomePhase.Loading -> HomeSkeleton(
+                HomePhase.Loading ->                 HomeSkeleton(
                     onSearch = onOpenSearch,
+                    onAlerts = onOpenAlerts,
                     modifier = Modifier.fillMaxSize(),
                 )
                 is HomePhase.Failed -> StatusMessage(
@@ -209,6 +211,7 @@ fun HomeScreen(
                     border = capsuleAnim.value,
                     onSelect = onSelectShelf,
                     onSearch = onOpenSearch,
+                    onAlerts = onOpenAlerts,
                     hat = logo.hat,
                     mustache = logo.mustache,
                     onMenuSettled = logo::onSettled,
@@ -419,6 +422,7 @@ fun HomeScreen(
                 play = play,
                 blend = playBlend,
                 onSearch = onOpenSearch,
+                onAlerts = onOpenAlerts,
                 hat = logo.hat,
                 mustache = logo.mustache,
                 modifier = Modifier
@@ -490,6 +494,7 @@ private fun BrandScrim(progress: () -> Float, modifier: Modifier = Modifier) {
                     )
                 }
                 pool(Offset(logoX, y))
+                pool(Offset(searchX - 40.dp.toPx(), y))
                 pool(Offset(searchX, y))
             },
     )
@@ -504,9 +509,9 @@ private fun DataError.message(): String = when (this) {
 }
 
 @Composable
-private fun HomeSkeleton(onSearch: () -> Unit, modifier: Modifier = Modifier) {
+private fun HomeSkeleton(onSearch: () -> Unit, onAlerts: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier.padding(top = BrandTopInset)) {
-        CategoryTabsSkeleton(onSearch = onSearch)
+        CategoryTabsSkeleton(onSearch = onSearch, onAlerts = onAlerts)
         Spacer(Modifier.height(16.dp))
         CoverStackSkeleton(Modifier.fillMaxWidth())
         Spacer(Modifier.height(24.dp))

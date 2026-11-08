@@ -56,6 +56,7 @@ import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.BrandWordmark
 import com.example.movie.presentation.home.components.CategoryTabs
+import com.example.movie.presentation.home.components.HeaderBell
 import com.example.movie.presentation.home.components.HomeContentInset
 import com.example.movie.presentation.home.components.RecommendationRail
 import com.example.movie.presentation.shell.ShellIcons
@@ -74,6 +75,7 @@ fun CatalogScreen(
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
     onSearch: () -> Unit,
+    onAlerts: () -> Unit,
     onGenres: (type: String) -> Unit,
     onOpenShelf: (type: String, sort: String) -> Unit,
     active: Boolean = false,
@@ -168,6 +170,7 @@ fun CatalogScreen(
         }
         CatalogBrand(
             onSearch = onSearch,
+            onAlerts = onAlerts,
             onGenres = { onGenres(tab.type) },
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -182,6 +185,7 @@ fun CatalogScreen(
 @Composable
 private fun CatalogBrand(
     onSearch: () -> Unit,
+    onAlerts: () -> Unit,
     onGenres: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -214,6 +218,7 @@ private fun CatalogBrand(
                 modifier = Modifier.size(22.dp),
             )
         }
+        HeaderBell(onAlerts)
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -277,6 +282,7 @@ private fun CatalogScrim(progress: () -> Float, modifier: Modifier = Modifier) {
                     )
                 }
                 pool(Offset(logoX, y))
+                pool(Offset(searchX - 80.dp.toPx(), y))
                 pool(Offset(searchX - 40.dp.toPx(), y))
                 pool(Offset(searchX, y))
             },

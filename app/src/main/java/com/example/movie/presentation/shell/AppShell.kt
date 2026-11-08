@@ -71,6 +71,7 @@ import com.example.movie.domain.model.fullyWatched
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.detail.WatchPlayer
 import com.example.movie.presentation.detail.resumeWatchUrl
+import com.example.movie.presentation.alerts.AlertsScreen
 import com.example.movie.presentation.favorites.FavoritesScreen
 import com.example.movie.presentation.haptic.rememberHapticTick
 import kotlinx.coroutines.launch
@@ -269,10 +270,25 @@ fun AppShell(
     LaunchedEffect(peek) {
         if (peek != null) keyboard?.hide()
     }
+    var alertsOpen by rememberSaveable { mutableStateOf(false) }
+    val alertsVeil = remember { Animatable(0f) }
+    var alertsShown by remember { mutableStateOf(false) }
+    val openAlerts = { alertsOpen = true }
+    LaunchedEffect(alertsOpen) {
+        if (alertsOpen) {
+            alertsShown = true
+            withFrameNanos { }
+            alertsVeil.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        } else if (alertsShown) {
+            alertsVeil.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+            alertsShown = false
+        }
+    }
     BackHandler(
-        enabled = handleBack && resumePlayback == null && (peek != null || sectionShown != null || tab != AppTab.Home),
+        enabled = handleBack && resumePlayback == null && (alertsShown || peek != null || sectionShown != null || tab != AppTab.Home),
     ) {
         when {
+            alertsShown -> alertsOpen = false
             peek != null -> peek = null
             tab == AppTab.Catalog && homeState.searchOpen -> homeViewModel.closeSearch()
             listShown != null -> catalogListKey = null
@@ -294,6 +310,7 @@ fun AppShell(
                     onOpenSection = { sectionName = it.name },
                     onPlayResume = playResume,
                     onSearchCover = { searchCover = it },
+                    onOpenAlerts = openAlerts,
                     presentSearch = tab == AppTab.Home,
                     session = session,
                 )
@@ -317,7 +334,14 @@ fun AppShell(
             modifier = Modifier
                 .fillMaxSize()
                 .clipToBounds()
-                .onSizeChanged { stageWidth = it.width },
+                .onSizeChanged { stageWidth = it.width }
+                .then(
+                    if (alertsShown) {
+                        Modifier.graphicsLayer { alpha = 1f - alertsVeil.value }
+                    } else {
+                        Modifier
+                    },
+                ),
         ) {
             Box(Modifier.fillMaxSize()) {
                 for (which in listOf(AppTab.Home, AppTab.Favorites, AppTab.Settings)) {
@@ -364,6 +388,7 @@ fun AppShell(
                         onMovieClick = onMovieClick,
                         onMoviePeek = { peek = it },
                         onSearch = homeViewModel::openSearch,
+                        onAlerts = openAlerts,
                         onGenres = { genresType = it },
                         onOpenShelf = { type, sort -> catalogListKey = "$type:$sort" },
                         active = tab == AppTab.Catalog,
@@ -441,7 +466,7 @@ fun AppShell(
             }
         }
         val searchDim = if (tab == AppTab.Catalog) searchVeil.value else searchCover
-        val barAlpha = (1f - searchDim) * (1f - genresAlpha)
+        val barAlpha = (1f - searchDim) * (1f - genresAlpha) * (1f - alertsVeil.value)
         val listOpen = sectionShown != null || listShown != null
         LaunchedEffect(sectionShown, listShown) { barHidden = false }
         val hide by animateFloatAsState(
@@ -462,6 +487,16 @@ fun AppShell(
                     .onSizeChanged { barHeight = it.height }
                     .offset { IntOffset(0, (barHeight * hide).toInt()) }
                     .graphicsLayer { alpha = barAlpha },
+            )
+        }
+        if (alertsShown) {
+            AlertsScreen(
+                onMovieClick = onMovieClick,
+                onBack = { alertsOpen = false },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = alertsVeil.value }
+                    .background(CinemaBlack),
             )
         }
         if (searchShown && tab == AppTab.Catalog) {

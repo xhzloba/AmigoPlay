@@ -22,6 +22,30 @@ import androidx.compose.ui.unit.sp
 internal val UpdateAlert = Color(0xFFE23B5A)
 
 @Composable
+internal fun CountBadge(count: Int, modifier: Modifier = Modifier) {
+    if (count <= 0) return
+    val label = if (count > 9) "9+" else count.toString()
+    Box(
+        modifier = modifier
+            .size(width = if (count > 9) 22.dp else 16.dp, height = 16.dp)
+            .clip(CircleShape)
+            .background(UpdateAlert)
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp,
+            lineHeight = 10.sp,
+            textAlign = TextAlign.Center,
+            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+        )
+    }
+}
+
+@Composable
 internal fun UpdateBadge(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier

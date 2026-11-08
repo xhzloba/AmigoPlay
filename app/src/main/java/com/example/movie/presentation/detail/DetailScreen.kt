@@ -147,6 +147,15 @@ import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
 import com.example.movie.presentation.common.LocalShelfNotices
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.example.movie.domain.model.SeriesSub
+import com.example.movie.domain.model.releaseSnapshot
 import com.example.movie.presentation.common.NoticeShelfFavorites
 import com.example.movie.presentation.common.NoticeShelfWatched
 import com.example.movie.presentation.common.ImdbScore
@@ -224,6 +233,50 @@ private fun WatchedButton(seen: Boolean, onClick: () -> Unit) {
             modifier = Modifier.size(22.dp),
         )
     }
+}
+
+@Composable
+private fun BellButton(armed: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(if (armed) Color.White else ActionCircle)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = ShellIcons.bell,
+            contentDescription = stringResource(R.string.action_alert),
+            tint = if (armed) Color.Black else Color.White.copy(alpha = 0.92f),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+private fun Context.askNotifyPermission() {
+    val activity = findActivity() ?: return
+    if (
+        ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    ) {
+        return
+    }
+    ActivityCompat.requestPermissions(
+        activity,
+        arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+        48,
+    )
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 @Composable
@@ -345,6 +398,17 @@ private fun DetailContent(
     val keptMarks by resumeStore.kept.collectAsStateWithLifecycle()
     val continued = resumeItems.firstOrNull { it.id == detail.id }
     val progressMarks = combineMarks(continued?.episodeMarks().orEmpty(), keptMarks[detail.id].orEmpty())
+    val releaseWatch = LocalAppContainer.current.releaseWatch
+    val alertIds by releaseWatch.store.ids.collectAsStateWithLifecycle()
+    LaunchedEffect(detail.id, detail.franchise, alertIds) {
+        if (detail.id !in alertIds) return@LaunchedEffect
+        val sub = releaseWatch.store.subs.value.firstOrNull { it.id == detail.id } ?: return@LaunchedEffect
+        if (sub.airedKey.isNotEmpty()) return@LaunchedEffect
+        val snapshot = detail.franchise?.releaseSnapshot() ?: return@LaunchedEffect
+        releaseWatch.store.arm(
+            sub.copy(airedKey = snapshot.key, nextEpochDay = snapshot.nextEpochDay),
+        )
+    }
     val savedIds by favorites.ids.collectAsStateWithLifecycle()
     val watchedIds by watched.ids.collectAsStateWithLifecycle()
     val tick = rememberHapticTick()
@@ -569,6 +633,8 @@ private fun DetailContent(
             val removedFavorite = stringResource(
                 if (series) R.string.notice_favorite_series_off else R.string.notice_favorite_movie_off,
             )
+            val alertOn = stringResource(R.string.notice_alert_on)
+            val alertOff = stringResource(R.string.notice_alert_off)
             val addedWatched = stringResource(R.string.notice_watched_movie)
             val removedWatched = stringResource(R.string.notice_watched_movie_off)
             WatchBar(
@@ -633,8 +699,34 @@ private fun DetailContent(
                         },
                     )
                 }
-                ActionSlot(stringResource(R.string.action_share)) {
-                    RoundAction(Icons.Filled.Share)
+                if (series) {
+                    val armed = detail.id in alertIds
+                    ActionSlot(stringResource(R.string.action_alert)) {
+                        BellButton(armed = armed) {
+                            tick?.invoke()
+                            if (armed) {
+                                releaseWatch.store.disarm(detail.id)
+                                notices.show(alertOff, NoticeShelfFavorites)
+                            } else {
+                                val snapshot = detail.franchise?.releaseSnapshot()
+                                releaseWatch.store.arm(
+                                    SeriesSub(
+                                        id = detail.id,
+                                        title = detail.title,
+                                        posterUrl = detail.posterUrl,
+                                        airedKey = snapshot?.key.orEmpty(),
+                                        nextEpochDay = snapshot?.nextEpochDay,
+                                    ),
+                                )
+                                context.askNotifyPermission()
+                                notices.show(alertOn, NoticeShelfFavorites)
+                            }
+                        }
+                    }
+                } else {
+                    ActionSlot(stringResource(R.string.action_share)) {
+                        RoundAction(Icons.Filled.Share)
+                    }
                 }
                 ActionSlot(stringResource(R.string.menu_list)) {
                     RoundAction(Icons.Filled.List)

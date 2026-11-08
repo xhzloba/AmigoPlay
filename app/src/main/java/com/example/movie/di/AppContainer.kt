@@ -3,6 +3,8 @@ package com.example.movie.di
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.example.movie.BuildConfig
+import com.example.movie.data.alerts.ReleaseWatch
+import com.example.movie.data.alerts.ReleaseWatchStore
 import com.example.movie.data.favorites.FavoriteStore
 import com.example.movie.data.favorites.WatchedStore
 import com.example.movie.data.remote.FranchiseApi
@@ -15,7 +17,9 @@ import com.example.movie.data.search.SearchHistoryStore
 import com.example.movie.data.settings.UserSettingsStore
 import com.example.movie.data.update.ApkUpdateInstaller
 import com.example.movie.data.update.GithubUpdateRepository
+import com.example.movie.AppForeground
 import com.example.movie.domain.model.Franchise
+import com.example.movie.presentation.alerts.ReleaseNotifier
 import com.example.movie.domain.model.UserSettingsRepository
 import com.example.movie.domain.usecase.CheckAppUpdateUseCase
 import com.example.movie.domain.usecase.GetHomeShelvesUseCase
@@ -104,6 +108,13 @@ class AppContainer(context: Context) {
         .create(GithubApi::class.java)
 
     val checkAppUpdate: CheckAppUpdateUseCase = CheckAppUpdateUseCase(GithubUpdateRepository(githubApi))
+
+    val releaseWatch = ReleaseWatch(
+        store = ReleaseWatchStore(context),
+        movies = movieRepository,
+        notify = { alert -> ReleaseNotifier.post(context, alert) },
+        foreground = { AppForeground.shown.get() },
+    )
 
     val apkInstaller: ApkUpdateInstaller = ApkUpdateInstaller(
         client = OkHttpClient.Builder()
