@@ -124,6 +124,12 @@ internal class UpdateController(
             return
         }
         if (phase == UpdatePhase.Downloading) return
+        phase = UpdatePhase.Downloading
+        progress = DownloadProgress()
+        val intent = Intent(context, UpdateDownloadService::class.java)
+            .putExtra(UpdateDownloadService.EXTRA_URL, item.apkUrl)
+        runCatching { ContextCompat.startForegroundService(context, intent) }
+            .onFailure { phase = UpdatePhase.Failed }
         val activity = context.findActivity()
         if (
             activity != null &&
@@ -136,12 +142,6 @@ internal class UpdateController(
                 NOTIFICATION_REQUEST,
             )
         }
-        phase = UpdatePhase.Downloading
-        progress = DownloadProgress()
-        val intent = Intent(context, UpdateDownloadService::class.java)
-            .putExtra(UpdateDownloadService.EXTRA_URL, item.apkUrl)
-        runCatching { ContextCompat.startForegroundService(context, intent) }
-            .onFailure { phase = UpdatePhase.Failed }
     }
 }
 

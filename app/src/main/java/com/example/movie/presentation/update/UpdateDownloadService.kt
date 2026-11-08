@@ -52,10 +52,12 @@ class UpdateDownloadService : Service() {
                         UpdateDownloadHub.progress = snapshot
                         val known = snapshot.total > 0
                         val percent = if (known) (snapshot.fraction * 100).roundToInt() else 0
-                        manager().notify(
-                            NOTE_ID,
-                            note(downloadStatus(snapshot), indeterminate = !known, percent = percent),
-                        )
+                        runCatching {
+                            manager().notify(
+                                NOTE_ID,
+                                note(downloadStatus(snapshot), indeterminate = !known, percent = percent),
+                            )
+                        }
                     },
                 )
                 UpdateDownloadHub.phase = UpdatePhase.Ready

@@ -4,11 +4,14 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.example.movie.domain.model.DownloadProgress
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.IOException
 
 class ApkUpdateInstaller(
     private val client: OkHttpClient,
@@ -17,11 +20,32 @@ class ApkUpdateInstaller(
         url: String,
         destination: File,
         onProgress: (DownloadProgress) -> Unit,
+    ): File {
+        var last: Throwable? = null
+        repeat(ATTEMPTS) { attempt ->
+            try {
+                return fetch(url, destination, onProgress)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                last = error
+                if (attempt == ATTEMPTS - 1 || !error.transient()) throw error
+                delay(400L shl attempt)
+            }
+        }
+        throw last ?: IllegalStateException("download")
+    }
+
+    private suspend fun fetch(
+        url: String,
+        destination: File,
+        onProgress: (DownloadProgress) -> Unit,
     ): File = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", "AmigoPlay")
             .header("Accept", "application/octet-stream")
+            .header("Accept-Encoding", "identity")
             .build()
         val partial = File(destination.parentFile, "${destination.name}.part")
         destination.parentFile?.mkdirs()
@@ -60,6 +84,16 @@ class ApkUpdateInstaller(
         if (destination.exists()) destination.delete()
         if (!partial.renameTo(destination)) error("rename")
         destination
+    }
+
+    private companion object {
+        const val ATTEMPTS = 4
+    }
+
+    private fun Throwable.transient(): Boolean {
+        if (this is IOException) return true
+        val code = message?.removePrefix("http ")?.toIntOrNull() ?: return false
+        return code == 408 || code == 429 || code in 500..599
     }
 
     fun install(context: Context, apk: File) {

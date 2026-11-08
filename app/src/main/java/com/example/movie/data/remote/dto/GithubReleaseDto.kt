@@ -17,17 +17,21 @@ internal data class GithubReleaseDto(
 @Serializable
 internal data class GithubAssetDto(
     val name: String = "",
+    val url: String = "",
     @SerialName("browser_download_url") val browserDownloadUrl: String = "",
     @SerialName("content_type") val contentType: String = "",
 )
+
+private fun GithubAssetDto.downloadUrl(): String? =
+    url.takeIf { it.isNotBlank() } ?: browserDownloadUrl.takeIf { it.isNotBlank() }
 
 internal fun GithubReleaseDto.toRelease(currentCode: Int): AppRelease? {
     if (draft) return null
     val code = ReleaseVersions.codeOf(tagName) ?: ReleaseVersions.codeOf(name) ?: return null
     if (code <= currentCode) return null
-    val apk = assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) && it.browserDownloadUrl.isNotBlank() }
+    val apk = assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) && it.downloadUrl() != null }
         ?: assets.firstOrNull {
-            it.contentType == "application/vnd.android.package-archive" && it.browserDownloadUrl.isNotBlank()
+            it.contentType == "application/vnd.android.package-archive" && it.downloadUrl() != null
         }
         ?: return null
     val versionName = ReleaseVersions.nameOf(tagName) ?: ReleaseVersions.nameOf(name) ?: return null
@@ -35,6 +39,6 @@ internal fun GithubReleaseDto.toRelease(currentCode: Int): AppRelease? {
         versionName = versionName,
         versionCode = code,
         notes = body.trim().replace("\r\n", "\n"),
-        apkUrl = apk.browserDownloadUrl,
+        apkUrl = apk.downloadUrl() ?: return null,
     )
 }
