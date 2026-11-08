@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.2.0",
+            added = listOf(
+                "В избранном на обложке закладка того же размера, что галочка просмотренного. Белый кружок, внутри чёрная заливка. Внизу справа, в слайдерах, каталоге и полном списке.",
+                "Закладка смотрит на ту же настройку, что галочка. Выключено — обеих отметок нет.",
+            ),
+        ),
+        Release(
             version = "2.1.0",
             added = listOf(
                 "Под колокольчиком в деталке написано «Уведомление».",

@@ -67,8 +67,10 @@ import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionSkeleton
+import com.example.movie.presentation.home.components.FavoriteBadge
 import com.example.movie.presentation.home.components.WatchedBadge
 import com.example.movie.presentation.home.components.WatchedBadgeHang
+import com.example.movie.presentation.home.components.rememberFavoriteIds
 import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.home.components.WatchProgress
 import com.example.movie.presentation.home.components.posterGridColumns
@@ -382,6 +384,7 @@ private fun PosterCell(
     val wave = remember(movie.id) { PosterWave() }
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
+    val favorites = rememberFavoriteIds()
     Column {
         Box(
             Modifier
@@ -427,6 +430,8 @@ private fun PosterCell(
             }
             if (movie.id in watched) {
                 WatchedBadge(Modifier.align(Alignment.BottomEnd))
+            } else if (movie.id in favorites) {
+                FavoriteBadge(Modifier.align(Alignment.BottomEnd))
             }
         }
         Spacer(Modifier.height(WatchedBadgeHang))

@@ -219,6 +219,7 @@ private fun RecommendationPager(
     val posterHeight = posterWidth * PosterAspect
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
+    val favorites = rememberFavoriteIds()
     val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val end = (maxWidth - posterWidth - RailStart).coerceAtLeast(RailStart)
@@ -284,6 +285,8 @@ private fun RecommendationPager(
                         }
                         if (movie.id in watched) {
                             WatchedBadge(Modifier.align(Alignment.BottomEnd))
+                        } else if (movie.id in favorites) {
+                            FavoriteBadge(Modifier.align(Alignment.BottomEnd))
                         }
                     }
                     Spacer(Modifier.height(WatchedBadgeHang))

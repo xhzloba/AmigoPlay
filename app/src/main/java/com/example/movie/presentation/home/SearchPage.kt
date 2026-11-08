@@ -71,10 +71,12 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionSkeleton
 import com.example.movie.presentation.home.components.PosterGridInset
+import com.example.movie.presentation.home.components.FavoriteBadge
 import com.example.movie.presentation.home.components.WatchedBadge
 import com.example.movie.presentation.home.components.WatchedBadgeHang
 import com.example.movie.presentation.home.components.posterGridColumns
 import com.example.movie.presentation.home.components.posterTitlesOn
+import com.example.movie.presentation.home.components.rememberFavoriteIds
 import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.CinemaBlack
@@ -373,6 +375,7 @@ private fun SearchResults(
     val tick = rememberHapticTick()
     val showTitles = posterTitlesOn()
     val watched = rememberWatchedIds()
+    val favorites = rememberFavoriteIds()
     LazyVerticalGrid(
         columns = GridCells.Fixed(posterGridColumns()),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 24.dp),
@@ -418,6 +421,8 @@ private fun SearchResults(
                 )
                 if (movie.id in watched) {
                     WatchedBadge(Modifier.align(Alignment.BottomEnd))
+                } else if (movie.id in favorites) {
+                    FavoriteBadge(Modifier.align(Alignment.BottomEnd))
                 }
                 }
                 Spacer(Modifier.height(WatchedBadgeHang))
