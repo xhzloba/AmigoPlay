@@ -20,7 +20,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -91,7 +90,6 @@ import com.example.movie.domain.model.EpisodeProgress
 import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.FranchiseEpisode
 import com.example.movie.domain.model.FranchiseSeason
-import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.isUnreleased
@@ -136,7 +134,6 @@ private val dateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("ru")
 @Composable
 internal fun FranchiseBlock(
     detail: MovieDetail,
-    onPlayTrailer: (FranchiseTrailer) -> Unit,
     onPlayEpisode: (Int, Int) -> Unit,
     marks: List<EpisodeProgress> = emptyList(),
     onOpenAbout: () -> Unit,
@@ -188,17 +185,6 @@ internal fun FranchiseBlock(
         if (franchise.photos.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
             PhotoStrip(franchise.photos)
-        }
-        if (franchise.trailers.isNotEmpty()) {
-            Spacer(Modifier.height(22.dp))
-            Text(
-                text = stringResource(R.string.franchise_trailers),
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(12.dp))
-            TrailerRow(franchise.trailers, onPlayTrailer)
         }
         if (franchise.facts.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
@@ -261,77 +247,6 @@ private fun PhotoStrip(photos: List<String>) {
     }
 }
 
-@Composable
-internal fun TrailerRow(trailers: List<FranchiseTrailer>, onPlay: (FranchiseTrailer) -> Unit) {
-    val tick = rememberHapticTick()
-    val row = rememberLazyListState()
-    HapticOnChange(row) { row.firstVisibleItemIndex }
-    LazyRow(
-        state = row,
-        modifier = Modifier
-            .edgeToEdge(DetailInset)
-            .fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = DetailInset),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        items(trailers.size, key = { it }) { index ->
-            val trailer = trailers[index]
-            Column(Modifier.width(260.dp)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Card)
-                        .pointerInput(trailer.url) {
-                            detectTapGestures(onTap = {
-                                tick?.invoke()
-                                onPlay(trailer)
-                            })
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (!trailer.posterUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = trailer.posterUrl,
-                            contentDescription = trailer.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.45f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp),
-                        )
-                    }
-                }
-                val caption = trailer.season?.let { stringResource(R.string.franchise_trailer_season, it) }
-                    ?: trailer.name
-                if (caption.isNotBlank()) {
-                    Text(
-                        text = caption,
-                        color = Color(0xFFC7C7CC),
-                        fontSize = 13.sp,
-                        lineHeight = 16.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 8.dp, start = 2.dp, end = 2.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
 internal fun liftWatchUrl(id: Int): String =
     "https://embed.liftw.ws/embed/movie/$id?host=lift.com&imp2=a7579fe91a3b6593c0b2f4bdb69fae4e6e539ff0a39a988f90a280e97fd43718&t2=1794007180&ht=5f79777865aa38c62bbc232817687bfdd3003a8e2dabebba331258f181643072&imp3=9125fe15854f815949c15971ca44fd92cf9abddf40a233ebcc375e358119b86a"
 
@@ -377,11 +292,6 @@ internal fun WatchPlayer(
             CircularProgressIndicator(color = Color.White)
         }
     }
-}
-
-@Composable
-internal fun TrailerPlayer(trailer: FranchiseTrailer, onDismiss: () -> Unit) {
-    EmbedPlayer(url = trailer.url, direct = false, allowedHostSuffix = "nextembed.ws", onDismiss = onDismiss)
 }
 
 @Composable

@@ -473,7 +473,6 @@ private fun DetailContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var playingTrailer by remember { mutableStateOf<FranchiseTrailer?>(null) }
     var watching by remember(detail.id) { mutableStateOf<WatchRequest?>(null) }
     var episodesOpen by remember(detail.id) { mutableStateOf(false) }
     var seasonWatch by remember(detail.id) { mutableStateOf(false) }
@@ -1014,7 +1013,6 @@ private fun DetailContent(
                 Spacer(Modifier.height(28.dp))
                 FranchiseBlock(
                     detail,
-                    onPlayTrailer = { playingTrailer = it },
                     onPlayEpisode = { season, episode ->
                         val id = detail.franchise?.watchId ?: return@FranchiseBlock
                         watching = WatchRequest(id, season, episode)
@@ -1100,9 +1098,6 @@ private fun DetailContent(
                 )
             }
         }
-        playingTrailer?.let { trailer ->
-            TrailerPlayer(trailer = trailer, onDismiss = { playingTrailer = null })
-        }
         val savedResume = remember(detail.id, watching) {
             watching?.let { resumeStore.items.value.firstOrNull { item -> item.id == detail.id } }
         }
@@ -1169,7 +1164,7 @@ private fun CastPage(cast: List<CastMember>, onBack: () -> Unit, modifier: Modif
                 )
                 Spacer(Modifier.height(8.dp))
             }
-            items(cast.size, key = { it }) { index ->
+            items(count = cast.size, key = { "${cast[it].id}\u0000${cast[it].name}" }) { index ->
                 val member = cast[index]
                 Row(
                     modifier = Modifier
@@ -1741,9 +1736,18 @@ private val CastGap = 14.dp
 
 @Composable
 private fun PersonPhoto(url: String?, name: String, size: Dp) {
+    val context = LocalContext.current
     var failed by remember(url) { mutableStateOf(url.isNullOrBlank()) }
-    var loaded by remember(url) { mutableStateOf(false) }
-    val loading = !failed && !loaded && !url.isNullOrBlank()
+    val request = remember(url) {
+        url?.let {
+            ImageRequest.Builder(context)
+                .data(it)
+                .crossfade(false)
+                .memoryCacheKey(it)
+                .diskCacheKey(it)
+                .build()
+        }
+    }
     Box(
         modifier = Modifier
             .size(size)
@@ -1751,11 +1755,13 @@ private fun PersonPhoto(url: String?, name: String, size: Dp) {
             .background(Color(0xFF2C2C2E)),
         contentAlignment = Alignment.Center,
     ) {
-        if (loading) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = photoPulse())),
+        if (request != null && !failed) {
+            AsyncImage(
+                model = request,
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                onError = { failed = true },
+                modifier = Modifier.fillMaxSize(),
             )
         }
         if (failed) {
@@ -1764,17 +1770,6 @@ private fun PersonPhoto(url: String?, name: String, size: Dp) {
                 contentDescription = name,
                 tint = Color(0xFF9A9AA0),
                 modifier = Modifier.size(size * 0.5f),
-            )
-        } else if (!url.isNullOrBlank()) {
-            AsyncImage(
-                model = url,
-                contentDescription = name,
-                contentScale = ContentScale.Crop,
-                onSuccess = { loaded = true },
-                onError = { failed = true },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = if (loaded) 1f else 0f },
             )
         }
     }
@@ -1818,8 +1813,7 @@ private fun CastRow(cast: List<CastMember>) {
         contentPadding = PaddingValues(horizontal = DetailInset),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        items(count = cast.size, key = { it }) { index ->
-            val member = cast[index]
+        items(cast, key = { it.id to it.name }) { member ->
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(92.dp)) {
                 PersonPhoto(url = member.photoUrl, name = member.name, size = 92.dp)
                 Spacer(Modifier.height(6.dp))
