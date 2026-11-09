@@ -1493,6 +1493,7 @@ private fun LogoOrTitle(detail: MovieDetail, onInkBelow: (Dp) -> Unit) {
                 .width(DetailLogoWidth),
             contentAlignment = Alignment.Center,
         ) {
+            if (!ready) DetailLogoSkeleton()
             MovieLogoShadow(
                 model = detail.logoUrl,
                 visible = ready,
@@ -1511,7 +1512,9 @@ private fun LogoOrTitle(detail: MovieDetail, onInkBelow: (Dp) -> Unit) {
                     failed = true
                     onInkBelow(0.dp)
                 },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = if (ready) 1f else 0f },
             )
         }
     } else {
@@ -1532,6 +1535,27 @@ private fun LogoOrTitle(detail: MovieDetail, onInkBelow: (Dp) -> Unit) {
 private val DetailLogoWidth = 300.dp
 private val DetailLogoHeight = 84.dp
 private val LogoMetaGap = 8.dp
+
+@Composable
+private fun DetailLogoSkeleton() {
+    val transition = rememberInfiniteTransition(label = "detail-logo")
+    val pulse by transition.animateFloat(
+        initialValue = 0.08f,
+        targetValue = 0.16f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "detail-logo-pulse",
+    )
+    Box(
+        modifier = Modifier
+            .width(210.dp)
+            .height(28.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = pulse)),
+    )
+}
 
 private fun SuccessResult.inkBelow(density: Density, maxWidth: Dp, maxHeight: Dp): Dp {
     val raw = (drawable as? BitmapDrawable)?.bitmap ?: return 0.dp

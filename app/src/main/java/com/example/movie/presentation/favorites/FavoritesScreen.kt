@@ -105,6 +105,7 @@ import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
+import com.example.movie.presentation.home.components.WatchedBadgeHang
 import com.example.movie.presentation.home.components.WatchProgress
 import com.example.movie.presentation.home.components.posterGridColumns
 import com.example.movie.presentation.home.components.posterTitlesOn
@@ -831,6 +832,9 @@ private fun FavoritePoster(
                 )
             }
         }
-        if (showTitles) PosterCaption(item.title, item.year)
+        if (showTitles) {
+            Spacer(Modifier.height(WatchedBadgeHang))
+            PosterCaption(item.title, item.year)
+        }
     }
 }

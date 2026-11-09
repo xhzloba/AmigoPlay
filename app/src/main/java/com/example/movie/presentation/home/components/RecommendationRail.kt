@@ -47,8 +47,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.home.holdCue
@@ -74,6 +78,9 @@ internal fun RailTitle(
     modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val white = settings.whiteTitles
+    val color = if (white) Color.White else Color(0xFFB4B4B8)
     Row(
         modifier = modifier
             .padding(horizontal = PosterGridInset)
@@ -95,18 +102,18 @@ internal fun RailTitle(
     ) {
         Text(
             text = title,
-            color = Color(0xFFB4B4B8),
-            fontWeight = FontWeight.Normal,
-            fontSize = CategoryTabFontSize,
-            lineHeight = CategoryTabLineHeight,
-            letterSpacing = CategoryTabLetterSpacing,
+            color = color,
+            fontWeight = if (white) FontWeight.Bold else FontWeight.Normal,
+            fontSize = if (white) 18.sp else CategoryTabFontSize,
+            lineHeight = if (white) TextUnit.Unspecified else CategoryTabLineHeight,
+            letterSpacing = if (white) TextUnit.Unspecified else CategoryTabLetterSpacing,
         )
         if (onClick != null) {
             Spacer(Modifier.width(4.dp))
             Icon(
                 imageVector = ShellIcons.chevron,
                 contentDescription = null,
-                tint = Color(0xFFB4B4B8),
+                tint = color,
                 modifier = Modifier.size(18.dp),
             )
         }

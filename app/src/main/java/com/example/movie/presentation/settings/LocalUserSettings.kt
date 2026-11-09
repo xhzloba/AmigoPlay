@@ -48,4 +48,6 @@ private object DefaultUserSettings : UserSettingsRepository {
     override fun setPlayerHdr(enabled: Boolean) = Unit
 
     override fun setWatchedBadge(enabled: Boolean) = Unit
+
+    override fun setWhiteTitles(enabled: Boolean) = Unit
 }

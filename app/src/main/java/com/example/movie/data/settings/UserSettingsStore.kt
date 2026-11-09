@@ -59,6 +59,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setWatchedBadge(enabled: Boolean) = write { it.copy(watchedBadge = enabled) }
 
+    override fun setWhiteTitles(enabled: Boolean) = write { it.copy(whiteTitles = enabled) }
+
     private fun write(transform: (UserSettings) -> UserSettings) {
         val next = transform(state.value)
         prefs.edit()
@@ -80,6 +82,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_PLAYER_AUTO_NEXT, next.playerAutoNext)
             .putBoolean(KEY_PLAYER_HDR, next.playerHdr)
             .putBoolean(KEY_WATCHED_BADGE, next.watchedBadge)
+            .putBoolean(KEY_WHITE_TITLES, next.whiteTitles)
             .commit()
         state.value = next
     }
@@ -117,6 +120,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         playerAutoNext = prefs.getBoolean(KEY_PLAYER_AUTO_NEXT, true),
         playerHdr = prefs.getBoolean(KEY_PLAYER_HDR, true),
         watchedBadge = prefs.getBoolean(KEY_WATCHED_BADGE, true),
+        whiteTitles = prefs.getBoolean(KEY_WHITE_TITLES, false),
         )
     }
 
@@ -141,5 +145,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_PLAYER_AUTO_NEXT = "player_auto_next"
         const val KEY_PLAYER_HDR = "player_hdr"
         const val KEY_WATCHED_BADGE = "watched_badge"
+        const val KEY_WHITE_TITLES = "white_titles"
     }
 }

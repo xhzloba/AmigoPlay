@@ -21,6 +21,7 @@ data class UserSettings(
     val playerAutoNext: Boolean = true,
     val playerHdr: Boolean = true,
     val watchedBadge: Boolean = true,
+    val whiteTitles: Boolean = false,
 )
 
 interface UserSettingsRepository {
@@ -61,4 +62,6 @@ interface UserSettingsRepository {
     fun setPlayerHdr(enabled: Boolean)
 
     fun setWatchedBadge(enabled: Boolean)
+
+    fun setWhiteTitles(enabled: Boolean)
 }
