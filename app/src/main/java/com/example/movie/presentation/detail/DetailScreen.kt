@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -37,6 +38,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -179,6 +181,7 @@ import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.SeasonWatchSheet
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
+import com.example.movie.presentation.home.pressToOpen
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.shell.ShellIcons
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -450,6 +453,7 @@ fun DetailScreen(
     onResolveWatch: () -> Unit,
     onOpenMovie: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val detail = state.detail
@@ -461,6 +465,7 @@ fun DetailScreen(
             onResolveWatch = onResolveWatch,
             onOpenMovie = onOpenMovie,
             onMoviePeek = onMoviePeek,
+            onBack = onBack,
             modifier = modifier,
         )
         state.phase is DetailPhase.Failed -> DetailMessage(
@@ -491,12 +496,14 @@ private fun DetailContent(
     onResolveWatch: () -> Unit,
     onOpenMovie: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     var watching by remember(detail.id) { mutableStateOf<WatchRequest?>(null) }
     var episodesOpen by remember(detail.id) { mutableStateOf(false) }
     var seasonWatch by remember(detail.id) { mutableStateOf(false) }
+    var castSheet by remember(detail.id) { mutableStateOf(false) }
     var watchRequested by remember(detail.id) { mutableStateOf(false) }
     var franchisePage by remember(detail.id) { mutableStateOf<String?>(null) }
     val pageVeil = remember { Animatable(0f) }
@@ -700,6 +707,10 @@ private fun DetailContent(
         val heroHeight = maxHeight * 0.72f
         val contentTop = maxHeight * 0.44f
         val textWidth = maxWidth - DetailInset * 2
+        val barTravelPx = with(density) { DetailBarTravel.toPx() }
+        val dock = WindowInsets.statusBars.getTop(density).toFloat()
+        val logoTop = with(density) { contentTop.toPx() } - scroll.value
+        val barIn = ((dock + barTravelPx - logoTop) / barTravelPx).coerceIn(0f, 1f)
         if (backdrops.isNotEmpty() || (wantTrailer && trailerMedia != null)) {
             Box(
                 modifier = Modifier
@@ -854,7 +865,9 @@ private fun DetailContent(
             )
             Layout(
                 content = {
-                    LogoOrTitle(detail, onInkBelow = { inkBelow = it })
+                    Box(Modifier.graphicsLayer { alpha = 1f - barIn }) {
+                        LogoOrTitle(detail, onInkBelow = { inkBelow = it })
+                    }
                     MetaRow(detail)
                 },
             ) { measurables, constraints ->
@@ -1088,6 +1101,39 @@ private fun DetailContent(
             }
             Spacer(Modifier.height(28.dp))
         }
+        DetailBarSlot(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .graphicsLayer { alpha = (1f - barIn) * (1f - pageAlpha) },
+        ) {
+            Box(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 18.dp)
+                    .size(44.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            tick?.invoke()
+                            castSheet = true
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                ChromeCastMark()
+            }
+        }
+        DetailLogoBar(
+            title = detail.title,
+            logoUrl = detail.logoUrl,
+            showLogo = settings.showLogos,
+            color = lerp(paintWash.topLeft, paintWash.topRight, 0.5f).sunk(),
+            progress = barIn * (1f - pageAlpha),
+            onBack = onBack,
+            onCast = { castSheet = true },
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
         val openedPage = pageShown
         if (openedPage != null) {
             val pageModifier = Modifier
@@ -1126,6 +1172,9 @@ private fun DetailContent(
                 },
                 onDismiss = { trailerSheet = false },
             )
+        }
+        if (castSheet) {
+            CastOffSheet(onDismiss = { castSheet = false })
         }
         if (seasonWatch) {
             SeasonWatchSheet(
@@ -1299,6 +1348,9 @@ private fun WatchBar(
     val shownResume = if (qualityReady && available) resume else null
     val solid = available || (notify && !notifyArmed)
     val ink = if (solid) Color.Black else Color.White
+    var pressed by remember(glowKey) { mutableStateOf(false) }
+    val pressScale = rememberPressScale(pressed)
+    val wave = remember(glowKey) { PosterWave() }
     val label = when {
         notify && notifyArmed -> R.string.watch_notify_on
         notify -> R.string.watch_notify
@@ -1310,6 +1362,10 @@ private fun WatchBar(
         Modifier
             .fillMaxWidth()
             .height(WatchPillHeight)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
             .clip(WatchPillShape)
             .background(if (solid) Color.White else Color.White.copy(alpha = if (notifyArmed) 0.14f else 0.08f))
             .then(
@@ -1321,6 +1377,23 @@ private fun WatchBar(
                         Color.White.copy(alpha = if (notifyArmed) 0.72f else 0.28f),
                         WatchPillShape,
                     )
+                },
+            )
+            .posterWave(wave, light = !solid)
+            .then(
+                if (qualityReady) {
+                    Modifier.pressToOpen(
+                        onPressed = { pressed = it },
+                        onClick = {
+                            when {
+                                notify -> onNotify()
+                                available -> onWatch()
+                            }
+                        },
+                        wave = wave,
+                    )
+                } else {
+                    Modifier
                 },
             )
             .drawWithContent {
@@ -1336,13 +1409,7 @@ private fun WatchBar(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = appear.value }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        enabled = available || notify,
-                        onClick = { if (notify) onNotify() else onWatch() },
-                    ),
+                    .graphicsLayer { alpha = appear.value },
             ) {
             Row(
                 modifier = Modifier
@@ -1535,6 +1602,164 @@ private fun LogoOrTitle(detail: MovieDetail, onInkBelow: (Dp) -> Unit) {
 private val DetailLogoWidth = 300.dp
 private val DetailLogoHeight = 84.dp
 private val LogoMetaGap = 8.dp
+private val DetailBarRow = 62.dp
+private val DetailBarTravel = 72.dp
+
+private const val ChromeCastScreen =
+    "M39 39C39.3942 39.0007 39.7846 38.9235 40.1488 38.773C40.5131 38.6225 40.8441 38.4015 41.1228 38.1228C41.4015 37.8441 41.6225 37.5131 41.773 37.1488C41.9235 36.7846 42.0007 36.3942 42 36V12C42.0007 11.6058 41.9235 11.2154 41.773 10.8512C41.6225 10.4869 41.4015 10.1559 41.1228 9.87718C40.8441 9.59847 40.5131 9.37752 40.1488 9.22699C39.7846 9.07647 39.3942 8.99933 39 9H9C8.60585 8.99933 8.21544 9.07647 7.85116 9.22699C7.48688 9.37752 7.15589 9.59847 6.87718 9.87718C6.59847 10.1559 6.37752 10.4869 6.22699 10.8512C6.07647 11.2154 5.99933 11.6058 6 12V22.6747C5.02382 22.4332 4.02226 22.2538 3 22.1409V12C2.99976 11.212 3.1548 10.4317 3.45624 9.70362C3.75769 8.97556 4.19963 8.31403 4.75683 7.75683C5.31403 7.19963 5.97556 6.75769 6.70362 6.45624C7.43168 6.1548 8.212 5.99976 9 6H39C39.788 5.99976 40.5683 6.1548 41.2964 6.45624C42.0244 6.75769 42.686 7.19963 43.2432 7.75683C43.8004 8.31403 44.2423 8.97556 44.5438 9.70362C44.8452 10.4317 45.0002 11.212 45 12V36C45.0001 36.788 44.845 37.5682 44.5436 38.2963C44.2421 39.0243 43.8001 39.6858 43.2429 40.243C42.6858 40.8001 42.0243 41.2421 41.2963 41.5436C40.5682 41.845 39.788 42.0001 39 42H22.908C22.8255 41.1079 22.6884 40.2312 22.5 39.373C22.4726 39.2482 22.4441 39.1239 22.4146 39H39Z"
+
+private val ChromeCast: ImageVector = ImageVector.Builder(
+    name = "chromeCast",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 48f,
+    viewportHeight = 48f,
+).apply {
+    listOf(
+        ChromeCastScreen,
+        "M3 38.8V42H6.2C6.2 40.2327 4.76731 38.8 3 38.8Z",
+        "M9.4 42H12.6C12.6 36.6981 8.30193 32.4 3 32.4V35.6C6.53462 35.6 9.4 38.4654 9.4 42Z",
+        "M15.8 42H19C19 33.1634 11.8366 26 3 26V29.2C10.0692 29.2 15.8 34.9308 15.8 42Z",
+    ).forEach { data ->
+        addPath(
+            pathData = PathParser().parsePathString(data).toNodes(),
+            fill = SolidColor(Color.Black),
+        )
+    }
+}.build()
+
+@Composable
+private fun DetailBarSlot(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .height(DetailBarRow),
+        content = content,
+    )
+}
+
+@Composable
+private fun ChromeCastMark(modifier: Modifier = Modifier) {
+    Icon(
+        imageVector = ChromeCast,
+        contentDescription = null,
+        tint = Color.White,
+        modifier = modifier.size(26.dp),
+    )
+}
+
+@Composable
+private fun CastOffSheet(onDismiss: () -> Unit) {
+    HandleSheet(onDismiss = onDismiss) {
+        Text(
+            text = stringResource(R.string.cast_tv_off),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp)
+                .padding(bottom = 16.dp),
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun DetailLogoBar(
+    title: String,
+    logoUrl: String?,
+    showLogo: Boolean,
+    color: Color,
+    progress: Float,
+    onBack: () -> Unit,
+    onCast: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tick = rememberHapticTick()
+    val barPress = remember { MutableInteractionSource() }
+    var logoFailed by remember(logoUrl) { mutableStateOf(logoUrl.isNullOrBlank()) }
+    val useLogo = showLogo && !logoFailed
+    Box(
+        modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = progress }
+            .background(color)
+            .then(
+                if (progress > 0f) {
+                    Modifier.clickable(
+                        interactionSource = barPress,
+                        indication = null,
+                        onClick = {
+                            tick?.invoke()
+                            onCast()
+                        },
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .height(DetailBarRow),
+    ) {
+        if (useLogo) {
+            AsyncImage(
+                model = logoUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center,
+                onError = { logoFailed = true },
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 64.dp)
+                    .height(28.dp)
+                    .fillMaxWidth(),
+            )
+        } else {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 64.dp)
+                    .fillMaxWidth(),
+            )
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .offset(x = (-2).dp)
+                .size(44.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = progress > 0.45f,
+                    onClick = {
+                        tick?.invoke()
+                        onBack()
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = ShellIcons.back,
+                contentDescription = stringResource(R.string.section_back),
+                tint = Color.White,
+                modifier = Modifier.size(26.dp),
+            )
+        }
+        ChromeCastMark(Modifier.align(Alignment.CenterEnd).padding(end = 27.dp))
+    }
+}
 
 @Composable
 private fun DetailLogoSkeleton() {

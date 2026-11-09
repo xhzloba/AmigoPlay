@@ -14,6 +14,7 @@ fun DetailRoute(
     movieId: String,
     onOpenMovie: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onBack: () -> Unit,
 ) {
     val container = LocalAppContainer.current
     val viewModel: DetailViewModel = viewModel(key = movieId) {
@@ -34,5 +35,6 @@ fun DetailRoute(
         onResolveWatch = viewModel::resolveWatch,
         onOpenMovie = onOpenMovie,
         onMoviePeek = onMoviePeek,
+        onBack = onBack,
     )
 }

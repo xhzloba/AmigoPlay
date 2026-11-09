@@ -158,6 +158,7 @@
     <string name="franchise_season_many">%d сезонов</string>
     <string name="franchise_season">Сезон %1$d</string>
     <string name="watch_seasons_title">Что уже посмотрели</string>
+    <string name="cast_tv_off">Функция трансляции на ТВ временно отключена</string>
     <string name="watch_seasons_all">Весь сериал</string>
     <string name="watch_seasons_done">Готово</string>
     <string name="watch_seasons_reset">Сбросить всё</string>

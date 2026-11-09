@@ -215,6 +215,10 @@ class MainActivity : ComponentActivity() {
                                     movieId = id,
                                     onOpenMovie = { next -> if (stack.lastOrNull() != next) stack.add(next) },
                                     onMoviePeek = { detailPeek = it },
+                                    onBack = {
+                                        if (detailPeek != null) detailPeek = null
+                                        else if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
+                                    },
                                 )
                                 if (top) {
                                     MoviePeek(
