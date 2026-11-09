@@ -10,9 +10,11 @@ data class TvCastUi(
     val busy: Boolean = false,
     val devices: List<DlnaDevice> = emptyList(),
     val browserUrl: String? = null,
+    val streamUrl: String? = null,
     val playingOn: String? = null,
     val hls: Boolean = false,
     val running: Boolean = false,
+    val needsPin: Boolean = false,
 )
 
 object TvCastHub {

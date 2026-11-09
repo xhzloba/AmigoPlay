@@ -15,13 +15,20 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.example.movie.R
+import com.example.movie.data.cast.AtvIdentity
+import com.example.movie.data.cast.AtvPin
+import com.example.movie.data.cast.AtvResult
+import com.example.movie.data.cast.AtvSession
 import com.example.movie.data.cast.CastProxy
 import com.example.movie.data.cast.DlnaDevice
+import com.example.movie.data.cast.atvOpen
 import com.example.movie.data.cast.TvCastHub
 import com.example.movie.data.cast.TvCastUi
 import com.example.movie.data.cast.discoverRenderers
 import com.example.movie.data.cast.lanIpv4
 import com.example.movie.data.cast.runningOnEmulator
+import com.example.movie.data.cast.TvPairing
+import com.example.movie.data.cast.openTvBrowser
 import com.example.movie.data.cast.playOnRenderer
 import com.example.movie.data.cast.stopRenderer
 import com.example.movie.data.player.WatchKind
@@ -39,6 +46,9 @@ class TvCastService : Service() {
     private var mediaTitle: String = ""
     private var hls: Boolean = false
     private var controlUrl: String? = null
+    private var pairing: AtvSession? = null
+    private var vlcHost: String = ""
+    private var vlcName: String = ""
     private var wifiLock: WifiManager.WifiLock? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var session: MediaSession? = null
@@ -62,6 +72,8 @@ class TvCastService : Service() {
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         val name = intent.getStringExtra(EXTRA_NAME).orEmpty()
         val control = intent.getStringExtra(EXTRA_CONTROL).orEmpty()
+        val location = intent.getStringExtra(EXTRA_LOCATION).orEmpty()
+        val pin = intent.getStringExtra(EXTRA_PIN).orEmpty()
         try {
             commands.execute {
                 if (!alive) return@execute
@@ -70,6 +82,9 @@ class TvCastService : Service() {
                         ACTION_PREPARE -> prepare(page, title)
                         ACTION_SEARCH -> search()
                         ACTION_PLAY -> play(name, control)
+                        ACTION_BROWSER -> openBrowser(name, location)
+                        ACTION_VLC -> openVlc(name, location)
+                        ACTION_VLC_PIN -> submitVlcPin(pin)
                         ACTION_STOP -> shutdown()
                     }
                 } catch (error: Exception) {
@@ -91,12 +106,13 @@ class TvCastService : Service() {
     }
 
     private fun prepare(pageUrl: String, title: String) {
+        dropPairing()
         if (pageUrl.isBlank()) {
-            TvCastHub.update { it.copy(busy = false, message = getString(R.string.cast_no_stream)) }
+            TvCastHub.update { it.copy(busy = false, needsPin = false, message = getString(R.string.cast_no_stream)) }
             return
         }
         TvCastHub.update {
-            it.copy(busy = true, running = true, playingOn = null, message = getString(R.string.cast_preparing))
+            it.copy(busy = true, running = true, playingOn = null, needsPin = false, message = getString(R.string.cast_preparing))
         }
         val address = lanIpv4(this)
         if (address == null) {
@@ -137,6 +153,8 @@ class TvCastService : Service() {
                 running = true,
                 hls = hls,
                 browserUrl = current.origin + "/",
+                streamUrl = local,
+                needsPin = false,
                 message = when {
                     emulator -> getString(R.string.cast_emulator, current.origin + "/")
                     hls -> getString(R.string.cast_ready)
@@ -181,18 +199,109 @@ class TvCastService : Service() {
     }
 
     private fun play(name: String, control: String) {
+        dropPairing()
         val url = mediaUrl
         if (url.isNullOrBlank() || control.isBlank()) return
         if (!hls) {
             TvCastHub.update { it.copy(message = getString(R.string.cast_dash_only)) }
             return
         }
-        TvCastHub.update { it.copy(busy = true) }
+        TvCastHub.update { it.copy(busy = true, needsPin = false) }
         playOnRenderer(DlnaDevice(name, control, control), url, mediaTitle)
         controlUrl = control
         TvCastHub.update {
             it.copy(busy = false, playingOn = name, message = getString(R.string.cast_playing, name))
         }
+    }
+
+    private fun openBrowser(name: String, location: String) {
+        dropPairing()
+        val page = proxy?.let { it.origin + "/" }
+        if (page.isNullOrBlank()) {
+            TvCastHub.update { it.copy(busy = false, needsPin = false, message = getString(R.string.cast_no_stream)) }
+            return
+        }
+        val tv = location.toHttpUrlOrNull()?.host
+        if (tv.isNullOrBlank()) throw IllegalStateException("нет адреса телевизора")
+        TvCastHub.update { it.copy(busy = true, needsPin = false, message = getString(R.string.cast_browser_allow)) }
+        openTvBrowser(tv, page, TvPairing(this))
+        TvCastHub.update {
+            it.copy(busy = false, playingOn = name, message = getString(R.string.cast_browser_opened, name))
+        }
+    }
+
+    private fun openVlc(name: String, location: String) {
+        val url = mediaUrl
+        if (url.isNullOrBlank()) {
+            TvCastHub.update { it.copy(busy = false, needsPin = false, message = getString(R.string.cast_no_stream)) }
+            return
+        }
+        val tv = location.toHttpUrlOrNull()?.host
+        if (tv.isNullOrBlank()) throw IllegalStateException("нет адреса телевизора")
+        dropPairing()
+        vlcHost = tv
+        vlcName = name
+        TvCastHub.update { it.copy(busy = true, needsPin = false, message = getString(R.string.cast_vlc_opening)) }
+        when (val result = atvOpen(tv, "vlc://$url", AtvIdentity.load(filesDir))) {
+            AtvResult.Launched -> showVlc(name)
+            AtvResult.NoLink -> TvCastHub.update {
+                it.copy(busy = false, needsPin = false, message = getString(R.string.cast_vlc_nolink))
+            }
+            AtvResult.Offline -> TvCastHub.update {
+                it.copy(busy = false, needsPin = false, message = getString(R.string.cast_vlc_offline))
+            }
+            is AtvResult.Pin -> {
+                pairing = result.session
+                TvCastHub.update { it.copy(busy = false, needsPin = true, message = getString(R.string.cast_vlc_pin)) }
+            }
+        }
+    }
+
+    private fun submitVlcPin(pin: String) {
+        val session = pairing
+        val url = mediaUrl
+        if (session == null || url.isNullOrBlank() || vlcHost.isBlank()) {
+            dropPairing()
+            TvCastHub.update { it.copy(busy = false, needsPin = false, message = getString(R.string.cast_vlc_again)) }
+            return
+        }
+        TvCastHub.update { it.copy(busy = true, needsPin = true, message = getString(R.string.cast_vlc_opening)) }
+        when (session.finish(pin)) {
+            AtvPin.Again -> TvCastHub.update {
+                it.copy(busy = false, needsPin = true, message = getString(R.string.cast_vlc_pin_bad))
+            }
+            AtvPin.Rejected -> {
+                pairing = null
+                TvCastHub.update { it.copy(busy = false, needsPin = false, message = getString(R.string.cast_vlc_pin_bad)) }
+            }
+            AtvPin.Ok -> {
+                pairing = null
+                when (val result = atvOpen(vlcHost, "vlc://$url", AtvIdentity.load(filesDir))) {
+                    AtvResult.Launched -> showVlc(vlcName)
+                    is AtvResult.Pin -> {
+                        pairing = result.session
+                        TvCastHub.update { it.copy(busy = false, needsPin = true, message = getString(R.string.cast_vlc_pin)) }
+                    }
+                    AtvResult.NoLink -> TvCastHub.update {
+                        it.copy(busy = false, needsPin = false, message = getString(R.string.cast_vlc_nolink))
+                    }
+                    AtvResult.Offline -> TvCastHub.update {
+                        it.copy(busy = false, needsPin = false, message = getString(R.string.cast_vlc_offline))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showVlc(name: String) {
+        TvCastHub.update {
+            it.copy(busy = false, needsPin = false, playingOn = name, message = getString(R.string.cast_vlc_opened, name))
+        }
+    }
+
+    private fun dropPairing() {
+        pairing?.close()
+        pairing = null
     }
 
     private fun shutdown() {
@@ -206,6 +315,7 @@ class TvCastService : Service() {
         val control = controlUrl
         controlUrl = null
         mediaUrl = null
+        dropPairing()
         if (control != null) runCatching { stopRenderer(control) }
         proxy?.stop()
         proxy = null
@@ -279,11 +389,16 @@ class TvCastService : Service() {
         const val ACTION_PREPARE = "prepare"
         const val ACTION_SEARCH = "search"
         const val ACTION_PLAY = "play"
+        const val ACTION_BROWSER = "browser"
+        const val ACTION_VLC = "vlc"
+        const val ACTION_VLC_PIN = "vlc_pin"
         const val ACTION_STOP = "stop"
         const val EXTRA_PAGE = "page"
         const val EXTRA_TITLE = "title"
         const val EXTRA_NAME = "name"
         const val EXTRA_CONTROL = "control"
+        const val EXTRA_LOCATION = "location"
+        const val EXTRA_PIN = "pin"
         private const val CHANNEL = "tv_cast"
         private const val NOTE_ID = 73
 
@@ -300,6 +415,26 @@ class TvCastService : Service() {
             send(context, ACTION_PLAY) {
                 putExtra(EXTRA_NAME, name)
                 putExtra(EXTRA_CONTROL, controlUrl)
+            }
+        }
+
+        fun openBrowser(context: Context, name: String, location: String) {
+            send(context, ACTION_BROWSER) {
+                putExtra(EXTRA_NAME, name)
+                putExtra(EXTRA_LOCATION, location)
+            }
+        }
+
+        fun openVlc(context: Context, name: String, location: String) {
+            send(context, ACTION_VLC) {
+                putExtra(EXTRA_NAME, name)
+                putExtra(EXTRA_LOCATION, location)
+            }
+        }
+
+        fun submitVlcPin(context: Context, pin: String) {
+            send(context, ACTION_VLC_PIN) {
+                putExtra(EXTRA_PIN, pin)
             }
         }
 

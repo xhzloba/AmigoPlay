@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.14.5",
+            fixed = listOf(
+                "У телевизора «Браузер» открывает тот же плеер, что уже играет. «Плеер телевизора» остаётся для встроенного.",
+                "«VLC» сразу открывает фильм в VLC и подставляет ссылку. Первый раз телевизор показывает код, его вводят один раз.",
+            ),
+        ),
+        Release(
             version = "2.14.4",
             fixed = listOf(
                 "Пока «Смотреть» в деталке ещё грузится, слева в кнопке крутится лоадер. Пустой кнопки больше нет.",

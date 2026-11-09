@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +28,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,8 +51,12 @@ internal fun CastSheet(
     val context = LocalContext.current
     val state by TvCastHub.state.collectAsStateWithLifecycle()
     var copied by remember { mutableStateOf(false) }
+    var pin by remember { mutableStateOf("") }
     LaunchedEffect(pageUrl, title) {
         if (!pageUrl.isNullOrBlank()) TvCastService.prepare(context, pageUrl, title)
+    }
+    LaunchedEffect(state.needsPin) {
+        if (state.needsPin) pin = ""
     }
     HandleSheet(onDismiss = onDismiss) {
         Column(
@@ -80,6 +88,30 @@ internal fun CastSheet(
                 fontSize = 15.sp,
                 lineHeight = 20.sp,
             )
+            if (state.needsPin) {
+                Spacer(Modifier.height(12.dp))
+                BasicTextField(
+                    value = pin,
+                    onValueChange = { raw ->
+                        pin = raw.uppercase().filter { it.isDigit() || it in 'A'..'F' }.take(6)
+                    },
+                    textStyle = TextStyle(color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                CastRow(
+                    text = stringResource(R.string.cast_vlc_pin_go),
+                    enabled = pin.length == 6 && !state.busy,
+                    filled = true,
+                    onClick = { TvCastService.submitVlcPin(context, pin) },
+                )
+            }
             if (!pageUrl.isNullOrBlank()) {
                 Spacer(Modifier.height(16.dp))
                 if (state.running) {
@@ -98,11 +130,53 @@ internal fun CastSheet(
                     )
                 }
                 state.devices.forEach { device ->
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = device.name,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     Spacer(Modifier.height(8.dp))
                     CastRow(
-                        text = device.name,
+                        text = stringResource(R.string.cast_tv_vlc),
                         enabled = !state.busy,
+                        filled = true,
+                        onClick = { TvCastService.openVlc(context, device.name, device.location) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    CastRow(
+                        text = stringResource(R.string.cast_tv_browser),
+                        enabled = !state.busy,
+                        filled = true,
+                        onClick = { TvCastService.openBrowser(context, device.name, device.location) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    CastRow(
+                        text = stringResource(R.string.cast_tv_player),
+                        enabled = !state.busy && state.hls,
                         onClick = { TvCastService.play(context, device.name, device.controlUrl) },
+                    )
+                }
+                val stream = state.streamUrl
+                if (!stream.isNullOrBlank()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.cast_vlc),
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    CastRow(
+                        text = stream,
+                        enabled = true,
+                        onClick = {
+                            val clipboard = context.getSystemService(ClipboardManager::class.java)
+                            clipboard.setPrimaryClip(ClipData.newPlainText("vlc", stream))
+                            copied = true
+                        },
                     )
                 }
                 val browser = state.browserUrl
