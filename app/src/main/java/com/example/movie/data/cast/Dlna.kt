@@ -1,6 +1,9 @@
 package com.example.movie.data.cast
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -8,9 +11,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.DatagramPacket
-import java.net.DatagramSocket
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.MulticastSocket
+import java.net.NetworkInterface
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
 
@@ -22,9 +27,10 @@ data class DlnaDevice(
 
 private const val AvTransport = "urn:schemas-upnp-org:service:AVTransport:1"
 private val soapType = "text/xml; charset=utf-8".toMediaType()
-private val serviceBlock = Regex("<service>(.*?)</service>", RegexOption.DOT_MATCHES_ALL)
-private val controlTag = Regex("<controlURL>(.*?)</controlURL>", RegexOption.DOT_MATCHES_ALL)
-private val nameTag = Regex("<friendlyName>(?:<!\\[CDATA\\[)?(.*?)(?:]]>)?</friendlyName>", RegexOption.DOT_MATCHES_ALL)
+private val serviceBlock = Regex("<(?:[\\w.-]+:)?service\\b[^>]*>(.*?)</(?:[\\w.-]+:)?service>", RegexOption.DOT_MATCHES_ALL)
+private val controlTag = Regex("<(?:[\\w.-]+:)?controlURL\\b[^>]*>(.*?)</(?:[\\w.-]+:)?controlURL>", RegexOption.DOT_MATCHES_ALL)
+private val nameTag = Regex("<(?:[\\w.-]+:)?friendlyName\\b[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:]]>)?</(?:[\\w.-]+:)?friendlyName>", RegexOption.DOT_MATCHES_ALL)
+private val urlBaseTag = Regex("<(?:[\\w.-]+:)?URLBase\\b[^>]*>(.*?)</(?:[\\w.-]+:)?URLBase>", RegexOption.DOT_MATCHES_ALL)
 private val faultTag = Regex("<faultstring>(.*?)</faultstring>", RegexOption.DOT_MATCHES_ALL)
 
 private val dlnaClient = OkHttpClient.Builder()
@@ -41,7 +47,7 @@ internal fun discoverRenderers(context: Context, host: String): List<DlnaDevice>
         acquire()
     }
     try {
-        val locations = search(host)
+        val locations = search(context, host)
         val found = LinkedHashMap<String, DlnaDevice>()
         locations.forEach { location ->
             val xml = fetchText(location) ?: return@forEach
@@ -55,7 +61,10 @@ internal fun discoverRenderers(context: Context, host: String): List<DlnaDevice>
 }
 
 internal fun parseDevice(xml: String, location: String): DlnaDevice? {
-    val base = location.toHttpUrlOrNull() ?: return null
+    val base = urlBaseTag.find(xml)?.groupValues?.get(1)?.trim()?.let(::xmlUnescape)
+        ?.toHttpUrlOrNull()
+        ?: location.toHttpUrlOrNull()
+        ?: return null
     val service = serviceBlock.findAll(xml).firstOrNull { block ->
         block.groupValues[1].contains("AVTransport")
     } ?: return null
@@ -123,23 +132,28 @@ private fun invoke(controlUrl: String, action: String, inner: String) {
     }
 }
 
-private fun search(host: String): List<String> {
+private fun search(context: Context, host: String): List<String> {
     val locations = LinkedHashSet<String>()
-    DatagramSocket(null).use { socket ->
+    val network = wifiNetwork(context)
+    val iface = wifiInterface(host)
+    MulticastSocket(null).use { socket ->
         socket.reuseAddress = true
-        try {
-            socket.bind(InetSocketAddress(InetAddress.getByName(host), 0))
-        } catch (_: Exception) {
-            socket.bind(InetSocketAddress(0))
-        }
-        socket.soTimeout = 400
+        socket.broadcast = true
+        socket.bind(InetSocketAddress(InetAddress.getByName("0.0.0.0"), 0))
+        if (iface != null) runCatching { socket.networkInterface = iface }
+        if (network != null) runCatching { network.bindSocket(socket) }
+        socket.timeToLive = 4
+        socket.soTimeout = 500
         val group = InetAddress.getByName("239.255.255.250")
         listOf(
             "urn:schemas-upnp-org:device:MediaRenderer:1",
-            "urn:schemas-upnp-org:service:AVTransport:1",
+            "ssdp:all",
+            "upnp:rootdevice",
         ).forEach { target ->
             val bytes = msearch(target).toByteArray(Charsets.UTF_8)
-            repeat(2) { socket.send(DatagramPacket(bytes, bytes.size, group, 1900)) }
+            repeat(2) {
+                runCatching { socket.send(DatagramPacket(bytes, bytes.size, group, 1900)) }
+            }
         }
         val deadline = System.nanoTime() + 4_000_000_000L
         val buffer = ByteArray(8192)
@@ -160,6 +174,21 @@ private fun search(host: String): List<String> {
         }
     }
     return locations.toList()
+}
+
+@Suppress("DEPRECATION")
+private fun wifiNetwork(context: Context): Network? {
+    val manager = context.applicationContext.getSystemService(ConnectivityManager::class.java) ?: return null
+    return manager.allNetworks.firstOrNull { network ->
+        val capabilities = manager.getNetworkCapabilities(network) ?: return@firstOrNull false
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+}
+
+private fun wifiInterface(host: String): NetworkInterface? {
+    val address = runCatching { InetAddress.getByName(host) }.getOrNull() as? Inet4Address ?: return null
+    return runCatching { NetworkInterface.getByInetAddress(address) }.getOrNull()
 }
 
 private fun msearch(target: String): String =

@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.14.1",
+            fixed = listOf(
+                "Поиск телевизоров идёт по Wi-Fi и находит их в той же сети. Список появляется сам, когда поток готов.",
+                "Плеер в браузере телевизора на весь экран.",
+            ),
+        ),
+        Release(
             version = "2.14.0",
             added = listOf(
                 "Иконка трансляции на ТВ ищет телевизоры в той же Wi-Fi и включает фильм. Телефон сам качает поток и отдаёт его телевизору.",

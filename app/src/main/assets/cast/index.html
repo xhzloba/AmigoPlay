@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AmigoPlay</title>
 <style>
-html,body{margin:0;height:100%;background:#000;color:#fff;font-family:sans-serif}
-video{width:100%;height:100%;background:#000;object-fit:contain}
+html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font-family:sans-serif;overflow:hidden}
+video{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;object-fit:contain}
 #title{position:absolute;left:28px;top:20px;right:28px;font-size:32px;font-weight:700;text-shadow:0 2px 8px #000}
 #err{position:absolute;left:28px;right:28px;bottom:28px;font-size:24px;text-shadow:0 2px 8px #000}
 </style>
 </head>
 <body>
-<video id="v" controls autoplay playsinline></video>
+<video id="v" controls autoplay></video>
 <div id="title"></div>
 <div id="err"></div>
 <script src="/hls.min.js"></script>
@@ -22,12 +22,22 @@ let current = "";
 let hls = null;
 let dash = null;
 function fail(text){ document.getElementById("err").textContent = text || ""; }
+function fill(video){
+  try {
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    var req = video.requestFullscreen || video.webkitRequestFullscreen || video.webkitEnterFullscreen;
+    if (!req) return;
+    var result = req.call(video);
+    if (result && result.catch) result.catch(function(){});
+  } catch (e) {}
+}
 function load(now){
   if (!now || !now.url || now.url === current) return;
   current = now.url;
   fail("");
   document.getElementById("title").textContent = now.title || "";
   const video = document.getElementById("v");
+  video.onclick = function(){ fill(video); };
   if (hls) { hls.destroy(); hls = null; }
   if (dash) { if (dash.destroy) dash.destroy(); else dash.reset(); dash = null; }
   video.removeAttribute("src");
@@ -35,6 +45,7 @@ function load(now){
   if (now.kind === "dash" && window.dashjs) {
     dash = dashjs.MediaPlayer().create();
     dash.initialize(video, now.url, true);
+    fill(video);
     return;
   }
   if (now.kind !== "dash" && window.Hls && Hls.isSupported()) {
@@ -47,12 +58,13 @@ function load(now){
       levelLoadingMaxRetry: 4
     });
     hls.on(Hls.Events.ERROR, function(_, data){ if (data && data.fatal) fail("Плеер не смог открыть поток"); });
-    hls.on(Hls.Events.MANIFEST_PARSED, function(){ video.play().catch(function(){}); });
+    hls.on(Hls.Events.MANIFEST_PARSED, function(){ fill(video); video.play().catch(function(){}); });
     hls.loadSource(now.url);
     hls.attachMedia(video);
     return;
   }
   video.src = now.url;
+  fill(video);
   video.play().catch(function(){});
   video.onerror = function(){ fail("Плеер не смог открыть поток"); };
 }

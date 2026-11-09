@@ -145,6 +145,7 @@ class TvCastService : Service() {
             )
         }
         runCatching { manager().notify(NOTE_ID, note(getString(R.string.cast_notification_text))) }
+        if (!emulator) search()
     }
 
     private fun search() {
