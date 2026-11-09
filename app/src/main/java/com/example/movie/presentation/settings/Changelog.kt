@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.14.3",
+            fixed = listOf(
+                "В «Как в Plex» при прокрутке ретушь больше не затемняется.",
+                "Ретушь «Как в Plex» и «Цвета с кадра» появляется из чёрного, не из серого. Пока цвет проявляется, насыщенность не садится.",
+            ),
+        ),
+        Release(
             version = "2.14.2",
             fixed = listOf(
                 "В деталке лого, инфа и backdrop выше. Ретушь заходит на лого.",

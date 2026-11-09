@@ -552,7 +552,7 @@ private fun DetailContent(
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack, CinemaBlack)
-    val hidden = PosterWash(Color(0xFF121212), Color(0xFF121212), Color(0xFF121212), Color(0xFF121212))
+    val hidden = PosterWash(Color.Black, Color.Black, Color.Black, Color.Black)
     val colored = settings.extractColors || settings.extractBackdrop || settings.extractPlex
     var target by remember(detail.id) { mutableStateOf(if (colored) hidden else flat) }
     var backdropWash by remember(detail.id) { mutableStateOf(hidden) }
@@ -715,7 +715,7 @@ private fun DetailContent(
                 ) {
                     if (settings.extractPlex) drawPlexWash(paintWash, washAlpha) else drawPosterWash(paintWash, washAlpha)
                 }
-                if (shade > 0f && colored) {
+                if (shade > 0f && colored && !settings.extractPlex) {
                     val ink = lerp(paintWash.topLeft, paintWash.topRight, 0.5f).sunk()
                     drawRect(
                         brush = Brush.verticalGradient(
