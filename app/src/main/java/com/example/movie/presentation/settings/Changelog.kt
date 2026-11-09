@@ -11,6 +11,13 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.14.2",
+            fixed = listOf(
+                "В деталке лого, инфа и backdrop выше. Ретушь заходит на лого.",
+                "В «Как в Plex» тёмные фиолетовые больше не садятся в чёрный. Насыщенность цвета остаётся, яркость ограничена.",
+            ),
+        ),
+        Release(
             version = "2.14.1",
             fixed = listOf(
                 "Поиск телевизоров идёт по Wi-Fi и находит их в той же сети. Список появляется сам, когда поток готов.",

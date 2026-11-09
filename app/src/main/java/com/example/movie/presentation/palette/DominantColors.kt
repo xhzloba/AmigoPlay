@@ -386,18 +386,35 @@ internal fun android.graphics.Bitmap.plexWash(): PosterWash? {
 
 private class CubeCell {
     var count = 0
-    var red = 0L
-    var green = 0L
-    var blue = 0L
+    var red = 0.0
+    var green = 0.0
+    var blue = 0.0
 
     fun color(): Color {
         if (count == 0) return Color(0xFF1E1E1E)
+        val scale = 255.0 / count
         return Color(
-            (red / count).toInt().coerceIn(0, 255),
-            (green / count).toInt().coerceIn(0, 255),
-            (blue / count).toInt().coerceIn(0, 255),
+            (red * scale).toInt().coerceIn(0, 255),
+            (green * scale).toInt().coerceIn(0, 255),
+            (blue * scale).toInt().coerceIn(0, 255),
         )
     }
+
+    fun kept(): Boolean {
+        if (count == 0) return false
+        val red = this.red / count
+        val green = this.green / count
+        val blue = this.blue / count
+        return rgbDistance(red, green, blue, 0.0, 0.0, 0.0) >= AvoidNeutralDistance &&
+            rgbDistance(red, green, blue, 1.0, 1.0, 1.0) >= AvoidNeutralDistance
+    }
+}
+
+private fun rgbDistance(red: Double, green: Double, blue: Double, toRed: Double, toGreen: Double, toBlue: Double): Double {
+    val dr = red - toRed
+    val dg = green - toGreen
+    val db = blue - toBlue
+    return kotlin.math.sqrt(dr * dr + dg * dg + db * db)
 }
 
 private fun android.graphics.Bitmap.quadrantColor(
@@ -408,21 +425,18 @@ private fun android.graphics.Bitmap.quadrantColor(
     y1: Int,
 ): Color {
     if (x1 <= x0 || y1 <= y0) return Color(0xFF1E1E1E).plexTone()
-    val cells = HashMap<Int, CubeCell>(128)
-    val hsv = FloatArray(3)
+    val cells = HashMap<Int, CubeCell>(256)
+    val edge = CubeResolution - 1
     for (y in y0 until y1) {
         val row = y * width
         for (x in x0 until x1) {
             val pixel = pixels[row + x]
-            if (android.graphics.Color.alpha(pixel) < 128) continue
-            android.graphics.Color.colorToHSV(pixel, hsv)
-            if (hsv[2] < 0.05f || hsv[2] > 0.98f) continue
-            val red = android.graphics.Color.red(pixel)
-            val green = android.graphics.Color.green(pixel)
-            val blue = android.graphics.Color.blue(pixel)
-            val key = ((red * CubeResolution) / 256) * CubePlane +
-                ((green * CubeResolution) / 256) * CubeResolution +
-                ((blue * CubeResolution) / 256)
+            val red = android.graphics.Color.red(pixel) / 255.0
+            val green = android.graphics.Color.green(pixel) / 255.0
+            val blue = android.graphics.Color.blue(pixel) / 255.0
+            val key = (red * edge).toInt() +
+                (green * edge).toInt() * CubeResolution +
+                (blue * edge).toInt() * CubePlane
             val cell = cells.getOrPut(key) { CubeCell() }
             cell.count += 1
             cell.red += red
@@ -431,17 +445,14 @@ private fun android.graphics.Bitmap.quadrantColor(
         }
     }
     if (cells.isEmpty()) return meanColor(pixels, x0, y0, x1, y1).plexTone()
-    val peaks = ArrayList<CubeCell>(8)
+    val peaks = ArrayList<CubeCell>(16)
     for ((key, cell) in cells) {
-        if (cell.count < 8 || !isLocalMaximum(cells, key, cell.count)) continue
+        if (cell.count == 0 || !isLocalMaximum(cells, key, cell.count)) continue
         peaks.add(cell)
     }
-    val pool = peaks.ifEmpty { cells.values }
-    val strongest = pool.maxBy { it.count }
-    val chromatic = pool
-        .filter { it.count >= strongest.count * 0.28f && it.color().saturation() >= 0.12f }
-        .maxByOrNull { it.count }
-    return (chromatic ?: strongest).color().plexTone()
+    peaks.sortByDescending { it.count }
+    val chosen = peaks.firstOrNull { it.kept() } ?: peaks.firstOrNull()
+    return (chosen?.color() ?: meanColor(pixels, x0, y0, x1, y1)).plexTone()
 }
 
 private fun isLocalMaximum(cells: Map<Int, CubeCell>, key: Int, count: Int): Boolean {
@@ -464,12 +475,6 @@ private fun isLocalMaximum(cells: Map<Int, CubeCell>, key: Int, count: Int): Boo
         }
     }
     return true
-}
-
-private fun Color.saturation(): Float {
-    val hsv = FloatArray(3)
-    android.graphics.Color.colorToHSV(toArgb(), hsv)
-    return hsv[1]
 }
 
 private fun Color.plexTone(): Color {
@@ -504,8 +509,9 @@ private fun android.graphics.Bitmap.meanColor(
     return Color((red / count).toInt(), (green / count).toInt(), (blue / count).toInt())
 }
 
-private const val CubeResolution = 16
+private const val CubeResolution = 30
 private const val CubePlane = CubeResolution * CubeResolution
+private const val AvoidNeutralDistance = 0.5
 private const val MaxUltrablurBrightness = 0.3f
 
 internal fun Color.differsInHue(other: Color): Boolean {

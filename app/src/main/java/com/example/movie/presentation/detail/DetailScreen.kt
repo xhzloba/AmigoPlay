@@ -707,7 +707,14 @@ private fun DetailContent(
             .fillMaxSize()
             .drawBehind {
                 drawRect(Color(0xFF121212))
-                if (settings.extractPlex) drawPlexWash(paintWash, washAlpha) else drawPosterWash(paintWash, washAlpha)
+                val washLift = size.height * 0.035f
+                scale(
+                    scaleX = 1f,
+                    scaleY = (size.height + washLift) / size.height,
+                    pivot = Offset(size.width / 2f, size.height),
+                ) {
+                    if (settings.extractPlex) drawPlexWash(paintWash, washAlpha) else drawPosterWash(paintWash, washAlpha)
+                }
                 if (shade > 0f && colored) {
                     val ink = lerp(paintWash.topLeft, paintWash.topRight, 0.5f).sunk()
                     drawRect(
@@ -720,8 +727,9 @@ private fun DetailContent(
                 }
             },
     ) {
+        val lift = maxHeight * 0.07f
         val heroHeight = maxHeight * 0.72f
-        val contentTop = maxHeight * 0.44f
+        val contentTop = maxHeight * 0.44f - lift
         val textWidth = maxWidth - DetailInset * 2
         val barTravelPx = with(density) { DetailBarTravel.toPx() }
         val dock = WindowInsets.statusBars.getTop(density).toFloat()
@@ -730,6 +738,7 @@ private fun DetailContent(
         if (backdrops.isNotEmpty() || (wantTrailer && trailerMedia != null)) {
             Box(
                 modifier = Modifier
+                    .offset(y = -lift)
                     .fillMaxWidth()
                     .height(heroHeight),
             ) {
@@ -739,7 +748,7 @@ private fun DetailContent(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
-                            .height(contentTop)
+                            .height(contentTop + lift)
                             .clipToBounds(),
                     ) {
                         key(trailerPlay) {
@@ -761,13 +770,14 @@ private fun DetailContent(
                 wash = paintWash,
                 alpha = washAlpha,
                 plex = settings.extractPlex,
-                bottomFraction = 0.44f,
+                bottomFraction = with(density) { contentTop.toPx() / maxHeight.toPx() },
                 modifier = Modifier.fillMaxSize(),
             )
         }
         if (backdrops.isNotEmpty()) {
             Box(
                 modifier = Modifier
+                    .offset(y = -lift)
                     .fillMaxWidth()
                     .height(heroHeight),
             ) {
@@ -2348,7 +2358,7 @@ private fun Int.asRuntime(): String {
     }
 }
 
-private const val BackdropFadeStart = 0.58f
+private const val BackdropFadeStart = 0.52f
 
 @Composable
 private fun TrailerEdgeFade(
@@ -2402,8 +2412,8 @@ private fun BackdropStill(
                     brush = Brush.verticalGradient(
                         0f to Color.Black,
                         BackdropFadeStart to Color.Black,
-                        0.74f to Color.Black.copy(alpha = 0.4f),
-                        0.9f to Color.Transparent,
+                        0.68f to Color.Black.copy(alpha = 0.4f),
+                        0.84f to Color.Transparent,
                         1f to Color.Transparent,
                     ),
                     blendMode = BlendMode.DstIn,
