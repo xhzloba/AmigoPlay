@@ -17,6 +17,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         it.copy(
             extractColors = enabled,
             extractBackdrop = if (enabled) false else it.extractBackdrop,
+            extractPlex = if (enabled) false else it.extractPlex,
         )
     }
 
@@ -24,6 +25,15 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         it.copy(
             extractBackdrop = enabled,
             extractColors = if (enabled) false else it.extractColors,
+            extractPlex = if (enabled) false else it.extractPlex,
+        )
+    }
+
+    override fun setExtractPlex(enabled: Boolean) = write {
+        it.copy(
+            extractPlex = enabled,
+            extractColors = if (enabled) false else it.extractColors,
+            extractBackdrop = if (enabled) false else it.extractBackdrop,
         )
     }
 
@@ -66,6 +76,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         prefs.edit()
             .putBoolean(KEY_COLORS, next.extractColors)
             .putBoolean(KEY_BACKDROP_COLORS, next.extractBackdrop)
+            .putBoolean(KEY_PLEX, next.extractPlex)
             .putBoolean(KEY_HERO_COLORS, next.heroPosterColors)
             .putBoolean(KEY_LOGOS, next.showLogos)
             .putBoolean(KEY_BACKDROP, next.autoBackdrop)
@@ -101,9 +112,18 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
                 }
                 .commit()
         }
+        if (!prefs.contains(KEY_PLEX_DEFAULT)) {
+            prefs.edit()
+                .putBoolean(KEY_PLEX_DEFAULT, true)
+                .putBoolean(KEY_PLEX, true)
+                .putBoolean(KEY_COLORS, false)
+                .putBoolean(KEY_BACKDROP_COLORS, false)
+                .commit()
+        }
         return UserSettings(
         extractColors = prefs.getBoolean(KEY_COLORS, false),
-        extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, true),
+        extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
+        extractPlex = prefs.getBoolean(KEY_PLEX, true),
         heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, true),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
@@ -128,6 +148,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val FILE = "user_settings"
         const val KEY_COLORS = "extract_colors"
         const val KEY_BACKDROP_COLORS = "extract_backdrop"
+        const val KEY_PLEX = "extract_plex"
+        const val KEY_PLEX_DEFAULT = "plex_color_default"
         const val KEY_FRAME_DEFAULT = "frame_color_default"
         const val KEY_HERO_COLORS = "hero_poster_colors"
         const val KEY_LOGOS = "show_logos"

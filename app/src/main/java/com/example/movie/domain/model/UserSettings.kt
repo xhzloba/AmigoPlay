@@ -4,7 +4,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 data class UserSettings(
     val extractColors: Boolean = false,
-    val extractBackdrop: Boolean = true,
+    val extractBackdrop: Boolean = false,
+    val extractPlex: Boolean = true,
     val heroPosterColors: Boolean = true,
     val showLogos: Boolean = true,
     val autoBackdrop: Boolean = true,
@@ -30,6 +31,8 @@ interface UserSettingsRepository {
     fun setExtractColors(enabled: Boolean)
 
     fun setExtractBackdrop(enabled: Boolean)
+
+    fun setExtractPlex(enabled: Boolean)
 
     fun setHeroPosterColors(enabled: Boolean)
 

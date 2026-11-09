@@ -141,6 +141,7 @@ import com.example.movie.domain.model.FranchiseTrailer
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
 import com.example.movie.presentation.palette.PosterWash
+import com.example.movie.presentation.palette.plexWash
 import com.example.movie.presentation.palette.posterWash
 import com.example.movie.data.player.TrailerSources
 import com.example.movie.data.player.fetchTrailerSources
@@ -186,6 +187,7 @@ import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.shell.ShellIcons
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.nativeCanvas
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -550,7 +552,7 @@ private fun DetailContent(
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack, CinemaBlack)
     val hidden = PosterWash(Color(0xFF121212), Color(0xFF121212), Color(0xFF121212), Color(0xFF121212))
-    val colored = settings.extractColors || settings.extractBackdrop
+    val colored = settings.extractColors || settings.extractBackdrop || settings.extractPlex
     var target by remember(detail.id) { mutableStateOf(if (colored) hidden else flat) }
     var backdropWash by remember(detail.id) { mutableStateOf(hidden) }
     val reveal = remember(detail.id) { Animatable(if (colored) 0f else 1f) }
@@ -633,8 +635,20 @@ private fun DetailContent(
         shownBackdrop,
         settings.extractColors,
         settings.extractBackdrop,
+        settings.extractPlex,
     ) {
         when {
+            settings.extractPlex -> {
+                reveal.snapTo(1f)
+                val url = shownBackdrop
+                if (url == null) {
+                    backdropWash = flat
+                    return@LaunchedEffect
+                }
+                val key = "plex:$url"
+                val extracted = washCache[key] ?: context.extractBackdrop(url, 640, 360, plex = true)?.also { washCache[key] = it }
+                if (extracted != null) backdropWash = extracted
+            }
             settings.extractColors -> {
                 reveal.snapTo(0f)
                 val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
@@ -648,7 +662,8 @@ private fun DetailContent(
                     backdropWash = flat
                     return@LaunchedEffect
                 }
-                val extracted = washCache[url] ?: context.extractBackdrop(url, 320, 180)?.also { washCache[url] = it }
+                val key = "frame:$url"
+                val extracted = washCache[key] ?: context.extractBackdrop(url, 320, 180)?.also { washCache[key] = it }
                 if (extracted != null) backdropWash = extracted
             }
             else -> {
@@ -658,7 +673,7 @@ private fun DetailContent(
         }
     }
     val washAlpha = reveal.value
-    val paintWash = if (settings.extractBackdrop) animateWash(backdropWash) else target
+    val paintWash = if (settings.extractBackdrop || settings.extractPlex) animateWash(backdropWash) else target
     var backdropColorReady by remember(detail.id, shownBackdrop) { mutableStateOf(false) }
     var watchGlow by remember(detail.id) { mutableStateOf<Color?>(null) }
     LaunchedEffect(detail.id, settings.watchGlow) {
@@ -691,7 +706,7 @@ private fun DetailContent(
             .fillMaxSize()
             .drawBehind {
                 drawRect(Color(0xFF121212))
-                drawPosterWash(paintWash, washAlpha)
+                if (settings.extractPlex) drawPlexWash(paintWash, washAlpha) else drawPosterWash(paintWash, washAlpha)
                 if (shade > 0f && colored) {
                     val ink = lerp(paintWash.topLeft, paintWash.topRight, 0.5f).sunk()
                     drawRect(
@@ -744,6 +759,7 @@ private fun DetailContent(
             TrailerEdgeFade(
                 wash = paintWash,
                 alpha = washAlpha,
+                plex = settings.extractPlex,
                 bottomFraction = 0.44f,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -2250,6 +2266,82 @@ internal fun DrawScope.drawPosterWash(wash: PosterWash, alpha: Float) {
     if (layer) drawContext.canvas.restore()
 }
 
+internal fun DrawScope.drawPlexWash(wash: PosterWash, alpha: Float) {
+    if (alpha <= 0f) return
+    if (wash.isFlat()) {
+        drawRect(wash.topLeft.copy(alpha = alpha))
+        return
+    }
+    val layer = alpha < 0.99f
+    if (layer) {
+        drawContext.canvas.saveLayer(
+            Rect(0f, 0f, size.width, size.height),
+            Paint().apply { this.alpha = alpha },
+        )
+    }
+    drawUltrablur(wash)
+    if (layer) drawContext.canvas.restore()
+}
+
+private fun PosterWash.isFlat(): Boolean =
+    topLeft == topRight && topLeft == bottomRight && topLeft == bottomLeft
+
+private fun DrawScope.drawUltrablur(wash: PosterWash) {
+    val canvas = drawContext.canvas.nativeCanvas
+    val width = size.width
+    val height = size.height
+    UltrablurPaint.fill.color = 0xFF1E1E1E.toInt()
+    canvas.drawRect(0f, 0f, width, height, UltrablurPaint.fill)
+    val mask = UltrablurMask.bitmap
+    val matrix = UltrablurPaint.matrix
+    val tint = UltrablurPaint.tint
+    val cx = width / 2f
+    val cy = height / 2f
+    val colors = intArrayOf(
+        wash.topLeft.toArgb(),
+        wash.topRight.toArgb(),
+        wash.bottomRight.toArgb(),
+        wash.bottomLeft.toArgb(),
+    )
+    for (index in colors.indices) {
+        matrix.setScale(width / mask.width, height / mask.height)
+        when (index) {
+            1 -> matrix.postScale(-1f, 1f, cx, cy)
+            2 -> matrix.postRotate(180f, cx, cy)
+            3 -> matrix.postScale(1f, -1f, cx, cy)
+        }
+        tint.colorFilter = android.graphics.PorterDuffColorFilter(colors[index], android.graphics.PorterDuff.Mode.SRC_IN)
+        canvas.drawBitmap(mask, matrix, tint)
+    }
+}
+
+private object UltrablurPaint {
+    val fill = android.graphics.Paint()
+    val tint = android.graphics.Paint().apply { isFilterBitmap = true }
+    val matrix = android.graphics.Matrix()
+}
+
+private object UltrablurMask {
+    val bitmap: android.graphics.Bitmap by lazy { cornerFade(640, 360) }
+
+    private fun cornerFade(width: Int, height: Int): android.graphics.Bitmap {
+        val image = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+        val pixels = IntArray(width * height)
+        val radius = kotlin.math.hypot(width.toFloat(), height.toFloat()) * 0.67f
+        var index = 0
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val distance = kotlin.math.hypot(x.toFloat(), y.toFloat())
+                val fade = (1f - distance / radius).coerceIn(0f, 1f)
+                val alpha = (fade * 255f).toInt()
+                pixels[index++] = android.graphics.Color.argb(alpha, 255, 255, 255)
+            }
+        }
+        image.setPixels(pixels, 0, width, 0, 0, width, height)
+        return image
+    }
+}
+
 private fun Int.asRuntime(): String {
     val hours = this / 60
     val minutes = this % 60
@@ -2266,6 +2358,7 @@ private const val BackdropFadeStart = 0.58f
 private fun TrailerEdgeFade(
     wash: PosterWash,
     alpha: Float,
+    plex: Boolean,
     bottomFraction: Float,
     modifier: Modifier = Modifier,
 ) {
@@ -2274,7 +2367,7 @@ private fun TrailerEdgeFade(
         val bottom = size.height * bottomFraction
         val fadeTop = bottom * 0.74f
         drawContext.canvas.saveLayer(Rect(0f, fadeTop, size.width, bottom + 2f), Paint())
-        drawPosterWash(wash, alpha)
+        if (plex) drawPlexWash(wash, alpha) else drawPosterWash(wash, alpha)
         drawRect(
             brush = Brush.verticalGradient(
                 0f to Color.Transparent,
@@ -2366,6 +2459,7 @@ private suspend fun android.content.Context.extractBackdrop(
     url: String,
     width: Int = 160,
     height: Int = 240,
+    plex: Boolean = false,
 ): PosterWash? {
     val result = imageLoader.execute(
         ImageRequest.Builder(this)
@@ -2380,7 +2474,9 @@ private suspend fun android.content.Context.extractBackdrop(
     } else {
         source
     }
-    val colors = withContext(Dispatchers.Default) { bitmap.posterWash() }
+    val colors = withContext(Dispatchers.Default) {
+        if (plex) bitmap.plexWash() else bitmap.posterWash()
+    }
     if (bitmap !== source) bitmap.recycle()
     return colors
 }

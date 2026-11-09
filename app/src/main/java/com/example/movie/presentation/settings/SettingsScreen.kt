@@ -99,6 +99,7 @@ fun SettingsRoute() {
         settings = settings,
         onExtractColors = repository::setExtractColors,
         onExtractBackdrop = repository::setExtractBackdrop,
+        onExtractPlex = repository::setExtractPlex,
         onHeroPosterColors = repository::setHeroPosterColors,
         onShowLogos = repository::setShowLogos,
         onWatchedBadge = repository::setWatchedBadge,
@@ -116,6 +117,7 @@ private fun SettingsScreen(
     settings: UserSettings,
     onExtractColors: (Boolean) -> Unit,
     onExtractBackdrop: (Boolean) -> Unit,
+    onExtractPlex: (Boolean) -> Unit,
     onHeroPosterColors: (Boolean) -> Unit,
     onShowLogos: (Boolean) -> Unit,
     onWatchedBadge: (Boolean) -> Unit,
@@ -188,6 +190,12 @@ private fun SettingsScreen(
                             hint = stringResource(R.string.settings_hero_colors_hint),
                             checked = settings.heroPosterColors,
                             onChecked = onHeroPosterColors,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_extract_plex),
+                            hint = stringResource(R.string.settings_extract_plex_hint),
+                            checked = settings.extractPlex,
+                            onChecked = onExtractPlex,
                         ),
                         SettingItem(
                             title = stringResource(R.string.settings_extract_colors),
