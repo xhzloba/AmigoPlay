@@ -69,6 +69,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.movie.presentation.cast.CastSheet
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaBlack
@@ -1190,7 +1191,19 @@ private fun DetailContent(
             )
         }
         if (castSheet) {
-            CastOffSheet(onDismiss = { castSheet = false })
+            val saved = resumeItems.firstOrNull { it.id == detail.id }
+            val season = watching?.season ?: saved?.season
+            val episode = watching?.episode ?: saved?.episode
+            val page = detail.franchise?.watchId?.let { resumeWatchUrl(it, season, episode) }
+            LaunchedEffect(castSheet) {
+                if (page == null) onResolveWatch()
+            }
+            CastSheet(
+                title = detail.title,
+                pageUrl = page,
+                resolving = !franchiseReady,
+                onDismiss = { castSheet = false },
+            )
         }
         if (seasonWatch) {
             SeasonWatchSheet(
@@ -1666,23 +1679,6 @@ private fun ChromeCastMark(modifier: Modifier = Modifier) {
         tint = Color.White,
         modifier = modifier.size(26.dp),
     )
-}
-
-@Composable
-private fun CastOffSheet(onDismiss: () -> Unit) {
-    HandleSheet(onDismiss = onDismiss) {
-        Text(
-            text = stringResource(R.string.cast_tv_off),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 22.dp)
-                .padding(bottom = 16.dp),
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-        )
-    }
 }
 
 @Composable
