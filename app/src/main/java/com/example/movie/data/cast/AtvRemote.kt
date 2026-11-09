@@ -181,6 +181,11 @@ internal fun unsigned(value: BigInteger): ByteArray {
 
 internal fun launchFrame(link: String): ByteArray = launchMessage(link)
 
+internal fun vlcLink(streamUrl: String): String {
+    val bare = streamUrl.removePrefix("http://")
+    return "vlc://$bare"
+}
+
 private class AtvNoLink : Exception()
 
 private val trustAll = object : X509TrustManager {

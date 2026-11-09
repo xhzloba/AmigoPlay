@@ -1208,10 +1208,15 @@ private fun DetailContent(
             LaunchedEffect(castSheet) {
                 if (page == null) onResolveWatch()
             }
+            val franchise = detail.franchise
             CastSheet(
                 title = detail.title,
                 pageUrl = page,
                 resolving = !franchiseReady,
+                seasons = if (franchise?.series == true) franchise.seasons else emptyList(),
+                resume = saved,
+                marks = progressMarks,
+                watchId = franchise?.watchId,
                 onDismiss = { castSheet = false },
             )
         }

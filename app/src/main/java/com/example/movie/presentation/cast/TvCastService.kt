@@ -22,6 +22,7 @@ import com.example.movie.data.cast.AtvSession
 import com.example.movie.data.cast.CastProxy
 import com.example.movie.data.cast.DlnaDevice
 import com.example.movie.data.cast.atvOpen
+import com.example.movie.data.cast.vlcLink
 import com.example.movie.data.cast.TvCastHub
 import com.example.movie.data.cast.TvCastUi
 import com.example.movie.data.cast.discoverRenderers
@@ -44,6 +45,7 @@ class TvCastService : Service() {
     private var host: String? = null
     private var mediaUrl: String? = null
     private var mediaTitle: String = ""
+    private var preparedPage: String? = null
     private var hls: Boolean = false
     private var controlUrl: String? = null
     private var pairing: AtvSession? = null
@@ -81,9 +83,18 @@ class TvCastService : Service() {
                     when (action) {
                         ACTION_PREPARE -> prepare(page, title)
                         ACTION_SEARCH -> search()
-                        ACTION_PLAY -> play(name, control)
-                        ACTION_BROWSER -> openBrowser(name, location)
-                        ACTION_VLC -> openVlc(name, location)
+                        ACTION_PLAY -> {
+                            retarget(page, title)
+                            play(name, control)
+                        }
+                        ACTION_BROWSER -> {
+                            retarget(page, title)
+                            openBrowser(name, location)
+                        }
+                        ACTION_VLC -> {
+                            retarget(page, title)
+                            openVlc(name, location)
+                        }
                         ACTION_VLC_PIN -> submitVlcPin(pin)
                         ACTION_STOP -> shutdown()
                     }
@@ -138,15 +149,31 @@ class TvCastService : Service() {
             }
         }
         host = published
+        bindStream(current, pageUrl, title, emulator)
+        runCatching { manager().notify(NOTE_ID, note(getString(R.string.cast_notification_text))) }
+        if (!emulator) search()
+    }
+
+    private fun retarget(pageUrl: String, title: String) {
+        if (pageUrl.isBlank() || pageUrl == preparedPage) return
+        val current = proxy ?: return
+        TvCastHub.update {
+            it.copy(busy = true, needsPin = false, message = getString(R.string.cast_preparing))
+        }
+        bindStream(current, pageUrl, title, runningOnEmulator())
+    }
+
+    private fun bindStream(current: CastProxy, pageUrl: String, title: String, emulator: Boolean) {
         val stream = preferHls(fetchLiftStream(pageUrl).stream)
         current.referer = pageUrl.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}/" }
-        current.title = title.ifBlank { getString(R.string.cast_notification_title) }
+        current.title = title.ifBlank { mediaTitle.ifBlank { getString(R.string.cast_notification_title) } }
         mediaTitle = current.title
         val local = current.localFor(stream.url)
         current.playlistUrl = local
         current.kind = if (stream.kind == WatchKind.Hls) "hls" else "dash"
         mediaUrl = local
         hls = stream.kind == WatchKind.Hls
+        preparedPage = pageUrl
         TvCastHub.update {
             it.copy(
                 busy = false,
@@ -162,8 +189,6 @@ class TvCastService : Service() {
                 },
             )
         }
-        runCatching { manager().notify(NOTE_ID, note(getString(R.string.cast_notification_text))) }
-        if (!emulator) search()
     }
 
     private fun search() {
@@ -242,7 +267,7 @@ class TvCastService : Service() {
         vlcHost = tv
         vlcName = name
         TvCastHub.update { it.copy(busy = true, needsPin = false, message = getString(R.string.cast_vlc_opening)) }
-        when (val result = atvOpen(tv, "vlc://$url", AtvIdentity.load(filesDir))) {
+        when (val result = atvOpen(tv, vlcLink(url), AtvIdentity.load(filesDir))) {
             AtvResult.Launched -> showVlc(name)
             AtvResult.NoLink -> TvCastHub.update {
                 it.copy(busy = false, needsPin = false, message = getString(R.string.cast_vlc_nolink))
@@ -276,7 +301,7 @@ class TvCastService : Service() {
             }
             AtvPin.Ok -> {
                 pairing = null
-                when (val result = atvOpen(vlcHost, "vlc://$url", AtvIdentity.load(filesDir))) {
+                when (val result = atvOpen(vlcHost, vlcLink(url), AtvIdentity.load(filesDir))) {
                     AtvResult.Launched -> showVlc(vlcName)
                     is AtvResult.Pin -> {
                         pairing = result.session
@@ -315,6 +340,7 @@ class TvCastService : Service() {
         val control = controlUrl
         controlUrl = null
         mediaUrl = null
+        preparedPage = null
         dropPairing()
         if (control != null) runCatching { stopRenderer(control) }
         proxy?.stop()
@@ -411,24 +437,30 @@ class TvCastService : Service() {
 
         fun search(context: Context) = send(context, ACTION_SEARCH)
 
-        fun play(context: Context, name: String, controlUrl: String) {
+        fun play(context: Context, name: String, controlUrl: String, pageUrl: String? = null, title: String? = null) {
             send(context, ACTION_PLAY) {
                 putExtra(EXTRA_NAME, name)
                 putExtra(EXTRA_CONTROL, controlUrl)
+                putExtra(EXTRA_PAGE, pageUrl)
+                putExtra(EXTRA_TITLE, title)
             }
         }
 
-        fun openBrowser(context: Context, name: String, location: String) {
+        fun openBrowser(context: Context, name: String, location: String, pageUrl: String? = null, title: String? = null) {
             send(context, ACTION_BROWSER) {
                 putExtra(EXTRA_NAME, name)
                 putExtra(EXTRA_LOCATION, location)
+                putExtra(EXTRA_PAGE, pageUrl)
+                putExtra(EXTRA_TITLE, title)
             }
         }
 
-        fun openVlc(context: Context, name: String, location: String) {
+        fun openVlc(context: Context, name: String, location: String, pageUrl: String? = null, title: String? = null) {
             send(context, ACTION_VLC) {
                 putExtra(EXTRA_NAME, name)
                 putExtra(EXTRA_LOCATION, location)
+                putExtra(EXTRA_PAGE, pageUrl)
+                putExtra(EXTRA_TITLE, title)
             }
         }
 

@@ -37,8 +37,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
+import com.example.movie.data.cast.DlnaDevice
 import com.example.movie.data.cast.TvCastHub
+import com.example.movie.domain.model.EpisodeProgress
+import com.example.movie.domain.model.FranchiseSeason
+import com.example.movie.domain.model.ResumeItem
 import com.example.movie.presentation.common.HandleSheet
+import com.example.movie.presentation.detail.EpisodeSheet
+import com.example.movie.presentation.detail.resumeWatchUrl
 import com.example.movie.ui.theme.PlayBlue
 
 @Composable
@@ -46,12 +52,34 @@ internal fun CastSheet(
     title: String,
     pageUrl: String?,
     resolving: Boolean,
+    seasons: List<FranchiseSeason> = emptyList(),
+    resume: ResumeItem? = null,
+    marks: List<EpisodeProgress> = emptyList(),
+    watchId: Int? = null,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val state by TvCastHub.state.collectAsStateWithLifecycle()
     var copied by remember { mutableStateOf(false) }
     var pin by remember { mutableStateOf("") }
+    var pick by remember { mutableStateOf<CastTarget?>(null) }
+    var pickDevice by remember { mutableStateOf<DlnaDevice?>(null) }
+    val chooseEpisode = watchId != null && seasons.isNotEmpty()
+    fun launch(target: CastTarget, device: DlnaDevice, page: String?, shown: String) {
+        when (target) {
+            CastTarget.Vlc -> TvCastService.openVlc(context, device.name, device.location, page, shown)
+            CastTarget.Browser -> TvCastService.openBrowser(context, device.name, device.location, page, shown)
+            CastTarget.Player -> TvCastService.play(context, device.name, device.controlUrl, page, shown)
+        }
+    }
+    fun arm(target: CastTarget, device: DlnaDevice) {
+        if (chooseEpisode) {
+            pick = target
+            pickDevice = device
+        } else {
+            launch(target, device, null, title)
+        }
+    }
     LaunchedEffect(pageUrl, title) {
         if (!pageUrl.isNullOrBlank()) TvCastService.prepare(context, pageUrl, title)
     }
@@ -144,20 +172,20 @@ internal fun CastSheet(
                         text = stringResource(R.string.cast_tv_vlc),
                         enabled = !state.busy,
                         filled = true,
-                        onClick = { TvCastService.openVlc(context, device.name, device.location) },
+                        onClick = { arm(CastTarget.Vlc, device) },
                     )
                     Spacer(Modifier.height(8.dp))
                     CastRow(
                         text = stringResource(R.string.cast_tv_browser),
                         enabled = !state.busy,
                         filled = true,
-                        onClick = { TvCastService.openBrowser(context, device.name, device.location) },
+                        onClick = { arm(CastTarget.Browser, device) },
                     )
                     Spacer(Modifier.height(8.dp))
                     CastRow(
                         text = stringResource(R.string.cast_tv_player),
                         enabled = !state.busy && state.hls,
-                        onClick = { TvCastService.play(context, device.name, device.controlUrl) },
+                        onClick = { arm(CastTarget.Player, device) },
                     )
                 }
                 val stream = state.streamUrl
@@ -227,7 +255,30 @@ internal fun CastSheet(
             }
         }
     }
+    val pending = pick
+    val device = pickDevice
+    val id = watchId
+    if (pending != null && device != null && id != null) {
+        EpisodeSheet(
+            seasons = seasons,
+            resume = resume,
+            marks = marks,
+            onPlay = { season, episode ->
+                val url = resumeWatchUrl(id, season, episode)
+                val place = context.getString(R.string.player_episode, season, episode)
+                pick = null
+                pickDevice = null
+                launch(pending, device, url, "$title · $place")
+            },
+            onDismiss = {
+                pick = null
+                pickDevice = null
+            },
+        )
+    }
 }
+
+private enum class CastTarget { Vlc, Browser, Player }
 
 @Composable
 private fun CastRow(

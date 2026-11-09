@@ -11,6 +11,14 @@ import java.security.interfaces.RSAPublicKey
 
 class AtvRemoteTest {
     @Test
+    fun vlcLinkLeavesTheHttpSchemeForVlc() {
+        assertEquals(
+            "vlc://192.168.1.20:8765/p/abc.m3u8",
+            vlcLink("http://192.168.1.20:8765/p/abc.m3u8"),
+        )
+    }
+
+    @Test
     fun launchCarriesTheStreamLink() {
         val link = "vlc://http://192.168.1.20:8765/p/abc.m3u8"
         val fields = parseProto(launchFrame(link))
