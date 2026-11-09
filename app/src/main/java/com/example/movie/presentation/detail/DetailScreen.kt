@@ -1536,6 +1536,15 @@ private fun WatchBar(
                     .fillMaxSize()
                     .background(Color.White.copy(alpha = heldPulse * (1f - appear.value))),
             )
+            CircularProgressIndicator(
+                color = ink,
+                strokeWidth = 2.dp,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 16.dp)
+                    .size(18.dp)
+                    .graphicsLayer { alpha = 1f - appear.value },
+            )
         }
     }
 }

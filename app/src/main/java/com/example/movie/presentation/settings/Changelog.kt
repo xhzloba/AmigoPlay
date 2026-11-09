@@ -11,6 +11,12 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
+            version = "2.14.4",
+            fixed = listOf(
+                "Пока «Смотреть» в деталке ещё грузится, слева в кнопке крутится лоадер. Пустой кнопки больше нет.",
+            ),
+        ),
+        Release(
             version = "2.14.3",
             fixed = listOf(
                 "В «Как в Plex» при прокрутке ретушь больше не затемняется.",
