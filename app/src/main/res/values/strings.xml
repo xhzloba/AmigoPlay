@@ -190,6 +190,7 @@
     <string name="cast_now_series_episode">Сериал «%1$s» · Сезон %2$d · Серия %3$d</string>
     <string name="cast_failed">Не удалось запустить: %1$s</string>
     <string name="watch_seasons_all">Весь сериал</string>
+    <string name="watch_season_progress">%1$d из %2$d</string>
     <string name="watch_seasons_done">Готово</string>
     <string name="watch_seasons_reset">Сбросить всё</string>
     <string name="watch_seasons_failed">Не удалось загрузить сезоны</string>

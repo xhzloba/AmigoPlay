@@ -125,14 +125,13 @@ class ResumeStore(context: Context) {
         forget(id)
     }
 
-    fun watchSeasons(id: String, seasons: List<FranchiseSeason>, selected: Set<Int>): Boolean {
+    fun watchSeasons(id: String, seasons: List<FranchiseSeason>, selected: Set<Pair<Int, Int>>): Boolean {
         if (id.isBlank() || selected.isEmpty() || seasons.isEmpty()) return false
         val current = itemsState.value
         val previous = current.firstOrNull { it.id == id }
         val base = combineMarks(previous?.episodeMarks().orEmpty(), keptState.value[id].orEmpty())
         val merged = applySelection(base, seasons, selected)
-        val pickedAll = seasons.all { it.number in selected }
-        val done = pickedAll || seasons.fullyWatched(merged)
+        val done = seasons.fullyWatched(merged)
         keepMarks(id, merged)
         if (done || previous == null || !previous.played()) {
             if (previous != null) write(current.filter { it.id != id })
@@ -217,33 +216,26 @@ private data class KeptProgress(val id: String, val marks: List<EpisodeProgress>
 private fun applySelection(
     existing: List<EpisodeProgress>,
     seasons: List<FranchiseSeason>,
-    selected: Set<Int>,
+    selected: Set<Pair<Int, Int>>,
 ): List<EpisodeProgress> {
-    val drop = seasons.filter { it.number !in selected }
-        .flatMap { season -> season.episodes.map { season.number to it.number } }
-        .toSet()
-    return stamp(existing.filterNot { (it.season to it.episode) in drop }, seasons, selected)
-}
-
-private fun stamp(
-    existing: List<EpisodeProgress>,
-    seasons: List<FranchiseSeason>,
-    selected: Set<Int>,
-): List<EpisodeProgress> {
-    val stamped = seasons.filter { it.number in selected }.flatMap { season ->
-        season.episodes.filterNot { it.release.isUnreleased() }.map { episode ->
-            EpisodeProgress(
-                season = season.number,
-                episode = episode.number,
-                positionMs = 1L,
-                durationMs = 1L,
-                completed = true,
-            )
-        }
+    val aired = seasons.flatMap { season ->
+        season.episodes.filterNot { it.release.isUnreleased() }.map { season.number to it.number }
+    }.toSet()
+    val chosen = selected.intersect(aired)
+    val stamped = chosen.map { (season, episode) ->
+        EpisodeProgress(
+            season = season,
+            episode = episode,
+            positionMs = 1L,
+            durationMs = 1L,
+            completed = true,
+        )
     }
-    if (stamped.isEmpty()) return existing
-    val keys = stamped.map { it.season to it.episode }.toSet()
-    return stamped + existing.filterNot { (it.season to it.episode) in keys }
+    val kept = existing.filter { mark ->
+        val key = mark.season to mark.episode
+        key !in chosen && !(key in aired && mark.completed)
+    }
+    return stamped + kept
 }
 
 private fun nextOpen(seasons: List<FranchiseSeason>, marks: List<EpisodeProgress>): Pair<Int, Int>? {
