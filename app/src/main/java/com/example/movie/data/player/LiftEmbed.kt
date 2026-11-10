@@ -250,6 +250,9 @@ private fun audioPlaylist(master: String, text: String): String? {
     return base.resolve(uri)?.toString()
 }
 
+internal fun playlistHeights(url: String): List<Int> =
+    fetchHeights(url).filter { it > 0 }.sortedDescending()
+
 private fun fetchHeights(url: String): Set<Int> = runCatching {
     val request = Request.Builder().url(url).header("User-Agent", LIFT_USER_AGENT).build()
     client.newCall(request).execute().use { response ->

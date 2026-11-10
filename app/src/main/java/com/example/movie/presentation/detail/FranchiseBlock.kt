@@ -192,7 +192,7 @@ internal fun FranchiseBlock(
         }
         if (franchise.seasons.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
-            Seasons(franchise, marks, onPlayEpisode)
+            Seasons(franchise, detail.posterUrl, marks, onPlayEpisode)
         }
         if (franchise.kinopoiskId != null || !franchise.imdbId.isNullOrBlank()) {
             Spacer(Modifier.height(22.dp))
@@ -534,6 +534,7 @@ private fun FactPopup(fact: String, onDismiss: () -> Unit) {
 @Composable
 internal fun EpisodeSheet(
     seasons: List<FranchiseSeason>,
+    posterUrl: String?,
     resume: ResumeItem?,
     marks: List<EpisodeProgress>,
     onPlay: (Int, Int) -> Unit,
@@ -628,7 +629,7 @@ internal fun EpisodeSheet(
                                 .padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            SeasonPoster(season.posterUrl)
+                            SeasonPoster(season.posterUrl, posterUrl)
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.franchise_season, season.number),
@@ -693,6 +694,7 @@ internal fun EpisodeSheet(
 @Composable
 private fun Seasons(
     franchise: Franchise,
+    posterUrl: String?,
     marks: List<EpisodeProgress>,
     onPlayEpisode: (Int, Int) -> Unit,
 ) {
@@ -728,7 +730,7 @@ private fun Seasons(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SeasonPoster(season.posterUrl)
+                SeasonPoster(season.posterUrl, posterUrl)
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.franchise_season, season.number),
@@ -883,10 +885,10 @@ private fun EpisodeLine(
 }
 
 @Composable
-private fun SeasonPoster(url: String?) {
-    if (url.isNullOrBlank()) return
+private fun SeasonPoster(url: String?, fallback: String?) {
+    val poster = url?.takeIf { it.startsWith("http") } ?: fallback?.takeIf { it.startsWith("http") } ?: return
     AsyncImage(
-        model = url,
+        model = poster,
         contentDescription = null,
         contentScale = ContentScale.Crop,
         modifier = Modifier

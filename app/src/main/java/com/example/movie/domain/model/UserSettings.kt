@@ -3,7 +3,6 @@ package com.example.movie.domain.model
 import kotlinx.coroutines.flow.StateFlow
 
 data class UserSettings(
-    val extractColors: Boolean = false,
     val extractBackdrop: Boolean = false,
     val extractPlex: Boolean = true,
     val heroPosterColors: Boolean = true,
@@ -27,8 +26,6 @@ data class UserSettings(
 
 interface UserSettingsRepository {
     val settings: StateFlow<UserSettings>
-
-    fun setExtractColors(enabled: Boolean)
 
     fun setExtractBackdrop(enabled: Boolean)
 

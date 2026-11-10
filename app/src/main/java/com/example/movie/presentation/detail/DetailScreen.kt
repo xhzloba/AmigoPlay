@@ -553,7 +553,7 @@ private fun DetailContent(
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val flat = PosterWash(CinemaBlack, CinemaBlack, CinemaBlack, CinemaBlack)
     val hidden = PosterWash(Color.Black, Color.Black, Color.Black, Color.Black)
-    val colored = settings.extractColors || settings.extractBackdrop || settings.extractPlex
+    val colored = settings.extractBackdrop || settings.extractPlex
     var target by remember(detail.id) { mutableStateOf(if (colored) hidden else flat) }
     var backdropWash by remember(detail.id) { mutableStateOf(hidden) }
     val reveal = remember(detail.id) { Animatable(if (colored) 0f else 1f) }
@@ -632,9 +632,7 @@ private fun DetailContent(
     val washCache = remember(detail.id) { HashMap<String, PosterWash>() }
     LaunchedEffect(
         detail.id,
-        detail.posterUrl,
         shownBackdrop,
-        settings.extractColors,
         settings.extractBackdrop,
         settings.extractPlex,
     ) {
@@ -649,12 +647,6 @@ private fun DetailContent(
                 val key = "plex:$url"
                 val extracted = washCache[key] ?: context.extractBackdrop(url, 640, 360, plex = true)?.also { washCache[key] = it }
                 if (extracted != null) backdropWash = extracted
-            }
-            settings.extractColors -> {
-                reveal.snapTo(0f)
-                val extracted = detail.posterUrl?.let { context.extractBackdrop(it) } ?: return@LaunchedEffect
-                target = extracted
-                reveal.animateTo(1f, tween(durationMillis = 320))
             }
             settings.extractBackdrop -> {
                 reveal.snapTo(1f)
@@ -1232,6 +1224,7 @@ private fun DetailContent(
             if (franchise != null && franchise.seasons.isNotEmpty()) {
                 EpisodeSheet(
                     seasons = franchise.seasons,
+                    posterUrl = detail.posterUrl,
                     resume = resumeItems.firstOrNull { it.id == detail.id },
                     marks = progressMarks,
                     onPlay = { season, episode ->
@@ -1980,7 +1973,7 @@ private fun RatingLine(detail: MovieDetail) {
 
 @Composable
 private fun ScoreBlend(percent: Int) {
-    val high = percent >= 55
+    val high = percent >= 60
     Row(verticalAlignment = Alignment.CenterVertically) {
         Image(
             painter = painterResource(if (high) R.drawable.ic_rating_high else R.drawable.ic_rating_low),

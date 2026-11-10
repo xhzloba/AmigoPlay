@@ -46,6 +46,9 @@ internal class CastProxy(
     @Volatile var title: String = ""
     @Volatile var playlistUrl: String = ""
     @Volatile var kind: String = ""
+    @Volatile var qualityHeight: Int? = null
+    @Volatile var audioIndex: Int = 0
+    @Volatile var audioName: String? = null
 
     val origin: String
         get() {
@@ -169,11 +172,16 @@ internal class CastProxy(
             if (playlist != null && response.isSuccessful) {
                 val text = response.body?.string().orEmpty()
                 val bytes = if (playlist == "dash") {
-                    val (xml, base) = rewriteDash(text, remote, "$origin/b/$token/", ::localFor)
+                    val (xml, base) = rewriteDash(
+                        narrowDash(text, qualityHeight),
+                        remote,
+                        "$origin/b/$token/",
+                        ::localFor,
+                    )
                     dashBases[token] = base
                     xml.toByteArray()
                 } else {
-                    rewriteHls(text, remote, ::localFor).toByteArray()
+                    rewriteHls(narrowHls(text, qualityHeight, audioName, audioIndex), remote, ::localFor).toByteArray()
                 }
                 val mime = if (playlist == "dash") "application/dash+xml" else "application/vnd.apple.mpegurl"
                 writeBytes(output, 200, mime, bytes, method == "HEAD")

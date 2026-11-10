@@ -97,7 +97,6 @@ fun SettingsRoute() {
     val settings by repository.settings.collectAsStateWithLifecycle()
     SettingsScreen(
         settings = settings,
-        onExtractColors = repository::setExtractColors,
         onExtractBackdrop = repository::setExtractBackdrop,
         onExtractPlex = repository::setExtractPlex,
         onHeroPosterColors = repository::setHeroPosterColors,
@@ -115,7 +114,6 @@ fun SettingsRoute() {
 @Composable
 private fun SettingsScreen(
     settings: UserSettings,
-    onExtractColors: (Boolean) -> Unit,
     onExtractBackdrop: (Boolean) -> Unit,
     onExtractPlex: (Boolean) -> Unit,
     onHeroPosterColors: (Boolean) -> Unit,
@@ -196,12 +194,6 @@ private fun SettingsScreen(
                             hint = stringResource(R.string.settings_extract_plex_hint),
                             checked = settings.extractPlex,
                             onChecked = onExtractPlex,
-                        ),
-                        SettingItem(
-                            title = stringResource(R.string.settings_extract_colors),
-                            hint = stringResource(R.string.settings_extract_colors_hint),
-                            checked = settings.extractColors,
-                            onChecked = onExtractColors,
                         ),
                         SettingItem(
                             title = stringResource(R.string.settings_extract_backdrop),

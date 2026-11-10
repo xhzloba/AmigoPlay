@@ -13,18 +13,9 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override val settings: StateFlow<UserSettings> = state.asStateFlow()
 
-    override fun setExtractColors(enabled: Boolean) = write {
-        it.copy(
-            extractColors = enabled,
-            extractBackdrop = if (enabled) false else it.extractBackdrop,
-            extractPlex = if (enabled) false else it.extractPlex,
-        )
-    }
-
     override fun setExtractBackdrop(enabled: Boolean) = write {
         it.copy(
             extractBackdrop = enabled,
-            extractColors = if (enabled) false else it.extractColors,
             extractPlex = if (enabled) false else it.extractPlex,
         )
     }
@@ -32,7 +23,6 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
     override fun setExtractPlex(enabled: Boolean) = write {
         it.copy(
             extractPlex = enabled,
-            extractColors = if (enabled) false else it.extractColors,
             extractBackdrop = if (enabled) false else it.extractBackdrop,
         )
     }
@@ -74,7 +64,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
     private fun write(transform: (UserSettings) -> UserSettings) {
         val next = transform(state.value)
         prefs.edit()
-            .putBoolean(KEY_COLORS, next.extractColors)
+            .putBoolean(KEY_COLORS, false)
             .putBoolean(KEY_BACKDROP_COLORS, next.extractBackdrop)
             .putBoolean(KEY_PLEX, next.extractPlex)
             .putBoolean(KEY_HERO_COLORS, next.heroPosterColors)
@@ -120,8 +110,10 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
                 .putBoolean(KEY_BACKDROP_COLORS, false)
                 .commit()
         }
+        if (prefs.getBoolean(KEY_COLORS, false)) {
+            prefs.edit().putBoolean(KEY_COLORS, false).commit()
+        }
         return UserSettings(
-        extractColors = prefs.getBoolean(KEY_COLORS, false),
         extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
         extractPlex = prefs.getBoolean(KEY_PLEX, true),
         heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, true),

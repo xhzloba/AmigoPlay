@@ -86,6 +86,129 @@ internal fun xmlEscape(value: String): String = buildString(value.length) {
     }
 }
 
+private val variantHeight = Regex("""RESOLUTION=\d+x(\d+)""")
+private val mediaAudio = Regex("""TYPE=AUDIO""", RegexOption.IGNORE_CASE)
+private val mediaName = Regex("""NAME="([^"]*)"""")
+private val dashHeightAttr = Regex("""\bheight\s*=\s*["'](\d+)["']""", RegexOption.IGNORE_CASE)
+
+internal fun narrowHls(text: String, height: Int?, audioName: String?, audioIndex: Int): String {
+    val lines = text.split('\n')
+    val head = ArrayList<String>()
+    val blocks = ArrayList<Pair<Int, List<String>>>()
+    var index = 0
+    while (index < lines.size) {
+        val line = lines[index].trimEnd('\r')
+        val trimmed = line.trim()
+        if (trimmed.startsWith("#EXT-X-STREAM-INF", ignoreCase = true)) {
+            val block = ArrayList<String>()
+            block += line
+            var next = index + 1
+            while (next < lines.size) {
+                val candidate = lines[next].trimEnd('\r')
+                val body = candidate.trim()
+                if (body.isEmpty() || (body.startsWith("#") && !body.startsWith("#EXT-X-STREAM-INF", ignoreCase = true))) {
+                    block += candidate
+                    next++
+                    continue
+                }
+                break
+            }
+            val uri = lines.getOrNull(next)?.trimEnd('\r')
+            if (uri != null && uri.isNotBlank() && !uri.trim().startsWith("#")) {
+                block += uri
+                next++
+            }
+            val parsed = variantHeight.find(block.joinToString("\n"))?.groupValues?.get(1)?.toIntOrNull() ?: -1
+            blocks += parsed to block
+            index = next
+            continue
+        }
+        if (height != null && trimmed.startsWith("#EXT-X-I-FRAME-STREAM-INF", ignoreCase = true)) {
+            index++
+            continue
+        }
+        head += line
+        index++
+    }
+    val kept = if (height == null) blocks else blocks.filter { it.first == height }.ifEmpty { blocks }
+    val audios = head.filter { line ->
+        line.trim().startsWith("#EXT-X-MEDIA:", ignoreCase = true) && mediaAudio.containsMatchIn(line)
+    }
+    val picked = pickAudio(audios, audioName, audioIndex)
+    val rewritten = if (picked == null) {
+        head
+    } else {
+        head.map { line ->
+            if (line.trim().startsWith("#EXT-X-MEDIA:", ignoreCase = true) && mediaAudio.containsMatchIn(line)) {
+                flagAudio(line, line == picked)
+            } else {
+                line
+            }
+        }
+    }
+    return buildString {
+        rewritten.forEach { append(it).append('\n') }
+        kept.forEach { (_, block) -> block.forEach { append(it).append('\n') } }
+    }.trimEnd('\n')
+}
+
+internal fun narrowDash(xml: String, height: Int?): String {
+    if (height == null || !xml.contains("<Representation", ignoreCase = true)) return xml
+    val out = StringBuilder()
+    var index = 0
+    var kept = false
+    var dropped = false
+    while (index < xml.length) {
+        val start = xml.indexOf("<Representation", index, ignoreCase = true)
+        if (start < 0) {
+            out.append(xml, index, xml.length)
+            break
+        }
+        out.append(xml, index, start)
+        val tagEnd = xml.indexOf('>', start)
+        if (tagEnd < 0) {
+            out.append(xml, start, xml.length)
+            break
+        }
+        val open = xml.substring(start, tagEnd + 1)
+        val selfClosed = open.trimEnd().endsWith("/>")
+        val end = if (selfClosed) {
+            tagEnd + 1
+        } else {
+            val close = xml.indexOf("</Representation>", tagEnd, ignoreCase = true)
+            if (close < 0) xml.length else close + "</Representation>".length
+        }
+        val parsed = dashHeightAttr.find(open)?.groupValues?.get(1)?.toIntOrNull()
+        if (parsed == null || parsed == height) {
+            if (parsed == height) kept = true
+            out.append(xml, start, end)
+        } else {
+            dropped = true
+        }
+        index = end
+    }
+    return if (kept || !dropped) out.toString() else xml
+}
+
+private fun pickAudio(lines: List<String>, name: String?, index: Int): String? {
+    if (lines.isEmpty()) return null
+    val wanted = name?.trim().orEmpty()
+    if (wanted.isNotEmpty()) {
+        lines.firstOrNull { mediaName.find(it)?.groupValues?.get(1)?.equals(wanted, ignoreCase = true) == true }
+            ?.let { return it }
+    }
+    return lines.getOrElse(index.coerceAtLeast(0)) { lines.first() }
+}
+
+private fun flagAudio(line: String, chosen: Boolean): String {
+    val value = if (chosen) "YES" else "NO"
+    return listOf("DEFAULT", "AUTOSELECT").fold(line) { current, key ->
+        val pattern = Regex("""$key=(YES|NO)""", RegexOption.IGNORE_CASE)
+        if (pattern.containsMatchIn(current)) pattern.replace(current, "$key=$value")
+        else "$current,$key=$value"
+    }
+}
+
 internal fun xmlUnescape(value: String): String = value
     .replace("&lt;", "<")
     .replace("&gt;", ">")

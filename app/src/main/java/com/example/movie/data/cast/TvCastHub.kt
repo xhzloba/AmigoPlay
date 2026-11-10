@@ -14,7 +14,11 @@ data class TvCastUi(
     val playingOn: String? = null,
     val hls: Boolean = false,
     val running: Boolean = false,
-    val needsPin: Boolean = false,
+    val searching: Boolean = false,
+    val qualities: List<Int> = emptyList(),
+    val audios: List<String> = emptyList(),
+    val quality: Int? = null,
+    val audio: Int = 0,
 )
 
 object TvCastHub {
