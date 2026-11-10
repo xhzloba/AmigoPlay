@@ -51,7 +51,8 @@ import com.example.movie.R
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.FeedKind
 import com.example.movie.presentation.haptic.rememberHapticTick
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.appChrome
 import com.example.movie.ui.theme.CinemaMuted
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,7 +76,7 @@ internal fun FeedSheet(onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = CinemaBlack,
+        containerColor = appChrome(),
         contentColor = Color.White,
         scrimColor = MenuScrim,
         dragHandle = null,
@@ -85,6 +86,7 @@ internal fun FeedSheet(onDismiss: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .appBackground()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,

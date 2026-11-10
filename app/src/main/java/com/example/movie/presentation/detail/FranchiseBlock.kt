@@ -94,7 +94,7 @@ import com.example.movie.domain.model.MovieDetail
 import com.example.movie.domain.model.ResumeItem
 import com.example.movie.domain.model.isUnreleased
 import com.example.movie.domain.model.resumeClock
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
 import com.example.movie.ui.theme.PlayBlue
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -107,7 +107,6 @@ import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.data.player.WatchPlayback
 import com.example.movie.data.player.fetchLiftStream
 import com.example.movie.presentation.shell.ShellIcons
-import com.example.movie.ui.theme.CinemaBlack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.content.Intent
@@ -500,7 +499,7 @@ private fun FactPopup(fact: String, onDismiss: () -> Unit) {
                     .padding(horizontal = 22.dp)
                     .fillMaxWidth()
                     .clip(shape)
-                    .background(CinemaBlack)
+                    .appBackground()
                     .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -1166,7 +1165,7 @@ internal fun StackPage(
     Box(
         modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .appBackground()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

@@ -43,7 +43,7 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.shell.ShellIcons
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
 
 internal const val GenreAll = "Все"
 
@@ -91,7 +91,7 @@ internal fun CatalogGenresPage(
     Box(
         modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .appBackground()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -164,7 +164,7 @@ private fun GenresBar(onBack: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxWidth()
-            .background(CinemaBlack)
+            .appBackground()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
             .padding(top = BrandTopInset)
             .height(36.dp),

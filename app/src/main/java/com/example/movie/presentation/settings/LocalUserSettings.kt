@@ -50,4 +50,6 @@ private object DefaultUserSettings : UserSettingsRepository {
     override fun setWatchedBadge(enabled: Boolean) = Unit
 
     override fun setWhiteTitles(enabled: Boolean) = Unit
+
+    override fun setAppTheme(theme: String) = Unit
 }

@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -77,6 +76,7 @@ import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
+import com.example.movie.presentation.common.appBackground
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
@@ -160,12 +160,11 @@ fun HomeScreen(
                     },
                 ),
         ) {
-    val background = MaterialTheme.colorScheme.background
     if (state.shelves.isEmpty()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(background)
+                .appBackground()
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             when (val phase = state.phase) {
@@ -191,7 +190,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(background)
+            .appBackground()
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
             ),

@@ -237,6 +237,11 @@
     <string name="bookmark_remove">Убрать из избранного</string>
     <string name="nav_settings">Настройки</string>
     <string name="settings_interface">Интерфейс</string>
+    <string name="settings_group_theme">Тема</string>
+    <string name="settings_theme_cinema">Как сейчас</string>
+    <string name="settings_theme_cinema_hint">Плоский фон, как в приложении сейчас.</string>
+    <string name="settings_theme_graphite">Графит</string>
+    <string name="settings_theme_graphite_hint">Четыре близких графитовых цвета по углам. Переливаются по всему экрану.</string>
     <string name="settings_group_posters">Обложки</string>
     <string name="settings_group_color">Цвет</string>
     <string name="settings_group_detail">Деталка</string>

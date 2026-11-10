@@ -51,6 +51,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,7 +75,9 @@ import com.example.movie.presentation.home.components.CategoryTabLetterSpacing
 import com.example.movie.presentation.home.components.CategoryTabLineHeight
 import com.example.movie.domain.model.AppRelease
 import com.example.movie.domain.model.DownloadProgress
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.THEME_CINEMA
+import com.example.movie.presentation.common.THEME_GRAPHITE
+import com.example.movie.presentation.common.appBackground
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.CinemaSurface
 
@@ -108,6 +112,7 @@ fun SettingsRoute() {
         onAutoBackdrop = repository::setAutoBackdrop,
         onWatchGlow = repository::setWatchGlow,
         onHaptic = repository::setHaptic,
+        onAppTheme = repository::setAppTheme,
     )
 }
 
@@ -125,13 +130,14 @@ private fun SettingsScreen(
     onAutoBackdrop: (Boolean) -> Unit,
     onWatchGlow: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
+    onAppTheme: (String) -> Unit,
 ) {
     var sectionName by rememberSaveable { mutableStateOf(SettingsSection.Interface.name) }
     val section = SettingsSection.valueOf(sectionName)
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .appBackground()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(top = BrandTopInset),
     ) {
@@ -148,6 +154,11 @@ private fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 96.dp),
             ) {
+                ThemeGroup(
+                    selected = settings.appTheme,
+                    onSelect = onAppTheme,
+                )
+                Spacer(Modifier.height(22.dp))
                 SettingGroup(
                     title = stringResource(R.string.settings_group_posters),
                     accent = PosterBlue,
@@ -589,7 +600,98 @@ private fun SettingsDivider() {
     )
 }
 
+private val ThemeInk = Color(0xFF8AA0B8)
 private val PosterBlue = Color(0xFF3B6EF5)
+
+@Composable
+private fun ThemeGroup(
+    selected: String,
+    onSelect: (String) -> Unit,
+) {
+    val tick = rememberHapticTick()
+    val graphite = selected == THEME_GRAPHITE
+    val next = if (graphite) THEME_CINEMA else THEME_GRAPHITE
+    fun apply() {
+        tick?.invoke()
+        onSelect(next)
+    }
+    Text(
+        text = stringResource(R.string.settings_group_theme),
+        modifier = Modifier.padding(start = PosterGridInset + 4.dp, end = PosterGridInset, bottom = 8.dp),
+        color = ThemeInk,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 13.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.4.sp,
+    )
+    Box(
+        modifier = Modifier
+            .padding(horizontal = PosterGridInset)
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.08f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 48.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = ::apply,
+                ),
+        )
+        Text(
+            text = stringResource(if (graphite) R.string.settings_theme_graphite else R.string.settings_theme_cinema),
+            modifier = Modifier.padding(horizontal = 52.dp),
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        ThemeKey(
+            glyph = "−",
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp),
+            onClick = ::apply,
+        )
+        ThemeKey(
+            glyph = "+",
+            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp),
+            onClick = ::apply,
+        )
+    }
+}
+
+@Composable
+private fun ThemeKey(
+    glyph: String,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.14f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = glyph,
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
 private val ColorViolet = Color(0xFF9B6BFF)
 private val DetailGreen = Color(0xFF14A36A)
 private val SensorAmber = Color(0xFFD4920A)

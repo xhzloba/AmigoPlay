@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.example.movie.R
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
 import com.example.movie.ui.theme.PlayBlue
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -71,7 +71,7 @@ internal fun SplashScreen(onReveal: () -> Unit, onFinished: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer(alpha = veil.value)
-            .background(CinemaBlack)
+            .appBackground()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

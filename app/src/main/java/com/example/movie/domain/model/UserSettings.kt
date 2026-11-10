@@ -22,6 +22,7 @@ data class UserSettings(
     val playerHdr: Boolean = true,
     val watchedBadge: Boolean = true,
     val whiteTitles: Boolean = false,
+    val appTheme: String = "cinema",
 )
 
 interface UserSettingsRepository {
@@ -64,4 +65,6 @@ interface UserSettingsRepository {
     fun setWatchedBadge(enabled: Boolean)
 
     fun setWhiteTitles(enabled: Boolean)
+
+    fun setAppTheme(theme: String)
 }

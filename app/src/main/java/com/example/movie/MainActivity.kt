@@ -43,7 +43,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
 import kotlin.math.roundToInt
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.common.LocalShelfNotices
@@ -204,7 +204,7 @@ class MainActivity : ComponentActivity() {
                                     .fillMaxSize()
                                     .zIndex(if (rides) presented.size + 5f else index + 1f)
                                     .slideBy({ fraction }, stageWidth)
-                                    .background(CinemaBlack)
+                                    .appBackground()
                                     .clickable(
                                         interactionSource = remember(id) { MutableInteractionSource() },
                                         indication = null,

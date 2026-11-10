@@ -79,7 +79,7 @@ import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.components.rememberFavoriteIds
 import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.shell.ShellIcons
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.PosterShape
 
@@ -127,7 +127,7 @@ internal fun SearchPage(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .appBackground()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

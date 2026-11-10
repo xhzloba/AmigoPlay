@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
-import com.example.movie.ui.theme.CinemaBlack
 
 private val SheetShape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
 private val Scrim = Color(0xFF3A3A3E).copy(alpha = 0.86f)
@@ -105,7 +104,7 @@ internal fun HandleSheet(
                     }
                     .fillMaxWidth()
                     .clip(SheetShape)
-                    .background(CinemaBlack)
+                    .appBackground()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

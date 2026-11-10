@@ -85,7 +85,8 @@ import com.example.movie.presentation.common.ImdbScore
 import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.settings.LocalUserSettings
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.appChrome
 import com.example.movie.ui.theme.CinemaMuted
 import com.example.movie.ui.theme.PlayBlue
 
@@ -187,7 +188,7 @@ private fun MovieMenu(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = CinemaBlack,
+        containerColor = appChrome(),
         contentColor = Color.White,
         scrimColor = MenuScrim,
         dragHandle = null,
@@ -197,6 +198,7 @@ private fun MovieMenu(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .appBackground()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -609,7 +611,7 @@ private fun OverviewPopup(
                     .padding(horizontal = 22.dp)
                     .fillMaxWidth()
                     .clip(PopupShape)
-                    .background(CinemaBlack)
+                    .appBackground()
                     .border(0.5.dp, Color.White.copy(alpha = 0.10f), PopupShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },

@@ -156,6 +156,9 @@ import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
+import com.example.movie.presentation.common.THEME_GRAPHITE
+import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.drawGraphite
 import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.common.LocalShelfNotices
 import android.Manifest
@@ -477,7 +480,7 @@ fun DetailScreen(
             modifier = modifier,
         )
         else -> Box(
-            modifier = modifier.fillMaxSize().background(Color(0xFF141414)),
+            modifier = modifier.fillMaxSize().appBackground(),
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator(color = Color.White)
@@ -698,6 +701,10 @@ private fun DetailContent(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
+                if (!colored && settings.appTheme == THEME_GRAPHITE) {
+                    drawGraphite()
+                    return@drawBehind
+                }
                 drawRect(Color(0xFF121212))
                 val washLift = size.height * 0.035f
                 scale(
@@ -2211,7 +2218,7 @@ private fun DetailMessage(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF141414))
+            .appBackground()
             .padding(horizontal = 32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,

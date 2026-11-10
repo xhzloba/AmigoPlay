@@ -90,7 +90,8 @@ import com.example.movie.presentation.home.MoviePeek
 import com.example.movie.presentation.settings.SettingsRoute
 import com.example.movie.presentation.update.LocalAppUpdate
 import com.example.movie.presentation.update.UpdateBadge
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.appChrome
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -332,7 +333,7 @@ fun AppShell(
         modifier = Modifier
             .fillMaxSize()
             .clipToBounds()
-            .background(CinemaBlack),
+            .appBackground(),
     ) {
         Box(
             modifier = Modifier
@@ -372,7 +373,7 @@ fun AppShell(
                                 .slideBy(fraction, stageWidth)
                                 .drawWithContent { if (shown) drawContent() }
                                 .fillMaxSize()
-                                .background(CinemaBlack),
+                                .appBackground(),
                         )
                     }
                 }
@@ -383,7 +384,7 @@ fun AppShell(
                         Modifier
                             .slideBy({ catalogShift.value }, stageWidth)
                             .fillMaxSize()
-                            .background(CinemaBlack)
+                            .appBackground()
                     } else {
                         Modifier.holdOffscreen()
                     },
@@ -411,7 +412,7 @@ fun AppShell(
                 modifier = Modifier
                     .slideBy({ sectionShift.value }, stageWidth)
                     .fillMaxSize()
-                    .background(CinemaBlack),
+                    .appBackground(),
             )
         }
         if (genresShown) {
@@ -448,7 +449,7 @@ fun AppShell(
                     modifier = Modifier
                         .slideBy({ listShift.value }, stageWidth)
                         .fillMaxSize()
-                        .background(CinemaBlack),
+                        .appBackground(),
                 )
             } else {
                 val titleRes = CatalogSort.entries.firstOrNull { it.sort == rest }?.title
@@ -464,7 +465,7 @@ fun AppShell(
                         modifier = Modifier
                             .slideBy({ listShift.value }, stageWidth)
                             .fillMaxSize()
-                            .background(CinemaBlack),
+                            .appBackground(),
                     )
                 }
             }
@@ -501,7 +502,7 @@ fun AppShell(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = alertsVeil.value }
-                    .background(CinemaBlack),
+                    .appBackground(),
             )
         }
         if (searchShown && tab == AppTab.Catalog) {
@@ -610,7 +611,7 @@ private fun AppBottomBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(CinemaBlack)
+            .background(appChrome())
             .drawBehind {
                 val stroke = 0.6.dp.toPx()
                 drawLine(

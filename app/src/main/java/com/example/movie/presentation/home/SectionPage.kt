@@ -81,7 +81,7 @@ import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.shell.ShellIcons
-import com.example.movie.ui.theme.CinemaBlack
+import com.example.movie.presentation.common.appBackground
 import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -171,7 +171,7 @@ internal fun SectionPage(
     Box(
         modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .appBackground()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
