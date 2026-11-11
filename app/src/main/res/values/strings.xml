@@ -251,7 +251,9 @@
     <string name="settings_extract_backdrop">Цвета с кадра</string>
     <string name="settings_extract_backdrop_hint">Ретушь берётся из текущего backdrop и меняется вместе с кадром. Включено — «Как в Plex» выключается.</string>
     <string name="settings_extract_plex">Как в Plex</string>
-    <string name="settings_extract_plex_hint">Ретушь из текущего backdrop: четыре цвета углов, яркость приглушена, мягкая маска. Кадр сменился — цвета перетекают. Включено — «Цвета с кадра» выключаются.</string>
+    <string name="settings_extract_plex_hint">Алгоритм UltraBlur из Plex: четыре цвета по углам, тёмные и насыщенные, на чёрном сходятся к центру. Включено — «Цвета с кадра» выключаются.</string>
+    <string name="settings_plex_backdrop">Plex: по кадру</string>
+    <string name="settings_plex_backdrop_hint">Цвета считаются по текущему backdrop и перетекают, когда кадр меняется — сам или свайпом. Выключено — по постеру, одни на весь фильм.</string>
     <string name="settings_white_titles">Белые заголовки</string>
     <string name="settings_white_titles_hint">Заголовки полок белые и жирные. Выключено — серые.</string>
     <string name="settings_poster_titles">Названия под обложками</string>

@@ -27,6 +27,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         )
     }
 
+    override fun setPlexBackdrop(enabled: Boolean) = write { it.copy(plexBackdrop = enabled) }
+
     override fun setHeroPosterColors(enabled: Boolean) = write { it.copy(heroPosterColors = enabled) }
 
     override fun setShowLogos(enabled: Boolean) = write { it.copy(showLogos = enabled) }
@@ -71,6 +73,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_COLORS, false)
             .putBoolean(KEY_BACKDROP_COLORS, next.extractBackdrop)
             .putBoolean(KEY_PLEX, next.extractPlex)
+            .putBoolean(KEY_PLEX_BACKDROP, next.plexBackdrop)
             .putBoolean(KEY_HERO_COLORS, next.heroPosterColors)
             .putBoolean(KEY_LOGOS, next.showLogos)
             .putBoolean(KEY_BACKDROP, next.autoBackdrop)
@@ -121,6 +124,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         return UserSettings(
         extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
         extractPlex = prefs.getBoolean(KEY_PLEX, true),
+        plexBackdrop = prefs.getBoolean(KEY_PLEX_BACKDROP, true),
         heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, true),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
@@ -147,6 +151,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_COLORS = "extract_colors"
         const val KEY_BACKDROP_COLORS = "extract_backdrop"
         const val KEY_PLEX = "extract_plex"
+        const val KEY_PLEX_BACKDROP = "plex_backdrop"
         const val KEY_PLEX_DEFAULT = "plex_color_default"
         const val KEY_FRAME_DEFAULT = "frame_color_default"
         const val KEY_HERO_COLORS = "hero_poster_colors"

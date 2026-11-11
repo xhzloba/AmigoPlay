@@ -103,6 +103,7 @@ fun SettingsRoute() {
         settings = settings,
         onExtractBackdrop = repository::setExtractBackdrop,
         onExtractPlex = repository::setExtractPlex,
+        onPlexBackdrop = repository::setPlexBackdrop,
         onHeroPosterColors = repository::setHeroPosterColors,
         onShowLogos = repository::setShowLogos,
         onWatchedBadge = repository::setWatchedBadge,
@@ -121,6 +122,7 @@ private fun SettingsScreen(
     settings: UserSettings,
     onExtractBackdrop: (Boolean) -> Unit,
     onExtractPlex: (Boolean) -> Unit,
+    onPlexBackdrop: (Boolean) -> Unit,
     onHeroPosterColors: (Boolean) -> Unit,
     onShowLogos: (Boolean) -> Unit,
     onWatchedBadge: (Boolean) -> Unit,
@@ -193,7 +195,7 @@ private fun SettingsScreen(
                 SettingGroup(
                     title = stringResource(R.string.settings_group_color),
                     accent = ColorViolet,
-                    items = listOf(
+                    items = listOfNotNull(
                         SettingItem(
                             title = stringResource(R.string.settings_hero_colors),
                             hint = stringResource(R.string.settings_hero_colors_hint),
@@ -206,6 +208,16 @@ private fun SettingsScreen(
                             checked = settings.extractPlex,
                             onChecked = onExtractPlex,
                         ),
+                        if (settings.extractPlex) {
+                            SettingItem(
+                                title = stringResource(R.string.settings_plex_backdrop),
+                                hint = stringResource(R.string.settings_plex_backdrop_hint),
+                                checked = settings.plexBackdrop,
+                                onChecked = onPlexBackdrop,
+                            )
+                        } else {
+                            null
+                        },
                         SettingItem(
                             title = stringResource(R.string.settings_extract_backdrop),
                             hint = stringResource(R.string.settings_extract_backdrop_hint),

@@ -17,6 +17,8 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setExtractPlex(enabled: Boolean) = Unit
 
+    override fun setPlexBackdrop(enabled: Boolean) = Unit
+
     override fun setHeroPosterColors(enabled: Boolean) = Unit
 
     override fun setShowLogos(enabled: Boolean) = Unit
