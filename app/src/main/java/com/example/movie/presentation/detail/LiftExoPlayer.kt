@@ -86,7 +86,6 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
@@ -96,7 +95,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.PlayerView
 import com.example.movie.R
-import com.example.movie.data.player.LIFT_USER_AGENT
+import com.example.movie.data.download.MediaCache
 import com.example.movie.data.player.WatchEpisode
 import com.example.movie.data.player.WatchKind
 import com.example.movie.data.player.WatchPlayback
@@ -134,9 +133,7 @@ internal fun LiftExoPlayer(
     val delayProcessor = remember { AudioDelayProcessor() }
     var current by remember(playback) { mutableStateOf(playback.stream) }
     val player = remember(playback) {
-        val source = DefaultHttpDataSource.Factory()
-            .setUserAgent(LIFT_USER_AGENT)
-            .setAllowCrossProtocolRedirects(true)
+        val source = MediaCache.readSource(activity)
         val selector = DefaultTrackSelector(activity).apply {
             parameters = buildUponParameters()
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)

@@ -91,8 +91,10 @@ import com.example.movie.presentation.home.PeekExit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.movie.R
+import com.example.movie.data.download.OfflineItem
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.presentation.detail.OfflinePlayer
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.SavedTitle
 import com.example.movie.domain.model.SeriesSub
@@ -172,7 +174,12 @@ internal fun FavoritesScreen(
     val watched by container.watched.items.collectAsStateWithLifecycle()
     val resume by container.resume.items.collectAsStateWithLifecycle()
     val alerts by container.releaseWatch.store.subs.collectAsStateWithLifecycle()
+    val downloads by container.offline.items.collectAsStateWithLifecycle()
+    val downloadTasks by container.offline.tasks.collectAsStateWithLifecycle()
+    val downloadPending by container.offline.pending.collectAsStateWithLifecycle()
     var libraryName by rememberSaveable { mutableStateOf(LibrarySection.Favorites.name) }
+    var playing by remember { mutableStateOf<OfflinePlay?>(null) }
+    var openedDownload by rememberSaveable { mutableStateOf<String?>(null) }
     val notices = LocalShelfNotices.current
     LaunchedEffect(notices.openRequest) {
         if (notices.openRequest == 0) return@LaunchedEffect
@@ -184,8 +191,13 @@ internal fun FavoritesScreen(
         LibrarySection.Continue -> resume.map { it.toSaved() }
         LibrarySection.Watched -> watched
         LibrarySection.Alerts -> alerts.map { it.toLibrary() }
+        LibrarySection.Downloads -> downloads.map { it.title }
         LibrarySection.Actors -> emptyList()
     }
+    val downloadStatus = { item: OfflineItem ->
+        container.offline.status(item, downloadTasks, downloadPending)
+    }
+    val opened = downloads.firstOrNull { it.title.id == openedDownload }
     var tabName by rememberSaveable { mutableStateOf(FavoriteTab.All.name) }
     var genreRaw by rememberSaveable { mutableStateOf("") }
     var sortRaw by rememberSaveable { mutableStateOf("") }
@@ -214,7 +226,49 @@ internal fun FavoritesScreen(
         tabName = next.name
     }
     Box(modifier = Modifier.fillMaxSize()) {
-        if (shown.isEmpty()) {
+        if (library == LibrarySection.Downloads) {
+            DownloadsLibrary(
+                items = downloads,
+                topPadding = topInset + BrandTopInset + brandReserve + 12.dp,
+                statusOf = downloadStatus,
+                onOpen = { openedDownload = it.title.id },
+                onPlay = { playing = OfflinePlay(it, null, null) },
+                onPause = { container.offline.pause(it.title.id) },
+                onResume = { container.offline.resume(it.title.id) },
+                onDelete = { container.offline.remove(it.title.id) },
+            )
+            LibraryBrand(
+                hat = logo.hat,
+                mustache = logo.mustache,
+                library = library,
+                onLibrary = {
+                    openedDownload = null
+                    libraryName = it.name
+                },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
+                    .padding(top = BrandTopInset)
+                    .onSizeChanged { brandHeight = it.height },
+            )
+            if (opened != null) {
+                DownloadedEpisodes(
+                    item = opened,
+                    statusOf = downloadStatus,
+                    onPlay = { season, episode -> playing = OfflinePlay(opened, season, episode) },
+                    onRemove = { season, episode ->
+                        container.offline.removeStream(opened.title.id, season, episode)
+                    },
+                    onPause = { season, episode ->
+                        container.offline.pauseStream(opened.title.id, season, episode)
+                    },
+                    onResume = { season, episode ->
+                        container.offline.resumeStream(opened.title.id, season, episode)
+                    },
+                    onBack = { openedDownload = null },
+                )
+            }
+        } else if (shown.isEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -246,7 +300,11 @@ internal fun FavoritesScreen(
                 ) {
                     Text(
                         text = stringResource(
-                            if (library == LibrarySection.Alerts) R.string.library_alerts_empty else R.string.catalog_empty,
+                            when (library) {
+                                LibrarySection.Alerts -> R.string.library_alerts_empty
+                                LibrarySection.Downloads -> R.string.downloads_empty
+                                else -> R.string.catalog_empty
+                            },
                         ),
                         modifier = Modifier.padding(horizontal = 32.dp),
                         color = CinemaMuted,
@@ -320,7 +378,7 @@ internal fun FavoritesScreen(
             )
         }
         LibraryFilterDialog(
-                open = filtersOpen && tab.hasGenres,
+                open = filtersOpen && tab.hasGenres && library != LibrarySection.Downloads,
                 title = stringResource(tab.label),
                 genres = genres,
                 genre = genre,
@@ -334,6 +392,14 @@ internal fun FavoritesScreen(
                 },
                 onDismiss = { filtersOpen = false },
             )
+        playing?.let { play ->
+            OfflinePlayer(
+                item = play.item,
+                season = play.season,
+                episode = play.episode,
+                onDismiss = { playing = null },
+            )
+        }
     }
 }
 
@@ -405,9 +471,12 @@ private enum class LibrarySection(@StringRes val label: Int) {
     Favorites(R.string.nav_favorites),
     Continue(R.string.section_continue),
     Watched(R.string.favorites_watched),
+    Downloads(R.string.favorites_downloaded),
     Alerts(R.string.library_alerts),
     Actors(R.string.favorites_actors),
 }
+
+private data class OfflinePlay(val item: OfflineItem, val season: Int?, val episode: Int?)
 
 private fun SeriesSub.toLibrary(): SavedTitle = SavedTitle(
     id = id,

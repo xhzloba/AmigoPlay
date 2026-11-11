@@ -15,6 +15,12 @@ internal enum class WatchKind { Hls, Dash }
 
 internal data class WatchSubtitle(val url: String, val name: String)
 
+/** Кандидат манифеста: HLS / DASH (в т.ч. dash_av1 / dash_vp9). */
+internal data class WatchManifest(
+    val url: String,
+    val kind: WatchKind,
+)
+
 internal data class WatchStream(
     val url: String,
     val kind: WatchKind,
@@ -23,6 +29,7 @@ internal data class WatchStream(
     val audioOrder: List<Int> = emptyList(),
     val alternateUrl: String? = null,
     val alternateKind: WatchKind? = null,
+    val manifests: List<WatchManifest> = emptyList(),
     val manifestPicked: Boolean = false,
 )
 
@@ -41,7 +48,9 @@ internal const val LIFT_USER_AGENT =
     "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
 
 private val hlsUrl = Regex("""["']?hls["']?\s*:\s*"(https?:[^"]+)"""")
-private val dashUrl = Regex("""["']?dash["']?\s*:\s*"(https?:[^"]+)"""")
+private val dashAv1Url = Regex("""["']?dash_av1["']?\s*:\s*"(https?:[^"]+)"""")
+private val dashVp9Url = Regex("""["']?dash_vp9["']?\s*:\s*"(https?:[^"]+)"""")
+private val dashUrl = Regex("""["']?dash(?:a)?["']?\s*:\s*"(https?:[^"]+)"""")
 private val ccBlock = Regex("""["']?cc["']?\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
 private val ccItem = Regex("""\{\s*"url"\s*:\s*"(https?:[^"]+)"\s*,\s*"name"\s*:\s*"([^"]*)"""")
 private val seasonsKey = Regex("""["']?seasons["']?\s*:\s*\[""")
@@ -106,6 +115,68 @@ internal fun fetchLiftStream(pageUrl: String): WatchPlayback {
     }
 }
 
+/**
+ * Нативный playlist Lift (`api.liftw.ws`) — тут `streams.dash_av1` / `dash_vp9` / `hls`
+ * с полной лестницей (4K). Embed HTML часто отдаёт те же файлы, но с урезанным манифестом до 1080.
+ */
+internal fun fetchLiftPlaylist(
+    id: Int,
+    season: Int? = null,
+    episode: Int? = null,
+): WatchPlayback {
+    val request = Request.Builder()
+        .url("https://api.liftw.ws/playlist?id=$id")
+        .header("User-Agent", LIFT_USER_AGENT)
+        .build()
+    client.newCall(request).execute().use { response ->
+        val body = response.body?.string().orEmpty()
+        if (!response.isSuccessful) error("playlist ${response.code}")
+        return parseLiftPlaylist(body, season, episode) ?: error("no playlist stream")
+    }
+}
+
+/** Сначала нативный playlist (4K), иначе embed. */
+internal fun fetchLiftPlayback(
+    id: Int,
+    season: Int? = null,
+    episode: Int? = null,
+): WatchPlayback = runCatching { fetchLiftPlaylist(id, season, episode) }
+    .getOrElse { fetchLiftStream(liftPlaylistFallbackUrl(id, season, episode)) }
+
+private fun liftPlaylistFallbackUrl(id: Int, season: Int?, episode: Int?): String {
+    val base = "https://embed.liftw.ws/embed/movie/$id"
+    if (season == null || episode == null) return base
+    return "$base?season=$season&episode=$episode"
+}
+
+internal fun parseLiftPlaylist(
+    raw: String,
+    season: Int? = null,
+    episode: Int? = null,
+): WatchPlayback? {
+    val root = runCatching { json.parseToJsonElement(raw) as? JsonObject }.getOrNull() ?: return null
+    val seasons = root["seasons"] as? JsonArray
+    if (seasons != null && seasons.isNotEmpty()) {
+        val episodes = seasons.mapNotNull { it as? JsonObject }.flatMap { seasonObj ->
+            val number = seasonObj.int("season") ?: return@flatMap emptyList()
+            val rows = seasonObj["episodes"] as? JsonArray ?: return@flatMap emptyList()
+            rows.mapNotNull { item ->
+                val ep = item as? JsonObject ?: return@mapNotNull null
+                val index = ep.int("episode") ?: return@mapNotNull null
+                val stream = ep.stream() ?: return@mapNotNull null
+                WatchEpisode(number, index, stream)
+            }
+        }.sortedWith(compareBy({ it.season }, { it.episode }))
+        if (episodes.isEmpty()) return null
+        val picked = episodes.firstOrNull { it.season == season && it.episode == episode }
+            ?: episodes.firstOrNull { it.season == season }
+            ?: episodes.first()
+        return WatchPlayback(picked.stream, episodes)
+    }
+    val stream = root.stream() ?: return null
+    return WatchPlayback(stream)
+}
+
 private fun parseEpisodes(html: String): List<WatchEpisode> {
     val key = seasonsKey.find(html) ?: return emptyList()
     val start = html.indexOf('[', key.range.first)
@@ -124,18 +195,35 @@ private fun parseEpisodes(html: String): List<WatchEpisode> {
 }
 
 private fun JsonObject.stream(): WatchStream? {
+    val nested = this["streams"] as? JsonObject
+    val source = nested ?: this
     val subs = (this["cc"] as? JsonArray).orEmpty().mapNotNull { item ->
         val row = item as? JsonObject ?: return@mapNotNull null
         val subtitle = row.string("url") ?: return@mapNotNull null
         WatchSubtitle(subtitle, row.string("name").orEmpty())
     }
     val (names, order) = (this["audio"] as? JsonObject)?.trackNames() ?: (emptyList<String>() to emptyList())
-    return buildStream(string("hls"), string("dash") ?: string("dasha"), subs, names, order)
+    return buildStream(
+        hls = source.string("hls"),
+        dashAv1 = source.string("dash_av1") ?: source.string("dashAv1"),
+        dashVp9 = source.string("dash_vp9") ?: source.string("dashVp9"),
+        dash = source.string("dash") ?: source.string("dasha"),
+        subs = subs,
+        names = names,
+        order = order,
+    )
 }
 
 private fun singleStream(html: String): WatchStream? {
     val hls = hlsUrl.find(html)?.groupValues?.get(1)?.cleanUrl()
-    val dash = dashUrl.find(html)?.groupValues?.get(1)?.cleanUrl()
+    val dashAv1 = dashAv1Url.find(html)?.groupValues?.get(1)?.cleanUrl()
+    val dashVp9 = dashVp9Url.find(html)?.groupValues?.get(1)?.cleanUrl()
+    // dash / dasha — не dash_av1 / dash_vp9
+    val dash = dashUrl.findAll(html)
+        .map { it.groupValues[1].cleanUrl() }
+        .firstOrNull { candidate ->
+            candidate != dashAv1 && candidate != dashVp9
+        }
     val subs = ccBlock.find(html)?.groupValues?.get(1).orEmpty()
         .let { block ->
             ccItem.findAll(block).map { match ->
@@ -143,44 +231,85 @@ private fun singleStream(html: String): WatchStream? {
             }.toList()
         }
     val (names, order) = audioFromHtml(html)
-    return buildStream(hls, dash, subs, names, order)
+    return buildStream(hls, dashAv1, dashVp9, dash, subs, names, order)
 }
 
 private fun buildStream(
     hls: String?,
+    dashAv1: String?,
+    dashVp9: String?,
     dash: String?,
     subs: List<WatchSubtitle>,
     names: List<String>,
     order: List<Int>,
 ): WatchStream? {
-    val url = hls ?: dash ?: return null
+    val manifests = buildList {
+        if (hls != null) add(WatchManifest(hls, WatchKind.Hls))
+        // AV1 → VP9 → обычный DASH — как у Lift
+        listOfNotNull(dashAv1, dashVp9, dash).distinct().forEach { add(WatchManifest(it, WatchKind.Dash)) }
+    }.distinctBy { it.url }
+    if (manifests.isEmpty()) return null
+    val primary = manifests.first()
+    val alternate = manifests.getOrNull(1)
     return WatchStream(
-        url = url,
-        kind = if (hls != null) WatchKind.Hls else WatchKind.Dash,
+        url = primary.url,
+        kind = primary.kind,
         subtitles = subs,
         audioNames = names,
         audioOrder = order,
-        alternateUrl = if (hls != null) dash else null,
-        alternateKind = if (hls != null && dash != null) WatchKind.Dash else null,
+        alternateUrl = alternate?.url,
+        alternateKind = alternate?.kind,
+        manifests = manifests,
     )
 }
 
+/**
+ * Берёт манифест с самым высоким max height (4K из dash_av1/vp9),
+ * при равенстве — с большим числом дорожек, затем DASH.
+ */
 internal fun WatchStream.preferRicherManifest(): WatchStream {
-    val other = alternateUrl ?: return copy(manifestPicked = true)
-    val otherKind = alternateKind ?: return copy(manifestPicked = true)
-    val mine = fetchHeights(url)
-    val theirs = fetchHeights(other)
-    if (theirs.size > mine.size) {
+    if (manifestPicked) return this
+    val options = manifests.ifEmpty {
+        listOfNotNull(
+            WatchManifest(url, kind),
+            alternateUrl?.let { alt -> alternateKind?.let { WatchManifest(alt, it) } },
+        )
+    }.distinctBy { it.url }
+    if (options.isEmpty()) return copy(manifestPicked = true)
+    if (options.size == 1) {
+        val only = options.first()
         return copy(
-            url = other,
-            kind = otherKind,
-            alternateUrl = url,
-            alternateKind = kind,
+            url = only.url,
+            kind = only.kind,
+            alternateUrl = null,
+            alternateKind = null,
+            manifests = options,
             manifestPicked = true,
         )
     }
-    return copy(manifestPicked = true)
+    val scored = options.map { option -> option to fetchHeights(option.url) }
+    val best = scored.maxWith(
+        compareBy(
+            { it.second.maxOrNull() ?: 0 },
+            { it.second.size },
+            { if (it.first.kind == WatchKind.Dash) 1 else 0 },
+        ),
+    )
+    val rest = options.filterNot { it.url == best.first.url }
+    return copy(
+        url = best.first.url,
+        kind = best.first.kind,
+        alternateUrl = rest.firstOrNull()?.url,
+        alternateKind = rest.firstOrNull()?.kind,
+        manifests = options,
+        manifestPicked = true,
+    )
 }
+
+internal fun WatchPlayback.forDownload(): WatchPlayback = copy(
+    stream = stream.preferRicherManifest(),
+    episodes = episodes.map { episode -> episode.copy(stream = episode.stream.preferRicherManifest()) },
+)
 
 internal fun WatchStream.fallbackManifest(): WatchStream? {
     val other = alternateUrl ?: return null

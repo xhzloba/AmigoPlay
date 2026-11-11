@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 
 internal const val NoticeShelfFavorites = "Favorites"
 internal const val NoticeShelfWatched = "Watched"
+internal const val NoticeShelfDownloads = "Downloads"
 
 private const val NoticeDelayMillis = 1_500L
 private const val NoticeHoldMillis = 2_000L

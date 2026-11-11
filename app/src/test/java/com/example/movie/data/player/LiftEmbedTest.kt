@@ -30,6 +30,103 @@ class LiftEmbedTest {
         assertEquals(listOf(1, 0), playback?.stream?.audioOrder)
         assertEquals("https://cdn.example/video.mpd?t=1", playback?.stream?.alternateUrl)
         assertEquals(WatchKind.Dash, playback?.stream?.alternateKind)
+        assertEquals(
+            listOf(
+                WatchManifest("https://cdn.example/master.m3u8?t=1", WatchKind.Hls),
+                WatchManifest("https://cdn.example/video.mpd?t=1", WatchKind.Dash),
+            ),
+            playback?.stream?.manifests,
+        )
+    }
+
+    @Test
+    fun parsesDashAv1AndVp9Candidates() {
+        val html = """
+            source: {
+                hls: "https://cdn.example/master.m3u8",
+                dash: "https://cdn.example/h264.mpd",
+                dash_vp9: "https://cdn.example/vp9.mpd",
+                dash_av1: "https://cdn.example/av1.mpd"
+            }
+        """.trimIndent()
+
+        val stream = parseLiftEmbed(html)?.stream
+
+        assertEquals("https://cdn.example/master.m3u8", stream?.url)
+        assertEquals(
+            listOf(
+                WatchManifest("https://cdn.example/master.m3u8", WatchKind.Hls),
+                WatchManifest("https://cdn.example/av1.mpd", WatchKind.Dash),
+                WatchManifest("https://cdn.example/vp9.mpd", WatchKind.Dash),
+                WatchManifest("https://cdn.example/h264.mpd", WatchKind.Dash),
+            ),
+            stream?.manifests,
+        )
+    }
+
+    @Test
+    fun playlistApiNestedStreamsPreferAv1Vp9Hls() {
+        val raw = """
+            {
+              "title":"Мстители",
+              "streams":{
+                "hls":"https://cdn.example/master.m3u8",
+                "dash_vp9":"https://cdn.example/vp9.mpd",
+                "dash_av1":"https://cdn.example/av1.mpd"
+              },
+              "audio":{"names":["Рус"],"order":[0]},
+              "cc":[{"url":"https://cdn.example/ru.vtt","name":"Рус"}]
+            }
+        """.trimIndent()
+
+        val stream = parseLiftPlaylist(raw)?.stream
+
+        assertEquals("https://cdn.example/master.m3u8", stream?.url)
+        assertEquals(WatchKind.Hls, stream?.kind)
+        assertEquals(
+            listOf(
+                WatchManifest("https://cdn.example/master.m3u8", WatchKind.Hls),
+                WatchManifest("https://cdn.example/av1.mpd", WatchKind.Dash),
+                WatchManifest("https://cdn.example/vp9.mpd", WatchKind.Dash),
+            ),
+            stream?.manifests,
+        )
+        assertEquals(listOf("Рус"), stream?.audioNames)
+        assertEquals("https://cdn.example/ru.vtt", stream?.subtitles?.single()?.url)
+    }
+
+    @Test
+    fun playlistApiSeriesEpisodeStreams() {
+        val raw = """
+            {
+              "title":"Игра престолов",
+              "seasons":[{
+                "season":5,
+                "episodes":[{
+                  "episode":"1",
+                  "streams":{
+                    "hls":"https://cdn.example/s5e1.m3u8",
+                    "dash_vp9":"https://cdn.example/s5e1-vp9.mpd",
+                    "dash_av1":"https://cdn.example/s5e1-av1.mpd"
+                  },
+                  "audio":{"names":["LostFilm"],"order":[0]}
+                }]
+              }]
+            }
+        """.trimIndent()
+
+        val playback = parseLiftPlaylist(raw, season = 5, episode = 1)
+
+        assertEquals("https://cdn.example/s5e1.m3u8", playback?.stream?.url)
+        assertEquals(
+            listOf(
+                WatchManifest("https://cdn.example/s5e1.m3u8", WatchKind.Hls),
+                WatchManifest("https://cdn.example/s5e1-av1.mpd", WatchKind.Dash),
+                WatchManifest("https://cdn.example/s5e1-vp9.mpd", WatchKind.Dash),
+            ),
+            playback?.stream?.manifests,
+        )
+        assertEquals(listOf(5 to 1), playback?.episodes?.map { it.season to it.episode })
     }
 
     @Test

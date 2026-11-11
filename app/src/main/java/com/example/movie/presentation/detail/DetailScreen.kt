@@ -138,6 +138,7 @@ import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.example.movie.R
+import com.example.movie.data.download.OfflinePhase
 import com.example.movie.domain.model.CastMember
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.FranchiseTrailer
@@ -158,11 +159,16 @@ import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
+import com.example.movie.presentation.common.DownloadRing
+import com.example.movie.presentation.common.inProgress
+import com.example.movie.presentation.common.offlineProgressTitle
 import com.example.movie.presentation.common.THEME_GRAPHITE
 import com.example.movie.presentation.common.appBackground
 import com.example.movie.presentation.common.drawGraphite
 import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.data.download.OfflineStatus
+import com.example.movie.ui.theme.CinemaMuted
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -358,6 +364,75 @@ private fun RowScope.ActionSlot(label: String, content: @Composable () -> Unit) 
 }
 
 @Composable
+private fun MoreActionsSheet(
+    downloadStatus: OfflineStatus?,
+    onDownload: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val tick = rememberHapticTick()
+    HandleSheet(onDismiss = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.action_more),
+                modifier = Modifier.padding(horizontal = 22.dp),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(14.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                tick?.invoke()
+                                onDownload()
+                            },
+                        )
+                        .padding(horizontal = 14.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_action_download),
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.92f),
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        text = when (downloadStatus?.phase) {
+                            OfflinePhase.Ready -> stringResource(R.string.action_downloaded)
+                            OfflinePhase.Downloading,
+                            OfflinePhase.Preparing,
+                            OfflinePhase.Paused,
+                            -> offlineProgressTitle(downloadStatus)
+                            else -> stringResource(R.string.action_download)
+                        },
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun TrailerPickSheet(
     trailers: List<FranchiseTrailer>,
     onPick: (FranchiseTrailer) -> Unit,
@@ -512,6 +587,9 @@ private fun DetailContent(
     var episodesOpen by remember(detail.id) { mutableStateOf(false) }
     var seasonWatch by remember(detail.id) { mutableStateOf(false) }
     var castSheet by remember(detail.id) { mutableStateOf(false) }
+    var downloadSheet by remember(detail.id) { mutableStateOf(false) }
+    var moreOpen by remember(detail.id) { mutableStateOf(false) }
+    var offlinePlay by remember(detail.id) { mutableStateOf(false) }
     var watchRequested by remember(detail.id) { mutableStateOf(false) }
     var franchisePage by remember(detail.id) { mutableStateOf<String?>(null) }
     val pageVeil = remember { Animatable(0f) }
@@ -529,9 +607,15 @@ private fun DetailContent(
     val pageAlpha = if (pageShown != null) pageVeil.value else 0f
     val favorites = LocalAppContainer.current.favorites
     val watched = LocalAppContainer.current.watched
+    val offline = LocalAppContainer.current.offline
     val resumeStore = LocalAppContainer.current.resume
     val resumeItems by resumeStore.items.collectAsStateWithLifecycle()
     val keptMarks by resumeStore.kept.collectAsStateWithLifecycle()
+    val downloads by offline.items.collectAsStateWithLifecycle()
+    val downloadTasks by offline.tasks.collectAsStateWithLifecycle()
+    val downloadPending by offline.pending.collectAsStateWithLifecycle()
+    val downloaded = downloads.firstOrNull { it.title.id == detail.id }
+    val downloadStatus = downloaded?.let { offline.status(it, downloadTasks, downloadPending) }
     val continued = resumeItems.firstOrNull { it.id == detail.id }
     val progressMarks = combineMarks(continued?.episodeMarks().orEmpty(), keptMarks[detail.id].orEmpty())
     val releaseWatch = LocalAppContainer.current.releaseWatch
@@ -996,8 +1080,12 @@ private fun DetailContent(
                     }
                 },
                 onWatch = {
-                    if (!online) return@WatchBar
                     tick?.invoke()
+                    if (downloaded != null && downloadStatus?.phase == OfflinePhase.Ready) {
+                        offlinePlay = true
+                        return@WatchBar
+                    }
+                    if (!online) return@WatchBar
                     if (seasonList.isNotEmpty()) {
                         episodesOpen = true
                     } else {
@@ -1097,7 +1185,34 @@ private fun DetailContent(
                     }
                 }
                 ActionSlot(stringResource(R.string.action_more)) {
-                    RoundAction(Icons.Filled.MoreVert)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(ActionCircle)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    tick?.invoke()
+                                    if (downloadStatus?.phase?.inProgress() == true) {
+                                        downloadSheet = true
+                                    } else {
+                                        moreOpen = true
+                                    }
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        DownloadRing(status = downloadStatus, size = 44.dp, stroke = 2.dp) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = stringResource(R.string.action_more),
+                                tint = Color.White.copy(alpha = 0.92f),
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    }
                 }
             }
             val director = detail.franchise?.directors
@@ -1257,6 +1372,31 @@ private fun DetailContent(
                 movie = detail.toSaved().toMovie(),
                 knownSeasons = detail.franchise?.seasons.orEmpty(),
                 onDismiss = { seasonWatch = false },
+            )
+        }
+        if (moreOpen) {
+            MoreActionsSheet(
+                downloadStatus = downloadStatus,
+                onDownload = {
+                    moreOpen = false
+                    downloadSheet = true
+                },
+                onDismiss = { moreOpen = false },
+            )
+        } else if (downloadSheet) {
+            DownloadSheet(
+                title = detail.toSaved(),
+                series = detail.franchise?.series == true,
+                watchId = detail.franchise?.watchId,
+                knownSeasons = detail.franchise?.seasons.orEmpty(),
+                existing = downloaded,
+                onDismiss = { downloadSheet = false },
+            )
+        }
+        if (offlinePlay && downloaded != null) {
+            OfflinePlayer(
+                item = downloaded,
+                onDismiss = { offlinePlay = false },
             )
         }
         if (episodesOpen) {

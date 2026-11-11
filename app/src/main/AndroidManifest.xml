@@ -70,6 +70,15 @@
             android:foregroundServiceType="dataSync" />
 
         <service
+            android:name=".data.download.MovieDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync">
+            <intent-filter>
+                <action android:name="androidx.media3.exoplayer.downloadService.action.RESTART" />
+            </intent-filter>
+        </service>
+
+        <service
             android:name=".presentation.cast.TvCastService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
