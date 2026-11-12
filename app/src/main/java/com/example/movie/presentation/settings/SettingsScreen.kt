@@ -36,7 +36,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -370,14 +369,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
             null -> Unit
         }
         Spacer(Modifier.height(28.dp))
-        var shown by rememberSaveable { mutableIntStateOf(ReleasePage) }
-        val visible = Changelog.releases.take(shown)
-        visible.forEachIndexed { index, release ->
-            if (index > 0) {
-                Spacer(Modifier.height(8.dp))
-                SettingsDivider()
-                Spacer(Modifier.height(28.dp))
-            }
+        Changelog.releases.firstOrNull()?.let { release ->
             Text(
                 text = release.version,
                 modifier = Modifier.padding(horizontal = PosterGridInset),
@@ -398,16 +390,6 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                 release.fixed.forEach { ChangeLine(it) }
             }
             Spacer(Modifier.height(20.dp))
-        }
-        when {
-            shown < Changelog.releases.size -> ReleaseAction(
-                text = stringResource(R.string.changelog_more),
-                onClick = { shown = (shown + ReleasePage).coerceAtMost(Changelog.releases.size) },
-            )
-            Changelog.releases.size > ReleasePage -> ReleaseAction(
-                text = stringResource(R.string.changelog_collapse),
-                onClick = { shown = ReleasePage },
-            )
         }
     }
 }
@@ -506,26 +488,6 @@ private fun UpdateBanner(
             }
         }
     }
-}
-
-private const val ReleasePage = 5
-
-@Composable
-private fun ReleaseAction(text: String, onClick: () -> Unit) {
-    Text(
-        text = text,
-        modifier = Modifier
-            .padding(start = PosterGridInset, end = PosterGridInset, top = 4.dp)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-        color = VersionBlue,
-        fontWeight = FontWeight.Medium,
-        fontSize = 15.sp,
-        lineHeight = 22.sp,
-    )
 }
 
 private val VersionBlue = Color(0xFF7EC8FF)
