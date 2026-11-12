@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -126,7 +127,7 @@ private val Label = Color(0xFF8E8E93)
 private val AboutValue = Color(0xFFE8E8ED)
 private val Value = Color(0xFFE8E8ED)
 private val Card = Color.White.copy(alpha = 0.06f)
-private val Panel = Color.White.copy(alpha = 0.16f)
+private val Panel = Color.Black.copy(alpha = 0.28f)
 private val Plaque = Color.Black.copy(alpha = 0.32f)
 private val dateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("ru"))
 
@@ -143,6 +144,9 @@ internal fun FranchiseBlock(
         OpenTitle(
             title = stringResource(if (franchise.series) R.string.franchise_about_series else R.string.franchise_about),
             onOpen = onOpenAbout,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.Normal,
         )
         Spacer(Modifier.height(12.dp))
         val status = franchise.serialStatus
@@ -162,9 +166,21 @@ internal fun FranchiseBlock(
         }
         InfoLine(stringResource(R.string.franchise_director), franchise.directors.orDash(detail.director))
         InfoLine(stringResource(R.string.franchise_writers), franchise.screenwriters.orDash())
-        InfoLine(stringResource(R.string.franchise_producers), franchise.producers.orDash())
-        InfoLine(stringResource(R.string.franchise_operator), franchise.operators.orDash())
-        InfoLine(stringResource(R.string.franchise_editor), franchise.editors.orDash())
+        InfoLine(
+            stringResource(R.string.franchise_producers),
+            franchise.producers.orDash(),
+            previewLimit = 2,
+        )
+        InfoLine(
+            stringResource(R.string.franchise_operator),
+            franchise.operators.orDash(),
+            previewLimit = 2,
+        )
+        InfoLine(
+            stringResource(R.string.franchise_editor),
+            franchise.editors.orDash(),
+            previewLimit = 2,
+        )
         InfoLine(
             stringResource(R.string.franchise_design),
             franchise.designers.orDash(),
@@ -1179,8 +1195,15 @@ private fun android.content.Context.openLink(url: String) {
 }
 
 @Composable
-internal fun OpenTitle(title: String, onOpen: () -> Unit) {
+internal fun OpenTitle(
+    title: String,
+    onOpen: () -> Unit,
+    fontSize: TextUnit = 18.sp,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    fontWeight: FontWeight = FontWeight.Bold,
+) {
     val tick = rememberHapticTick()
+    val chevron = if (fontSize.value <= 14f) 16.dp else 18.dp
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1197,15 +1220,16 @@ internal fun OpenTitle(title: String, onOpen: () -> Unit) {
         Text(
             text = title,
             color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = fontSize,
+            lineHeight = lineHeight,
+            fontWeight = fontWeight,
         )
         Spacer(Modifier.width(4.dp))
         Icon(
             imageVector = ShellIcons.chevron,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(chevron),
         )
     }
 }

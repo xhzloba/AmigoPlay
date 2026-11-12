@@ -1891,7 +1891,8 @@ private fun DetailLogoBar(
         modifier
             .fillMaxWidth()
             .graphicsLayer { alpha = progress }
-            .background(color)
+            .background(Color.Black.copy(alpha = 0.28f))
+            .background(color.copy(alpha = 0.52f))
             .then(
                 if (progress > 0f) {
                     Modifier.clickable(

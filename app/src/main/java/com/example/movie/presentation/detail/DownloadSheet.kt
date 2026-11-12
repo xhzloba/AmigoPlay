@@ -247,6 +247,7 @@ internal fun DownloadSheet(
                     watchId != null && !streamReady -> DownloadValueRow(
                         text = stringResource(R.string.download_audio_loading),
                         enabled = false,
+                        loading = true,
                     ) {}
                 }
             }
@@ -494,9 +495,10 @@ private enum class Mark { Empty, Partial, Full }
 private fun DownloadValueRow(
     text: String,
     enabled: Boolean = true,
+    loading: Boolean = false,
     onClick: () -> Unit,
 ) {
-    Box(
+    Row(
         Modifier
             .fillMaxWidth()
             .height(48.dp)
@@ -505,20 +507,29 @@ private fun DownloadValueRow(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                enabled = enabled,
+                enabled = enabled && !loading,
                 onClick = onClick,
             )
             .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = text,
-            color = if (enabled) Color.White else Color.White.copy(alpha = 0.72f),
+            color = if (enabled || loading) Color.White else Color.White.copy(alpha = 0.72f),
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
         )
+        if (loading) {
+            Spacer(Modifier.width(10.dp))
+            CircularProgressIndicator(
+                color = Color.White.copy(alpha = 0.85f),
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(16.dp),
+            )
+        }
     }
 }
 
