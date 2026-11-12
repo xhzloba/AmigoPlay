@@ -4,6 +4,7 @@ import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
+import com.example.movie.domain.model.MoviePage
 import com.example.movie.domain.model.Shelf
 import com.example.movie.domain.model.WatchCheck
 
@@ -14,7 +15,7 @@ interface MovieRepository {
 
     suspend fun getRecommendations(): Result<List<Movie>>
 
-    suspend fun search(name: String): Result<List<Movie>>
+    suspend fun search(name: String, page: Int = 1): Result<MoviePage>
 
     suspend fun getMovie(id: String): Result<MovieDetail>
 

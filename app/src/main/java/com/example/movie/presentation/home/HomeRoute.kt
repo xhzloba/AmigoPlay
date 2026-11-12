@@ -50,6 +50,8 @@ fun HomeRoute(
         onSearchQuery = viewModel::search,
         onCloseSearch = viewModel::closeSearch,
         onClearRecent = viewModel::clearRecent,
+        onLoadMoreSearch = viewModel::loadMoreSearch,
+        onRetrySearch = viewModel::retrySearch,
         onOpenSection = onOpenSection,
         onPlayResume = onPlayResume,
         onSearchCover = onSearchCover,

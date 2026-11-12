@@ -1,5 +1,8 @@
 package com.example.movie.presentation.shell
 
+import android.app.Activity
+import android.os.SystemClock
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
@@ -31,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
@@ -55,6 +59,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -295,6 +300,18 @@ fun AppShell(
             alertsShown = false
         }
     }
+    val context = LocalContext.current
+    val exitHint = stringResource(R.string.exit_press_again)
+    var exitArmedAt by remember { mutableLongStateOf(0L) }
+    val atHomeRoot = handleBack &&
+        resumePlayback == null &&
+        !alertsShown &&
+        peek == null &&
+        sectionShown == null &&
+        !genresShown &&
+        listShown == null &&
+        tab == AppTab.Home &&
+        !homeState.searchOpen
     BackHandler(
         enabled = handleBack && resumePlayback == null && (alertsShown || peek != null || sectionShown != null || tab != AppTab.Home),
     ) {
@@ -306,6 +323,16 @@ fun AppShell(
             genresShown -> genresType = null
             tab == AppTab.Home && sectionShown != null -> sectionName = null
             else -> onTabChange(AppTab.Home.name)
+        }
+    }
+    // На корне главной: первый Back — toast, второй за 2с — выход.
+    BackHandler(enabled = atHomeRoot) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - exitArmedAt < 2_000L) {
+            (context as? Activity)?.finish()
+        } else {
+            exitArmedAt = now
+            Toast.makeText(context, exitHint, Toast.LENGTH_SHORT).show()
         }
     }
     LaunchedEffect(tab) {
@@ -527,12 +554,17 @@ fun AppShell(
                 query = homeState.searchQuery,
                 results = homeState.searchResults,
                 searching = homeState.searching,
+                loadingMore = homeState.searchLoadingMore,
+                end = homeState.searchEnd,
                 error = homeState.searchError,
                 recent = homeState.recentQueries,
                 popular = homeState.searchPopular,
+                popularReady = homeState.searchPopularReady,
                 onQuery = homeViewModel::search,
                 onClose = homeViewModel::closeSearch,
                 onClearRecent = homeViewModel::clearRecent,
+                onLoadMore = homeViewModel::loadMoreSearch,
+                onRetry = homeViewModel::retrySearch,
                 onMovieClick = onMovieClick,
                 onMoviePeek = { peek = it },
                 modifier = Modifier

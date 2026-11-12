@@ -30,6 +30,7 @@ internal interface VokinoApi {
     suspend fun search(
         @Query("name") name: String,
         @Query("token") token: String,
+        @Query("page") page: Int = 1,
     ): CatalogResponseDto
 
     @GET("v2/view/{id}")

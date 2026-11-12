@@ -238,6 +238,7 @@
     <string name="kind_anime">Аниме</string>
     <string name="section_best">Лучшее</string>
     <string name="search">Поиск</string>
+    <string name="exit_press_again">Нажмите ещё раз, чтобы выйти</string>
     <string name="search_hint">Поиск в AmigoPlay</string>
     <string name="search_cancel">Отмена</string>
     <string name="search_recent">Последние запросы</string>

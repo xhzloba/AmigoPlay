@@ -19,11 +19,22 @@ internal object Changelog {
         "Скачивание до 4K при наличии дорожки в манифесте (playlist API).",
         "Cast/DLNA: качество, озвучка, серия.",
         "Темы; UltraBlur в деталке (постер/кадр) и на главной.",
-        "Поиск: последние запросы, популярное, debounce.",
+        "Поиск: последние запросы, популярное, debounce, infinite scroll.",
         "Обновления с GitHub Releases.",
     )
 
     val releases: List<Release> = listOf(
+        Release(
+            version = "2.23.0",
+            added = listOf(
+                "Поиск: все страницы API (`page` / `page.next`) и подгрузка при скролле.",
+                "На главной двойной Back: toast «Нажмите ещё раз, чтобы выйти», затем выход.",
+            ),
+            fixed = listOf(
+                "Поиск: вернули круглую ✕ справа от поля — закрывает поиск.",
+                "Деталка: шапка с «назад» появляется, когда лого доезжает до Chromecast (с учётом высоты лого).",
+            ),
+        ),
         Release(
             version = "2.22.0",
             added = listOf(

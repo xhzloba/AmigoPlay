@@ -39,6 +39,9 @@ class HomeViewModel(
     private val cache = mutableMapOf<String, List<Movie>>()
     private var moviesJob: Job? = null
     private var searchJob: Job? = null
+    private var searchPage = 0
+    private var searchBusy = false
+    private val searchSeen = mutableSetOf<String>()
     private val _state = MutableStateFlow(HomeUiState(recentQueries = searchHistory.items()))
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
@@ -104,11 +107,16 @@ class HomeViewModel(
 
     fun openSearch() {
         searchJob?.cancel()
+        searchBusy = false
+        searchPage = 0
+        searchSeen.clear()
         _state.value = _state.value.copy(
             searchOpen = true,
             searchQuery = "",
             searchResults = emptyList(),
             searching = false,
+            searchLoadingMore = false,
+            searchEnd = false,
             searchError = null,
             recentQueries = searchHistory.items(),
         )
@@ -116,10 +124,17 @@ class HomeViewModel(
     }
 
     private suspend fun loadSearchPopular() {
-        if (_state.value.searchPopular.isNotEmpty()) return
+        if (_state.value.searchPopular.isNotEmpty()) {
+            _state.update { it.copy(searchPopularReady = true) }
+            return
+        }
+        _state.update { it.copy(searchPopularReady = false) }
         getShelfMovies(CatalogQuery("popular"), limit = 24)
             .onSuccess { movies ->
-                _state.update { it.copy(searchPopular = movies) }
+                _state.update { it.copy(searchPopular = movies, searchPopularReady = true) }
+            }
+            .onFailure {
+                _state.update { it.copy(searchPopular = emptyList(), searchPopularReady = true) }
             }
     }
 
@@ -130,46 +145,119 @@ class HomeViewModel(
 
     fun closeSearch() {
         searchJob?.cancel()
+        searchBusy = false
+        searchPage = 0
+        searchSeen.clear()
         _state.value = _state.value.copy(
             searchOpen = false,
             searchQuery = "",
             searchResults = emptyList(),
             searching = false,
+            searchLoadingMore = false,
+            searchEnd = false,
             searchError = null,
         )
     }
 
     fun search(raw: String) {
-        _state.value = _state.value.copy(searchQuery = raw, searchError = null)
         searchJob?.cancel()
+        searchBusy = false
+        searchPage = 0
+        searchSeen.clear()
         val query = raw.trim()
         if (query.length < 2) {
-            _state.value = _state.value.copy(searchResults = emptyList(), searching = false)
+            _state.value = _state.value.copy(
+                searchQuery = raw,
+                searchResults = emptyList(),
+                searching = false,
+                searchLoadingMore = false,
+                searchEnd = false,
+                searchError = null,
+            )
             return
         }
+        // Сразу гасим выдачу/loadMore, иначе debounce окно догонит старой страницей.
+        _state.value = _state.value.copy(
+            searchQuery = raw,
+            searchResults = emptyList(),
+            searching = true,
+            searchLoadingMore = false,
+            searchEnd = true,
+            searchError = null,
+        )
         searchJob = viewModelScope.launch {
             // Debounce: ждём паузу в наборе, чтобы не долбить API на каждую букву.
             delay(SearchDebounceMs)
-            _state.value = _state.value.copy(searching = true, searchError = null)
-            searchMovies(query)
-                .onSuccess { movies ->
-                    if (_state.value.searchQuery.trim() != query) return@onSuccess
-                    searchHistory.remember(query)
-                    _state.value = _state.value.copy(
-                        searchResults = movies,
-                        searching = false,
-                        recentQueries = searchHistory.items(),
-                    )
-                }
-                .onFailure { error ->
-                    if (_state.value.searchQuery.trim() != query) return@onFailure
-                    _state.value = _state.value.copy(
-                        searchResults = emptyList(),
-                        searching = false,
-                        searchError = error.asDataError(),
-                    )
-                }
+            _state.value = _state.value.copy(searchEnd = false)
+            fetchSearch(query, page = 1, append = false)
         }
+    }
+
+    fun loadMoreSearch() {
+        val current = _state.value
+        if (searchBusy || current.searching || current.searchLoadingMore || current.searchEnd) return
+        if (current.searchError != null) return
+        val query = current.searchQuery.trim()
+        if (query.length < 2) return
+        searchJob = viewModelScope.launch {
+            fetchSearch(query, page = searchPage + 1, append = true)
+        }
+    }
+
+    fun retrySearch() {
+        val query = _state.value.searchQuery.trim()
+        if (query.length < 2) return
+        val append = _state.value.searchResults.isNotEmpty()
+        searchJob?.cancel()
+        searchBusy = false
+        searchJob = viewModelScope.launch {
+            if (append) {
+                fetchSearch(query, page = searchPage + 1, append = true)
+            } else {
+                searchPage = 0
+                searchSeen.clear()
+                _state.value = _state.value.copy(
+                    searching = true,
+                    searchLoadingMore = false,
+                    searchEnd = false,
+                    searchError = null,
+                )
+                fetchSearch(query, page = 1, append = false)
+            }
+        }
+    }
+
+    private suspend fun fetchSearch(query: String, page: Int, append: Boolean) {
+        if (searchBusy) return
+        searchBusy = true
+        if (append) {
+            _state.value = _state.value.copy(searchLoadingMore = true, searchError = null)
+        }
+        searchMovies(query, page)
+            .onSuccess { batch ->
+                if (_state.value.searchQuery.trim() != query) return@onSuccess
+                val fresh = batch.movies.filter { searchSeen.add(it.id) }
+                searchPage = page
+                if (!append) searchHistory.remember(query)
+                _state.value = _state.value.copy(
+                    searchResults = if (append) _state.value.searchResults + fresh else fresh,
+                    searching = false,
+                    searchLoadingMore = false,
+                    searchEnd = !batch.hasMore,
+                    searchError = null,
+                    recentQueries = if (!append) searchHistory.items() else _state.value.recentQueries,
+                )
+            }
+            .onFailure { error ->
+                if (_state.value.searchQuery.trim() != query) return@onFailure
+                _state.value = _state.value.copy(
+                    searching = false,
+                    searchLoadingMore = false,
+                    searchError = error.asDataError(),
+                    searchResults = if (append) _state.value.searchResults else emptyList(),
+                )
+            }
+        searchBusy = false
     }
 
     fun retry() {

@@ -15,6 +15,7 @@ import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.MovieDetail
+import com.example.movie.domain.model.MoviePage
 import com.example.movie.domain.model.Shelf
 import com.example.movie.domain.model.WatchCheck
 import com.example.movie.domain.repository.MovieRepository
@@ -71,13 +72,14 @@ internal class MovieRepositoryImpl(
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
     }
 
-    override suspend fun search(name: String): Result<List<Movie>> = runApi {
-        api.search(name, token)
-            .requireChannels()
+    override suspend fun search(name: String, page: Int): Result<MoviePage> = runApi {
+        val response = api.search(name = name, token = token, page = page)
+        if (response.error != null) throw IllegalStateException("catalog ${response.error}")
+        val movies = response.channels
             .map { it.toDomain() }
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
             .distinctBy { it.id }
-            .take(40)
+        MoviePage(movies = movies, hasMore = !response.page?.next.isNullOrBlank())
     }
 
     override suspend fun getMovie(id: String): Result<MovieDetail> = runApi {
