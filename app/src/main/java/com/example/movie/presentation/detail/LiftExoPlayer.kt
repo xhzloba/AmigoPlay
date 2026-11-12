@@ -6,7 +6,9 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.util.Rational
+import android.view.View
 import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
@@ -73,6 +75,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -128,6 +131,7 @@ internal fun LiftExoPlayer(
 ) {
     val view = LocalView.current
     val activity = view.context.hostActivity()
+    val window = remember(view) { view.hostWindow(activity) }
     val settingsRepository = LocalUserSettings.current
     val settings by settingsRepository.settings.collectAsStateWithLifecycle()
     val delayProcessor = remember { AudioDelayProcessor() }
@@ -234,12 +238,12 @@ internal fun LiftExoPlayer(
     follow.episode = episode?.episode
     follow.emit = onProgress
     val haze = rememberHazeState()
-    DisposableEffect(activity) {
+    DisposableEffect(activity, window) {
         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        val window = activity.window
         val previous = window.attributes.screenBrightness
         val previousCutout = window.attributes.layoutInDisplayCutoutMode
         val previousColor = window.colorMode
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val controller = WindowCompat.getInsetsController(window, view)
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         controller.hide(WindowInsetsCompat.Type.systemBars())
@@ -259,7 +263,7 @@ internal fun LiftExoPlayer(
         }
     }
     LaunchedEffect(hdr) {
-        activity.window.colorMode = if (hdr && activity.displaySupportsHdr()) {
+        window.colorMode = if (hdr && activity.displaySupportsHdr()) {
             ActivityInfo.COLOR_MODE_HDR
         } else {
             ActivityInfo.COLOR_MODE_DEFAULT
@@ -272,7 +276,6 @@ internal fun LiftExoPlayer(
         if (!qualityPinned) player.preferVideoRange(hdr, activity.displaySupportsHdr())
     }
     LaunchedEffect(underCamera) {
-        val window = activity.window
         window.attributes = window.attributes.apply {
             layoutInDisplayCutoutMode = if (underCamera) {
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -336,7 +339,7 @@ internal fun LiftExoPlayer(
         delayProcessor.delayUs = delayUs
     }
     LaunchedEffect(brightness) {
-        activity.window.attributes = activity.window.attributes.apply {
+        window.attributes = window.attributes.apply {
             screenBrightness = brightness ?: -1f
         }
     }
@@ -674,6 +677,15 @@ private fun Context.hostActivity(): ComponentActivity {
         current = current.baseContext
     }
     error("no activity")
+}
+
+private fun View.hostWindow(activity: Activity): Window {
+    var node = parent
+    while (node != null) {
+        if (node is DialogWindowProvider) return node.window
+        node = node.parent
+    }
+    return activity.window
 }
 
 private fun Activity.enterPip() {

@@ -68,7 +68,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -89,8 +88,8 @@ import androidx.compose.ui.window.DialogWindowProvider
 import com.example.movie.presentation.home.PeekEnter
 import com.example.movie.presentation.home.PeekExit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.example.movie.R
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.data.download.OfflineItem
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.common.LocalShelfNotices
@@ -860,10 +859,9 @@ private fun FavoritePoster(
                     .clip(PosterShape)
                     .background(Color.White.copy(alpha = 0.06f)),
             ) {
-                AsyncImage(
-                    model = item.posterUrl,
+                PosterImage(
+                    url = item.posterUrl,
                     contentDescription = stringResource(R.string.poster_content_description, item.title),
-                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .matchParentSize()
                         .posterWave(wave)

@@ -86,6 +86,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.example.movie.R
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.domain.model.EpisodeProgress
 import com.example.movie.domain.model.Franchise
 import com.example.movie.domain.model.FranchiseEpisode
@@ -885,14 +886,16 @@ private fun EpisodeLine(
 
 @Composable
 private fun SeasonPoster(url: String?, fallback: String?) {
-    val poster = url?.takeIf { it.startsWith("http") } ?: fallback?.takeIf { it.startsWith("http") } ?: return
-    AsyncImage(
-        model = poster,
+    val poster = url?.takeIf { it.startsWith("http") } ?: fallback?.takeIf { it.startsWith("http") }
+    PosterImage(
+        url = poster,
         contentDescription = null,
-        contentScale = ContentScale.Crop,
         modifier = Modifier
             .size(width = 36.dp, height = 52.dp)
-            .clip(RoundedCornerShape(6.dp)),
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color.White.copy(alpha = 0.08f)),
+        iconSize = 14.dp,
+        showLabel = false,
     )
     Spacer(Modifier.width(12.dp))
 }

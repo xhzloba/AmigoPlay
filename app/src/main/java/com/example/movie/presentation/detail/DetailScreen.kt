@@ -110,7 +110,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
@@ -160,13 +159,18 @@ import com.example.movie.domain.model.toResume
 import com.example.movie.domain.model.toSaved
 import com.example.movie.presentation.common.BookmarkButton
 import com.example.movie.presentation.common.DownloadRing
-import com.example.movie.presentation.common.inProgress
-import com.example.movie.presentation.common.offlineProgressTitle
+import com.example.movie.presentation.common.HandleSheet
+import com.example.movie.presentation.common.ImdbScore
+import com.example.movie.presentation.common.KpScore
+import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.presentation.common.NoticeShelfFavorites
+import com.example.movie.presentation.common.NoticeShelfWatched
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.presentation.common.THEME_GRAPHITE
 import com.example.movie.presentation.common.appBackground
 import com.example.movie.presentation.common.drawGraphite
-import com.example.movie.presentation.common.HandleSheet
-import com.example.movie.presentation.common.LocalShelfNotices
+import com.example.movie.presentation.common.inProgress
+import com.example.movie.presentation.common.offlineProgressTitle
 import com.example.movie.data.download.OfflineStatus
 import com.example.movie.ui.theme.CinemaMuted
 import android.Manifest
@@ -178,10 +182,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.movie.domain.model.SeriesSub
 import com.example.movie.domain.model.releaseSnapshot
-import com.example.movie.presentation.common.NoticeShelfFavorites
-import com.example.movie.presentation.common.NoticeShelfWatched
-import com.example.movie.presentation.common.ImdbScore
-import com.example.movie.presentation.common.KpScore
 import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.MovieLogoShadow
@@ -213,9 +213,6 @@ import java.util.Locale
 
 private val ActionCircle = Color.Black.copy(alpha = 0.16f)
 
-private const val TrailerPath =
-    "M42 24C42 31.2328 38.3435 37.6115 32.7782 41.3886C33.1935 41.2738 33.602 41.1447 34 41C45.1693 36.9384 47 32 47 32L48 35C48 35 44.3832 40.459 34.5 43.5C28 45.5 21 45 21 45C9.40202 45 0 35.598 0 24C0 12.402 9.40202 3 21 3C32.598 3 42 12.402 42 24ZM21 19C24.3137 19 27 16.3137 27 13C27 9.68629 24.3137 7 21 7C17.6863 7 15 9.68629 15 13C15 16.3137 17.6863 19 21 19ZM10 30C13.3137 30 16 27.3137 16 24C16 20.6863 13.3137 18 10 18C6.68629 18 4 20.6863 4 24C4 27.3137 6.68629 30 10 30ZM38 24C38 27.3137 35.3137 30 32 30C28.6863 30 26 27.3137 26 24C26 20.6863 28.6863 18 32 18C35.3137 18 38 20.6863 38 24ZM21 26C22.1046 26 23 25.1046 23 24C23 22.8954 22.1046 22 21 22C19.8954 22 19 22.8954 19 24C19 25.1046 19.8954 26 21 26ZM27 35C27 38.3137 24.3137 41 21 41C17.6863 41 15 38.3137 15 35C15 31.6863 17.6863 29 21 29C24.3137 29 27 31.6863 27 35Z"
-
 private const val PlexPlayPath =
     "M13.5 42C13.1022 42 12.7206 41.842 12.4393 41.5607C12.158 41.2794 12 40.8978 12 40.5V7.49999C12 7.23932 12.0679 6.98314 12.197 6.75671C12.3262 6.53028 12.5121 6.34141 12.7365 6.20873C12.9609 6.07605 13.216 6.00413 13.4766 6.00006C13.7372 5.99599 13.9944 6.05992 14.2229 6.18554L44.2228 22.6855C44.4582 22.815 44.6545 23.0052 44.7912 23.2364C44.9279 23.4676 45.0001 23.7313 45.0001 23.9999C45.0001 24.2685 44.9279 24.5322 44.7912 24.7634C44.6545 24.9946 44.4582 25.1849 44.2228 25.3143L14.2229 41.8143C14.0014 41.9361 13.7527 41.9999 13.5 42Z"
 
@@ -228,20 +225,6 @@ private val PlexPlay: ImageVector = ImageVector.Builder(
 ).apply {
     addPath(
         pathData = PathParser().parsePathString(PlexPlayPath).toNodes(),
-        fill = SolidColor(Color.Black),
-    )
-}.build()
-
-private val TrailerGlyph: ImageVector = ImageVector.Builder(
-    name = "trailers",
-    defaultWidth = 24.dp,
-    defaultHeight = 24.dp,
-    viewportWidth = 48f,
-    viewportHeight = 48f,
-).apply {
-    addPath(
-        pathData = PathParser().parsePathString(TrailerPath).toNodes(),
-        pathFillType = PathFillType.EvenOdd,
         fill = SolidColor(Color.Black),
     )
 }.build()
@@ -480,7 +463,7 @@ private fun TrailerPickSheet(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = TrailerGlyph,
+                            imageVector = ShellIcons.trailers,
                             contentDescription = null,
                             tint = Color.White.copy(alpha = 0.92f),
                             modifier = Modifier.size(22.dp),
@@ -1177,7 +1160,7 @@ private fun DetailContent(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            imageVector = TrailerGlyph,
+                            imageVector = ShellIcons.trailers,
                             contentDescription = stringResource(R.string.franchise_trailers),
                             tint = Color.White.copy(alpha = if (trailers.isEmpty()) 0.35f else 0.92f),
                             modifier = Modifier.size(22.dp),
@@ -2350,10 +2333,9 @@ private fun MovieStrip(
             val pressScale = rememberPressScale(pressed)
             val wave = remember(movie.id) { PosterWave() }
             Column(modifier = Modifier.width(posterWidth)) {
-                AsyncImage(
-                    model = movie.posterUrl,
+                PosterImage(
+                    url = movie.posterUrl,
                     contentDescription = movie.title,
-                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f / 1.46f)

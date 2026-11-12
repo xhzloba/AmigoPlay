@@ -35,15 +35,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.example.movie.R
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.ContentKind
 import com.example.movie.domain.model.FeedCard
@@ -227,15 +226,16 @@ private fun AlertRow(alert: SeriesAlert, onClick: () -> Unit) {
             .padding(horizontal = PosterGridInset, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = alert.posterUrl,
+        PosterImage(
+            url = alert.posterUrl,
             contentDescription = null,
             modifier = Modifier
                 .width(46.dp)
                 .height(68.dp)
                 .clip(PosterShape)
                 .background(Color(0xFF1C1C1E)),
-            contentScale = ContentScale.Crop,
+            iconSize = 18.dp,
+            showLabel = false,
         )
         Column(
             modifier = Modifier

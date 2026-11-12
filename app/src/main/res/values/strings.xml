@@ -16,6 +16,7 @@
     <string name="catalog_updates">Обновления</string>
     <string name="catalog_genres">Жанры</string>
     <string name="poster_content_description">Постер «%1$s»</string>
+    <string name="no_poster">No poster</string>
     <string name="watch_now">Смотреть</string>
     <string name="watch_unavailable">Недоступно</string>
     <string name="watch_notify">Уведомить о выходе</string>
@@ -297,6 +298,8 @@
     <string name="settings_haptic">Виброотклик</string>
     <string name="settings_haptic_hint">Короткий отклик при листании и открытии фильма.</string>
     <string name="settings_about">О программе</string>
+    <string name="settings_about_description">Описание</string>
+    <string name="settings_about_features">Возможности</string>
     <string name="settings_version">Версия</string>
     <string name="update_current">Актуальная</string>
     <string name="update_current_notice">Установлена актуальная версия</string>

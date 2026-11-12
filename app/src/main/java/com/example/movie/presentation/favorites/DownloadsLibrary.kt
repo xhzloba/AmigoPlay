@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,13 +42,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.movie.R
 import com.example.movie.data.download.OfflineItem
 import com.example.movie.data.download.OfflinePhase
 import com.example.movie.data.download.OfflineStatus
 import com.example.movie.data.download.OfflineStream
 import com.example.movie.presentation.common.DownloadProgressControls
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.presentation.common.canPause
 import com.example.movie.presentation.common.inProgress
 import com.example.movie.presentation.common.offlineProgressTitle
@@ -217,14 +216,9 @@ private fun DownloadTitleRow(
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AsyncImage(
-            model = item.title.posterUrl,
-            contentDescription = item.title.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(width = 56.dp, height = 82.dp)
-                .clip(PosterShape)
-                .background(Color.White.copy(alpha = 0.06f)),
+        OfflinePoster(
+            url = item.title.posterUrl,
+            title = item.title.title,
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -464,4 +458,17 @@ private fun episodeCountRes(count: Int): Int {
         mod10 in 2..4 -> R.string.downloads_episode_few
         else -> R.string.downloads_episode_many
     }
+}
+
+@Composable
+private fun OfflinePoster(url: String?, title: String) {
+    PosterImage(
+        url = url,
+        contentDescription = title,
+        modifier = Modifier
+            .size(width = 56.dp, height = 82.dp)
+            .clip(PosterShape)
+            .background(Color.White.copy(alpha = 0.06f)),
+        iconSize = 22.dp,
+    )
 }

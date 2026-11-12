@@ -9,36 +9,46 @@ package com.example.movie.presentation.settings
  * versionCode = MAJOR * 10000 + MINOR * 100 + PATCH.
  */
 internal object Changelog {
+    /** Описание возможностей приложения — не привязано к версии. */
+    val features: List<String> = listOf(
+        "Каталог, поиск, фильтры, деталка.",
+        "Плеер HLS/DASH: качество, озвучка, субтитры, resume.",
+        "Сериалы: сезоны/серии, прогресс, «уже посмотрел».",
+        "Моё: избранное, история, уведомления о сериях.",
+        "Офлайн: Media3 DownloadManager, качество/озвучка, pause/resume/delete, «Скачанное».",
+        "Скачивание до 4K при наличии дорожки в манифесте (playlist API).",
+        "Cast/DLNA: качество, озвучка, серия.",
+        "Темы; UltraBlur (постер/кадр).",
+        "Обновления с GitHub Releases.",
+    )
+
     val releases: List<Release> = listOf(
         Release(
-            version = "2.20.2",
+            version = "2.20.3",
             added = listOf(
-                "Каталог: полки, поиск, фильтры, детальная карточка фильма/сериала.",
-                "Онлайн-плеер: HLS/DASH, выбор качества и озвучки, субтитры, продолжение просмотра.",
-                "Сериалы: сезоны/серии, прогресс просмотра, отметка «уже посмотрел».",
-                "Моё: избранное, история, уведомления о выходе серий.",
-                "Офлайн: скачивание через Media3 DownloadManager; качество и озвучка; пауза/продолжить/удалить; библиотека «Скачанное»; воспроизведение без сети.",
-                "Качества скачивания, в том числе 4K, если дорожка есть в манифесте.",
-                "Трансляция на ТВ: DLNA/Chromecast-поток, выбор качества, озвучки и серии.",
-                "Темы оформления.",
-                "Алгоритм UltraBlur: палитра фона по постеру или кадру.",
-                "Проверка обновлений с GitHub Releases.",
+                "PosterImage: fallback trailers-glyph + «No poster» при null/ошибке URL.",
             ),
             fixed = listOf(
-                "В «О программе» показывается только актуальный changelog.",
+                "Офлайн LiftExoPlayer: insets/cutout/brightness на Dialog window, не activity.",
+            ),
+        ),
+        Release(
+            version = "2.20.2",
+            fixed = listOf(
+                "About: только последний Release из Changelog.",
             ),
         ),
         Release(
             version = "2.20.1",
             fixed = listOf(
-                "В «О программе» показывается только актуальный changelog.",
+                "About: только последний Release из Changelog.",
             ),
         ),
         Release(
             version = "2.20.0",
             added = listOf(
-                "Офлайн-скачивание: качество, озвучка, сезоны/серии, пауза и удаление, «Моё» → «Скачанное».",
-                "Качества скачивания, в том числе 4K, если дорожка есть в манифесте.",
+                "Офлайн: Media3 downloads, качество/озвучка/сезоны, pause/delete, «Скачанное».",
+                "4K download ladder из Lift playlist (dash_av1/vp9/HLS).",
             ),
         ),
         Release(

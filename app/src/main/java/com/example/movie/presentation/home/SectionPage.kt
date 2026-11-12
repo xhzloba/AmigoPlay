@@ -45,7 +45,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,8 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
 import com.example.movie.R
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
@@ -401,10 +400,9 @@ private fun PosterCell(
                     .clip(PosterShape)
                     .background(Color.White.copy(alpha = 0.08f)),
             ) {
-            AsyncImage(
-                model = movie.posterUrl,
+            PosterImage(
+                url = movie.posterUrl,
                 contentDescription = stringResource(R.string.poster_content_description, movie.title),
-                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .matchParentSize()
                     .posterWave(wave)

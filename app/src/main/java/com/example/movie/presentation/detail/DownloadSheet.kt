@@ -2,9 +2,11 @@ package com.example.movie.presentation.detail
 
 import android.graphics.drawable.ColorDrawable
 import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.core.view.WindowCompat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -753,6 +755,11 @@ internal fun OfflinePlayer(
             (view.parent as? DialogWindowProvider)?.window?.apply {
                 setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 setBackgroundDrawable(ColorDrawable(android.graphics.Color.BLACK))
+                WindowCompat.setDecorFitsSystemWindows(this, false)
+                attributes = attributes.apply {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
             }
         }
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {

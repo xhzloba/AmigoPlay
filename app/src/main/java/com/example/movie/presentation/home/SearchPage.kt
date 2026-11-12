@@ -54,7 +54,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -63,8 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.movie.R
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -398,10 +397,9 @@ private fun SearchResults(
                             scaleY = pressScale
                         },
                 ) {
-                AsyncImage(
-                    model = movie.posterUrl ?: movie.backdropUrl,
+                PosterImage(
+                    url = movie.posterUrl ?: movie.backdropUrl,
                     contentDescription = stringResource(R.string.poster_content_description, movie.title),
-                    contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .matchParentSize()
                         .clip(PosterShape)

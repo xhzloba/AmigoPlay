@@ -99,6 +99,7 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
+import com.example.movie.presentation.common.PosterImage
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
@@ -913,12 +914,12 @@ private fun PosterPage(
     modifier: Modifier = Modifier,
     onReady: () -> Unit = {},
 ) {
-    AsyncImage(
-        model = movie.posterUrl ?: movie.backdropUrl,
+    PosterImage(
+        url = movie.posterUrl ?: movie.backdropUrl,
         contentDescription = stringResource(R.string.poster_content_description, movie.title),
-        contentScale = ContentScale.Crop,
         modifier = modifier.background(Color(0xFF2A2A2E)),
-        onSuccess = { onReady() },
+        iconSize = 36.dp,
+        onSuccess = onReady,
     )
 }
 

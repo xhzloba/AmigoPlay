@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -74,6 +75,7 @@ import com.example.movie.presentation.home.components.CategoryTabLetterSpacing
 import com.example.movie.presentation.home.components.CategoryTabLineHeight
 import com.example.movie.domain.model.AppRelease
 import com.example.movie.domain.model.DownloadProgress
+import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.common.THEME_CINEMA
 import com.example.movie.presentation.common.THEME_GRAPHITE
 import com.example.movie.presentation.common.appBackground
@@ -273,6 +275,10 @@ private fun SettingsScreen(
 
 @Composable
 private fun AboutPage(modifier: Modifier = Modifier) {
+    var featuresOpen by rememberSaveable { mutableStateOf(false) }
+    val updates = LocalAppUpdate.current
+    val context = LocalContext.current
+    val tick = rememberHapticTick()
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -297,11 +303,10 @@ private fun AboutPage(modifier: Modifier = Modifier) {
             lineHeight = 18.sp,
         )
         Spacer(Modifier.height(6.dp))
-        val updates = LocalAppUpdate.current
-        val context = LocalContext.current
-        val tick = rememberHapticTick()
         Row(
-            modifier = Modifier.padding(horizontal = PosterGridInset),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = PosterGridInset),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -321,6 +326,22 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                     lineHeight = 18.sp,
                 )
             }
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.settings_about_description),
+                modifier = Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        tick?.invoke()
+                        featuresOpen = true
+                    },
+                ),
+                color = VersionBlue,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+            )
         }
         val offer = updates.release
         if (offer != null) {
@@ -390,6 +411,47 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                 release.fixed.forEach { ChangeLine(it) }
             }
             Spacer(Modifier.height(20.dp))
+        }
+    }
+    if (featuresOpen) {
+        FeaturesSheet(onDismiss = { featuresOpen = false })
+    }
+}
+
+@Composable
+private fun FeaturesSheet(onDismiss: () -> Unit) {
+    HandleSheet(onDismiss = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_about_features),
+                modifier = Modifier.padding(horizontal = 22.dp),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(14.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 22.dp),
+            ) {
+                Changelog.features.forEachIndexed { index, line ->
+                    if (index > 0) Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "— $line",
+                        color = ChangeText,
+                        fontSize = 15.sp,
+                        lineHeight = 22.sp,
+                    )
+                }
+            }
         }
     }
 }
