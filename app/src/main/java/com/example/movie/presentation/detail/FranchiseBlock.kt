@@ -123,7 +123,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val Label = Color(0xFF8E8E93)
-private val AboutLabel = Color(0xFFD4D4DA)
 private val AboutValue = Color(0xFFE8E8ED)
 private val Value = Color(0xFFE8E8ED)
 private val Card = Color.White.copy(alpha = 0.06f)
@@ -166,9 +165,23 @@ internal fun FranchiseBlock(
         InfoLine(stringResource(R.string.franchise_producers), franchise.producers.orDash())
         InfoLine(stringResource(R.string.franchise_operator), franchise.operators.orDash())
         InfoLine(stringResource(R.string.franchise_editor), franchise.editors.orDash())
-        InfoLine(stringResource(R.string.franchise_design), franchise.designers.orDash())
-        InfoLine(stringResource(R.string.franchise_genres), franchise.genres.orDash(detail.genres.joinToString(", ")))
-        InfoLine(stringResource(R.string.franchise_country), franchise.countries.orDash(detail.country))
+        InfoLine(
+            stringResource(R.string.franchise_design),
+            franchise.designers.orDash(),
+            previewLimit = 2,
+        )
+        InfoLine(
+            stringResource(R.string.franchise_genres),
+            franchise.genres.orDash(detail.genres.joinToString(", ")),
+            previewLimit = 3,
+        )
+        CountryInfoLine(
+            label = stringResource(R.string.franchise_country),
+            countries = franchise.countries.ifEmpty {
+                parseCountries(detail.country)
+            },
+            previewLimit = 3,
+        )
         InfoLine(stringResource(R.string.franchise_premiere), franchise.premiere.asDate())
         franchise.slogan?.let { InfoLine(stringResource(R.string.franchise_slogan), "«$it»") }
         franchise.premiereRu?.let { InfoLine(stringResource(R.string.franchise_premiere_ru), it.asDate()) }
@@ -177,10 +190,18 @@ internal fun FranchiseBlock(
         franchise.feesWorld?.let { InfoLine(stringResource(R.string.franchise_fees_world), it) }
         franchise.feesRus?.let { InfoLine(stringResource(R.string.franchise_fees_rus), it) }
         if (franchise.dubActors.isNotEmpty()) {
-            InfoLine(stringResource(R.string.franchise_dub), franchise.dubActors.joinToString(", "))
+            InfoLine(
+                stringResource(R.string.franchise_dub),
+                franchise.dubActors.joinToString(", "),
+                preview = false,
+            )
         }
         if (franchise.voiceActing.isNotEmpty()) {
-            InfoLine(stringResource(R.string.franchise_voice), franchise.voiceActing.joinToString(", "))
+            InfoLine(
+                stringResource(R.string.franchise_voice),
+                franchise.voiceActing.joinToString(", "),
+                preview = false,
+            )
         }
         if (franchise.photos.isNotEmpty()) {
             Spacer(Modifier.height(22.dp))
@@ -201,27 +222,123 @@ internal fun FranchiseBlock(
     }
 }
 
+private val AboutLabel = Color(0xFFC8C8CE)
+private const val InfoPreviewLimit = 4
+
 @Composable
-private fun InfoLine(label: String, value: String, valueColor: Color = AboutValue) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 5.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            text = label,
-            color = AboutLabel,
-            fontSize = 15.sp,
-            lineHeight = 20.sp,
-            modifier = Modifier.width(132.dp),
+private fun InfoLine(
+    label: String,
+    value: String,
+    valueColor: Color = AboutValue,
+    preview: Boolean = true,
+    previewLimit: Int = InfoPreviewLimit,
+) {
+    val display = remember(value, preview, previewLimit) {
+        if (preview) previewInfoValue(value, previewLimit) else value
+    }
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Text(
+                text = label,
+                color = AboutLabel,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(end = 16.dp),
+            )
+            Text(
+                text = display,
+                color = valueColor,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                textAlign = TextAlign.End,
+                softWrap = true,
+                maxLines = if (preview) 2 else Int.MAX_VALUE,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.12f)),
         )
-        Text(
-            text = value,
-            color = valueColor,
-            fontSize = 15.sp,
-            lineHeight = 20.sp,
-            modifier = Modifier.weight(1f),
+    }
+}
+
+/** В превью деталки — до N значений, остальное «…»; полный список в «О фильме». */
+private fun previewInfoValue(value: String, limit: Int = InfoPreviewLimit): String {
+    if (value == "—" || !value.contains(',')) return value
+    val parts = value.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    if (parts.size <= limit) return value
+    return parts.take(limit).joinToString(", ") + "…"
+}
+
+@Composable
+private fun CountryInfoLine(
+    label: String,
+    countries: List<String>,
+    previewLimit: Int = 3,
+) {
+    val names = countries.filter { it.isNotBlank() && it != "—" }
+    val shown = if (names.size > previewLimit) names.take(previewLimit) else names
+    val clipped = names.size > previewLimit
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                color = AboutLabel,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(end = 16.dp),
+            )
+            if (names.isEmpty()) {
+                Text(
+                    text = "—",
+                    color = AboutValue,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CountryFlagsValue(
+                        countries = shown,
+                        color = AboutValue,
+                    )
+                    if (clipped) {
+                        Text(
+                            text = "…",
+                            color = AboutValue,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                        )
+                    }
+                }
+            }
+        }
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.12f)),
         )
     }
 }
@@ -1109,12 +1226,24 @@ internal fun FranchiseAboutPage(detail: MovieDetail, onBack: () -> Unit, modifie
                 lineHeight = 16.sp,
             )
             Spacer(Modifier.height(4.dp))
-            Text(
-                text = line.value,
-                color = line.color,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-            )
+            val countries = line.countries
+            if (countries != null) {
+                CountryFlagsValue(
+                    countries = countries,
+                    color = line.color,
+                    endAligned = false,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Text(
+                    text = line.value,
+                    color = line.color,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                )
+            }
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -1242,13 +1371,23 @@ private fun PageBar(title: String, onBack: () -> Unit, modifier: Modifier = Modi
     }
 }
 
-private data class StackLine(val label: String, val value: String, val color: Color = Value)
+private data class StackLine(
+    val label: String,
+    val value: String,
+    val color: Color = Value,
+    val countries: List<String>? = null,
+)
 
 @Composable
 private fun aboutLines(detail: MovieDetail): List<StackLine> {
     val franchise = detail.franchise ?: return emptyList()
     val lines = mutableListOf<StackLine>()
-    fun add(label: String, value: String, color: Color = Value) {
+    fun add(label: String, value: String, color: Color = Value, countries: List<String>? = null) {
+        if (countries != null) {
+            if (countries.isEmpty()) return
+            lines += StackLine(label, countries.joinToString(", "), color, countries)
+            return
+        }
         if (value.isBlank() || value == "—") return
         lines += StackLine(label, value, color)
     }
@@ -1274,7 +1413,11 @@ private fun aboutLines(detail: MovieDetail): List<StackLine> {
     add(stringResource(R.string.franchise_editor), franchise.editors.orDash())
     add(stringResource(R.string.franchise_design), franchise.designers.orDash())
     add(stringResource(R.string.franchise_genres), franchise.genres.orDash(detail.genres.joinToString(", ")))
-    add(stringResource(R.string.franchise_country), franchise.countries.orDash(detail.country))
+    add(
+        label = stringResource(R.string.franchise_country),
+        value = "",
+        countries = franchise.countries.ifEmpty { parseCountries(detail.country) },
+    )
     add(stringResource(R.string.franchise_premiere), franchise.premiere.asDate())
     franchise.slogan?.let { add(stringResource(R.string.franchise_slogan), "«$it»") }
     franchise.premiereRu?.let { add(stringResource(R.string.franchise_premiere_ru), it.asDate()) }

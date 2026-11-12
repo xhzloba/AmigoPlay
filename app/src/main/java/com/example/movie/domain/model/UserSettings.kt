@@ -6,14 +6,14 @@ data class UserSettings(
     val extractBackdrop: Boolean = false,
     val extractPlex: Boolean = true,
     val plexBackdrop: Boolean = true,
-    val heroPosterColors: Boolean = true,
+    val heroPosterColors: Boolean = false,
     /** true = UltraBlur на всю главную; false = только зона слайдера (как раньше). */
     val heroPosterPage: Boolean = true,
     val showLogos: Boolean = true,
     val autoBackdrop: Boolean = true,
     val watchGlow: Boolean = false,
     val haptic: Boolean = true,
-    val showPosterTitles: Boolean = false,
+    val showPosterTitles: Boolean = true,
     val largePosters: Boolean = false,
     val playerLogo: Boolean = true,
     val playerSpeed: Float = 1f,
@@ -24,7 +24,7 @@ data class UserSettings(
     val playerAutoNext: Boolean = true,
     val playerHdr: Boolean = true,
     val watchedBadge: Boolean = true,
-    val whiteTitles: Boolean = false,
+    val whiteTitles: Boolean = true,
     val appTheme: String = "cinema",
 )
 

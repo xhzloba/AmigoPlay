@@ -121,6 +121,17 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
                 .putBoolean(KEY_BACKDROP_COLORS, false)
                 .commit()
         }
+        if (!prefs.contains(KEY_DEFAULTS_230)) {
+            prefs.edit()
+                .putBoolean(KEY_DEFAULTS_230, true)
+                .putBoolean(KEY_WHITE_TITLES, true)
+                .putBoolean(KEY_POSTER_TITLES, true)
+                .putBoolean(KEY_HERO_COLORS, false)
+                .putBoolean(KEY_PLEX, true)
+                .putBoolean(KEY_PLEX_BACKDROP, true)
+                .putBoolean(KEY_BACKDROP_COLORS, false)
+                .commit()
+        }
         if (prefs.getBoolean(KEY_COLORS, false)) {
             prefs.edit().putBoolean(KEY_COLORS, false).commit()
         }
@@ -128,13 +139,13 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
         extractPlex = prefs.getBoolean(KEY_PLEX, true),
         plexBackdrop = prefs.getBoolean(KEY_PLEX_BACKDROP, true),
-        heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, true),
+        heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, false),
         heroPosterPage = prefs.getBoolean(KEY_HERO_PAGE, true),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),
         watchGlow = prefs.getBoolean(KEY_WATCH_GLOW, false),
         haptic = prefs.getBoolean(KEY_HAPTIC, true),
-        showPosterTitles = prefs.getBoolean(KEY_POSTER_TITLES, false),
+        showPosterTitles = prefs.getBoolean(KEY_POSTER_TITLES, true),
         largePosters = prefs.getBoolean(KEY_LARGE_POSTERS, false),
         playerLogo = prefs.getBoolean(KEY_PLAYER_LOGO, true),
         playerSpeed = prefs.getFloat(KEY_PLAYER_SPEED, 1f),
@@ -145,7 +156,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         playerAutoNext = prefs.getBoolean(KEY_PLAYER_AUTO_NEXT, true),
         playerHdr = prefs.getBoolean(KEY_PLAYER_HDR, true),
         watchedBadge = prefs.getBoolean(KEY_WATCHED_BADGE, true),
-        whiteTitles = prefs.getBoolean(KEY_WHITE_TITLES, false),
+        whiteTitles = prefs.getBoolean(KEY_WHITE_TITLES, true),
         appTheme = prefs.getString(KEY_THEME, "cinema") ?: "cinema",
         )
     }
@@ -158,6 +169,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_PLEX_BACKDROP = "plex_backdrop"
         const val KEY_PLEX_DEFAULT = "plex_color_default"
         const val KEY_FRAME_DEFAULT = "frame_color_default"
+        const val KEY_DEFAULTS_230 = "defaults_2_30"
         const val KEY_HERO_COLORS = "hero_poster_colors"
         const val KEY_HERO_PAGE = "hero_poster_page"
         const val KEY_LOGOS = "show_logos"

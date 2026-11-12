@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
@@ -47,9 +48,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -90,6 +93,8 @@ import com.example.movie.presentation.home.PeekExit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
 import com.example.movie.presentation.common.PosterImage
+import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.appChrome
 import com.example.movie.data.download.OfflineItem
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.common.LocalShelfNotices
@@ -98,6 +103,7 @@ import com.example.movie.presentation.common.TopScrimTail
 import com.example.movie.presentation.common.topScrimFade
 import com.example.movie.presentation.common.topScrimPalette
 import com.example.movie.presentation.detail.OfflinePlayer
+import com.example.movie.ui.theme.PlayBlue
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.SavedTitle
 import com.example.movie.domain.model.SeriesSub
@@ -131,9 +137,11 @@ import com.example.movie.ui.theme.PosterShape
 
 private val FavoritePlay = Color(0xFFE23B5A)
 private val CapsuleInk = Color.White.copy(alpha = 0.72f)
-private val MenuShape = RoundedCornerShape(16.dp)
 private val FilterShape = RoundedCornerShape(22.dp)
 private val FilterNotes = Color(0xFFD2D2D8)
+private val LibrarySheetShape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+private val LibraryMenuScrim = Color(0xFF3A3A3E).copy(alpha = 0.86f)
+private val LibraryRowInk = Color(0xFFE8E8EC)
 
 private enum class LibrarySort(@StringRes val label: Int) {
     Genre(R.string.favorites_sort_genre),
@@ -441,7 +449,7 @@ private fun LibraryScrim(progress: Float, modifier: Modifier = Modifier) {
                 val radius = 140.dp.toPx()
                 val logoWidth = 36.dp.toPx() * (754f / 186f)
                 val logoX = (PosterGridInset - BrandLogoBleed).toPx() + logoWidth / 2f
-                val menuX = size.width - 80.dp.toPx()
+                val menuX = size.width - (14.dp.toPx() + 20.dp.toPx())
                 fun pool(center: Offset) {
                     drawCircle(
                         brush = Brush.radialGradient(
@@ -488,58 +496,114 @@ private fun LibraryMenu(
     onSelect: (LibrarySection) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
+    val tick = rememberHapticTick()
     Box(
-        modifier = Modifier.height(40.dp),
-        contentAlignment = Alignment.CenterEnd,
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(CinemaSurface)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {
+                    tick?.invoke()
+                    open = true
+                },
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
+        MenuArrow(
+            open = open,
+            tint = CapsuleInk,
+            size = 22.dp,
+        )
+    }
+    if (open) {
+        LibraryPickerSheet(
+            selected = selected,
+            onSelect = { section ->
+                onSelect(section)
+                open = false
+            },
+            onDismiss = { open = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibraryPickerSheet(
+    selected: LibrarySection,
+    onSelect: (LibrarySection) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val tick = rememberHapticTick()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = appChrome(),
+        contentColor = Color.White,
+        scrimColor = LibraryMenuScrim,
+        dragHandle = null,
+        shape = LibrarySheetShape,
+        tonalElevation = 0.dp,
+    ) {
+        Column(
             modifier = Modifier
-                .height(32.dp)
-                .clip(CircleShape)
-                .background(CinemaSurface)
+                .fillMaxWidth()
+                .appBackground()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = { open = true },
+                    onClick = {},
                 )
-                .padding(start = 12.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringResource(selected.label),
-                color = CapsuleInk,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-                letterSpacing = (-0.2).sp,
+            Box(
+                Modifier
+                    .padding(top = 8.dp, bottom = 12.dp)
+                    .width(32.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.28f)),
             )
-            Spacer(Modifier.width(2.dp))
-            MenuArrow(open = open, tint = CapsuleInk, size = 16.dp)
-        }
-        DropdownMenu(
-            expanded = open,
-            onDismissRequest = { open = false },
-            containerColor = CinemaSurface,
-            shape = MenuShape,
-        ) {
+            Text(
+                text = stringResource(R.string.nav_favorites),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp)
+                    .padding(bottom = 6.dp),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                lineHeight = 23.sp,
+                letterSpacing = (-0.3).sp,
+                textAlign = TextAlign.Center,
+            )
             LibrarySection.entries.forEach { section ->
                 val lit = section == selected
                 Text(
                     text = stringResource(section.label),
-                    color = if (lit) CapsuleInk else CinemaMuted,
-                    fontWeight = if (lit) FontWeight.Medium else FontWeight.Normal,
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
                     modifier = Modifier
+                        .fillMaxWidth()
                         .clickable(
                             interactionSource = remember(section.name) { MutableInteractionSource() },
                             indication = null,
                             onClick = {
-                                open = false
+                                tick?.invoke()
                                 onSelect(section)
                             },
                         )
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                        .padding(horizontal = 22.dp, vertical = 14.dp),
+                    color = if (lit) PlayBlue else LibraryRowInk,
+                    fontWeight = if (lit) FontWeight.SemiBold else FontWeight.Normal,
+                    fontSize = 16.sp,
+                    lineHeight = 21.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
