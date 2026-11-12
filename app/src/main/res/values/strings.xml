@@ -241,7 +241,9 @@
     <string name="search_hint">Поиск в AmigoPlay</string>
     <string name="search_cancel">Отмена</string>
     <string name="search_recent">Последние запросы</string>
-    <string name="search_clear">Удалить</string>
+    <string name="search_popular">Популярное</string>
+    <string name="search_clear">Очистить</string>
+    <string name="search_clear_query">Очистить запрос</string>
     <string name="search_close">Закрыть поиск</string>
     <string name="search_voice">Голосовой поиск</string>
     <string name="nav_home">Главная</string>

@@ -27,6 +27,7 @@ data class HomeUiState(
     val searching: Boolean = false,
     val searchError: DataError? = null,
     val recentQueries: List<String> = emptyList(),
+    val searchPopular: List<Movie> = emptyList(),
 )
 
 sealed interface HomePhase {

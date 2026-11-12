@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,6 +90,14 @@ internal fun CatalogGenresPage(
 ) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val header = top + BrandTopInset + 36.dp + 18.dp
+    val grid = rememberLazyGridState()
+    val density = LocalDensity.current
+    val scrim = if (grid.firstVisibleItemIndex > 0) {
+        1f
+    } else {
+        val threshold = with(density) { 28.dp.toPx() }
+        (grid.firstVisibleItemScrollOffset / threshold).coerceIn(0f, 1f)
+    }
     Box(
         modifier
             .fillMaxSize()
@@ -99,6 +109,7 @@ internal fun CatalogGenresPage(
             ),
     ) {
         LazyVerticalGrid(
+            state = grid,
             columns = GridCells.Fixed(2),
             contentPadding = PaddingValues(
                 start = PosterGridInset,
@@ -114,6 +125,8 @@ internal fun CatalogGenresPage(
                 GenreTile(name = name, onClick = { onGenre(name) })
             }
         }
+        // Та же растушёвка шапки, что у полного списка (cinema / graphite).
+        SectionScrim(progress = scrim, modifier = Modifier.align(Alignment.TopCenter))
         GenresBar(onBack = onBack, modifier = Modifier.align(Alignment.TopCenter))
     }
 }
@@ -164,7 +177,6 @@ private fun GenresBar(onBack: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier
             .fillMaxWidth()
-            .appBackground()
             .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top))
             .padding(top = BrandTopInset)
             .height(36.dp),

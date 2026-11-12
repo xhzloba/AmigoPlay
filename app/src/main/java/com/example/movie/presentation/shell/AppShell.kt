@@ -493,6 +493,7 @@ fun AppShell(
             val fromHome = sectionShown != null
             val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
             val washBar = settings.heroPosterColors &&
+                settings.heroPosterPage &&
                 tab == AppTab.Home &&
                 sectionShown == null
             AppBottomBar(
@@ -528,6 +529,7 @@ fun AppShell(
                 searching = homeState.searching,
                 error = homeState.searchError,
                 recent = homeState.recentQueries,
+                popular = homeState.searchPopular,
                 onQuery = homeViewModel::search,
                 onClose = homeViewModel::closeSearch,
                 onClearRecent = homeViewModel::clearRecent,

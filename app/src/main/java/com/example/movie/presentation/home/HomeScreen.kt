@@ -149,7 +149,8 @@ fun HomeScreen(
     }
     val paintedWash = heroWash.takeIf { pageWashOn }
     SideEffect {
-        val dock = heroWash.takeIf { playTintOn }
+        // Dock бара только в режиме «на всю главную».
+        val dock = heroWash.takeIf { pageWashOn }
         onHeroDock(dock?.bottomLeft, dock?.bottomRight)
     }
     val homeBackground = if (paintedWash != null) {
@@ -482,6 +483,7 @@ fun HomeScreen(
                 searching = state.searching,
                 error = state.searchError,
                 recent = state.recentQueries,
+                popular = state.searchPopular,
                 onQuery = onSearchQuery,
                 onClose = onCloseSearch,
                 onClearRecent = onClearRecent,

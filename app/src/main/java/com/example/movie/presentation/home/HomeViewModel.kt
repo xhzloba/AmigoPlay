@@ -112,6 +112,15 @@ class HomeViewModel(
             searchError = null,
             recentQueries = searchHistory.items(),
         )
+        viewModelScope.launch { loadSearchPopular() }
+    }
+
+    private suspend fun loadSearchPopular() {
+        if (_state.value.searchPopular.isNotEmpty()) return
+        getShelfMovies(CatalogQuery("popular"), limit = 24)
+            .onSuccess { movies ->
+                _state.update { it.copy(searchPopular = movies) }
+            }
     }
 
     fun clearRecent() {
@@ -139,7 +148,8 @@ class HomeViewModel(
             return
         }
         searchJob = viewModelScope.launch {
-            delay(280)
+            // Debounce: ждём паузу в наборе, чтобы не долбить API на каждую букву.
+            delay(SearchDebounceMs)
             _state.value = _state.value.copy(searching = true, searchError = null)
             searchMovies(query)
                 .onSuccess { movies ->
@@ -312,5 +322,8 @@ class HomeViewModel(
         }
     }
 }
+
+/** Пауза после последней буквы перед запросом (debounce). */
+private const val SearchDebounceMs = 450L
 
 private fun Throwable.asDataError(): DataError = this as? DataError ?: DataError.Unknown()
