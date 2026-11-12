@@ -11,7 +11,7 @@ package com.example.movie.presentation.settings
 internal object Changelog {
     val releases: List<Release> = listOf(
         Release(
-            version = "2.20.1",
+            version = "2.20.2",
             added = listOf(
                 "Каталог: полки, поиск, фильтры, детальная карточка фильма/сериала.",
                 "Онлайн-плеер: HLS/DASH, выбор качества и озвучки, субтитры, продолжение просмотра.",
@@ -24,6 +24,12 @@ internal object Changelog {
                 "Алгоритм UltraBlur: палитра фона по постеру или кадру.",
                 "Проверка обновлений с GitHub Releases.",
             ),
+            fixed = listOf(
+                "В «О программе» показывается только актуальный changelog.",
+            ),
+        ),
+        Release(
+            version = "2.20.1",
             fixed = listOf(
                 "В «О программе» показывается только актуальный changelog.",
             ),
