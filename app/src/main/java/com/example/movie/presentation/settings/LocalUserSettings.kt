@@ -21,6 +21,8 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setHeroPosterColors(enabled: Boolean) = Unit
 
+    override fun setHeroPosterPage(enabled: Boolean) = Unit
+
     override fun setShowLogos(enabled: Boolean) = Unit
 
     override fun setAutoBackdrop(enabled: Boolean) = Unit

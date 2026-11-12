@@ -2,6 +2,7 @@ package com.example.movie.presentation.shell
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -48,9 +49,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -87,6 +90,7 @@ import com.example.movie.presentation.home.SearchPage
 import com.example.movie.presentation.home.SectionRoute
 import com.example.movie.presentation.common.LocalShelfNotices
 import com.example.movie.presentation.home.MoviePeek
+import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.presentation.settings.SettingsRoute
 import com.example.movie.presentation.update.LocalAppUpdate
 import com.example.movie.presentation.update.UpdateBadge
@@ -164,6 +168,8 @@ fun AppShell(
     var sectionShown by remember { mutableStateOf<HomeSection?>(null) }
     var barHidden by remember { mutableStateOf(false) }
     var barHeight by remember { mutableIntStateOf(0) }
+    var homeDockLeft by remember { mutableStateOf<Color?>(null) }
+    var homeDockRight by remember { mutableStateOf<Color?>(null) }
     LaunchedEffect(section) {
         val move = tween<Float>(240, easing = FastOutSlowInEasing)
         if (section != null) {
@@ -315,6 +321,10 @@ fun AppShell(
                     onOpenSection = { sectionName = it.name },
                     onPlayResume = playResume,
                     onSearchCover = { searchCover = it },
+                    onHeroDock = { left, right ->
+                        homeDockLeft = left
+                        homeDockRight = right
+                    },
                     onOpenAlerts = openAlerts,
                     presentSearch = tab == AppTab.Home,
                     session = session,
@@ -481,12 +491,18 @@ fun AppShell(
         )
         if (barAlpha > 0.02f) {
             val fromHome = sectionShown != null
+            val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+            val washBar = settings.heroPosterColors &&
+                tab == AppTab.Home &&
+                sectionShown == null
             AppBottomBar(
                 selected = if (fromHome) null else tab,
                 onSelect = { next ->
                     if (fromHome && next == AppTab.Home) sectionName = null
                     else onTabChange(next.name)
                 },
+                washLeft = homeDockLeft.takeIf { washBar },
+                washRight = homeDockRight.takeIf { washBar },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .onSizeChanged { barHeight = it.height }
@@ -596,11 +612,23 @@ private fun Modifier.holdOffscreen(): Modifier =
     }.clearAndSetSemantics {}
 
 private val IdleInk = Color(0xFFC7C7CC)
+private val WashDockFallback = Color(0xFF121212)
+
+/** Чуть глубже угол UltraBlur — бар читаемый, палитра та же. */
+private fun Color.dockInk(): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(toArgb(), hsv)
+    hsv[1] = (hsv[1] * 0.95f).coerceAtMost(1f)
+    hsv[2] = (hsv[2] * 0.82f).coerceIn(0.1f, 0.4f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
 
 @Composable
 private fun AppBottomBar(
     selected: AppTab?,
     onSelect: (AppTab) -> Unit,
+    washLeft: Color? = null,
+    washRight: Color? = null,
     modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
@@ -608,14 +636,38 @@ private fun AppBottomBar(
     val updatePending = LocalAppUpdate.current.pending
     val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val belowGesture = (nav + 4.dp).coerceAtLeast(22.dp)
+    val leftTarget = (washLeft ?: WashDockFallback).dockInk()
+    val rightTarget = (washRight ?: washLeft ?: WashDockFallback).dockInk()
+    val left by animateColorAsState(
+        targetValue = leftTarget,
+        animationSpec = tween(520, easing = FastOutSlowInEasing),
+        label = "barDockL",
+    )
+    val right by animateColorAsState(
+        targetValue = rightTarget,
+        animationSpec = tween(520, easing = FastOutSlowInEasing),
+        label = "barDockR",
+    )
+    val washOn = washLeft != null
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(appChrome())
+            .background(if (washOn) Color.Transparent else appChrome())
             .drawBehind {
+                if (washOn) {
+                    // Горизонталь как нижние углы UltraBlur + плотный scrim для иконок.
+                    drawRect(brush = Brush.horizontalGradient(listOf(left, right)))
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            0f to Color.Black.copy(alpha = 0.22f),
+                            0.4f to Color.Black.copy(alpha = 0.34f),
+                            1f to Color.Black.copy(alpha = 0.46f),
+                        ),
+                    )
+                }
                 val stroke = 0.6.dp.toPx()
                 drawLine(
-                    color = Color.White.copy(alpha = 0.28f),
+                    color = Color.White.copy(alpha = if (washOn) 0.16f else 0.28f),
                     start = Offset(0f, stroke / 2f),
                     end = Offset(size.width, stroke / 2f),
                     strokeWidth = stroke,

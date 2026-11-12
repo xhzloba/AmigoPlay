@@ -18,11 +18,19 @@ internal object Changelog {
         "Офлайн: Media3 DownloadManager, качество/озвучка, pause/resume/delete, «Скачанное».",
         "Скачивание до 4K при наличии дорожки в манифесте (playlist API).",
         "Cast/DLNA: качество, озвучка, серия.",
-        "Темы; UltraBlur (постер/кадр).",
+        "Темы; UltraBlur в деталке (постер/кадр) и на главной.",
         "Обновления с GitHub Releases.",
     )
 
     val releases: List<Release> = listOf(
+        Release(
+            version = "2.21.0",
+            added = listOf(
+                "UltraBlur на главной с обложки слайдера: режим на весь экран или только зона слайдера.",
+                "В режиме на всю главную: фон, нижнее меню и scrim под AmigoPlay из палитры UltraBlur.",
+                "Play в логотипе берёт цвет обложки в обоих режимах UltraBlur и не уходит в синий при скролле.",
+            ),
+        ),
         Release(
             version = "2.20.3",
             added = listOf(

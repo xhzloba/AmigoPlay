@@ -50,6 +50,10 @@ import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
+import com.example.movie.presentation.common.TopScrimBrand
+import com.example.movie.presentation.common.TopScrimTail
+import com.example.movie.presentation.common.topScrimFade
+import com.example.movie.presentation.common.topScrimPalette
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.BrandLogoBleed
@@ -245,22 +249,14 @@ private fun CatalogBrand(
 @Composable
 private fun CatalogScrim(progress: () -> Float, modifier: Modifier = Modifier) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    val palette = topScrimPalette()
     Box(
         modifier
             .fillMaxWidth()
-            .height(top + BrandTopInset + 40.dp + 96.dp)
-            .graphicsLayer { alpha = progress() }
-            .graphicsLayer()
+            .height(top + BrandTopInset + TopScrimBrand + TopScrimTail)
+            .topScrimFade(progress)
             .drawBehind {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.84f),
-                        0.44f to Color.Black.copy(alpha = 0.74f),
-                        0.64f to Color.Black.copy(alpha = 0.42f),
-                        0.86f to Color.Transparent,
-                        1f to Color.Transparent,
-                    ),
-                )
+                drawRect(brush = palette.verticalBrush())
                 val y = top.toPx() + BrandTopInset.toPx() + 20.dp.toPx()
                 val radius = 140.dp.toPx()
                 val logoWidth = 36.dp.toPx() * (754f / 186f)
@@ -270,8 +266,8 @@ private fun CatalogScrim(progress: () -> Float, modifier: Modifier = Modifier) {
                     drawCircle(
                         brush = Brush.radialGradient(
                             colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.58f),
-                                0.45f to Color.Black.copy(alpha = 0.26f),
+                                0f to palette.poolCore,
+                                0.45f to palette.poolMid,
                                 1f to Color.Transparent,
                             ),
                             center = center,

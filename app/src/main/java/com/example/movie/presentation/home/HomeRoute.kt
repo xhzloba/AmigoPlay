@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.graphics.Color
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.Movie
 
@@ -15,6 +16,7 @@ fun HomeRoute(
     onOpenSection: (HomeSection) -> Unit,
     onPlayResume: (String) -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
+    onHeroDock: (Color?, Color?) -> Unit = { _, _ -> },
     onOpenAlerts: () -> Unit = {},
     presentSearch: Boolean = true,
     session: Int = 0,
@@ -51,6 +53,7 @@ fun HomeRoute(
         onOpenSection = onOpenSection,
         onPlayResume = onPlayResume,
         onSearchCover = onSearchCover,
+        onHeroDock = onHeroDock,
         presentSearch = presentSearch,
     )
 }

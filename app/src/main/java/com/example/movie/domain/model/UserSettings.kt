@@ -7,6 +7,8 @@ data class UserSettings(
     val extractPlex: Boolean = true,
     val plexBackdrop: Boolean = true,
     val heroPosterColors: Boolean = true,
+    /** true = UltraBlur на всю главную; false = только зона слайдера (как раньше). */
+    val heroPosterPage: Boolean = true,
     val showLogos: Boolean = true,
     val autoBackdrop: Boolean = true,
     val watchGlow: Boolean = false,
@@ -36,6 +38,8 @@ interface UserSettingsRepository {
     fun setPlexBackdrop(enabled: Boolean)
 
     fun setHeroPosterColors(enabled: Boolean)
+
+    fun setHeroPosterPage(enabled: Boolean)
 
     fun setShowLogos(enabled: Boolean)
 

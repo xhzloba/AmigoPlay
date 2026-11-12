@@ -106,6 +106,7 @@ fun SettingsRoute() {
         onExtractPlex = repository::setExtractPlex,
         onPlexBackdrop = repository::setPlexBackdrop,
         onHeroPosterColors = repository::setHeroPosterColors,
+        onHeroPosterPage = repository::setHeroPosterPage,
         onShowLogos = repository::setShowLogos,
         onWatchedBadge = repository::setWatchedBadge,
         onShowPosterTitles = repository::setShowPosterTitles,
@@ -125,6 +126,7 @@ private fun SettingsScreen(
     onExtractPlex: (Boolean) -> Unit,
     onPlexBackdrop: (Boolean) -> Unit,
     onHeroPosterColors: (Boolean) -> Unit,
+    onHeroPosterPage: (Boolean) -> Unit,
     onShowLogos: (Boolean) -> Unit,
     onWatchedBadge: (Boolean) -> Unit,
     onShowPosterTitles: (Boolean) -> Unit,
@@ -203,6 +205,16 @@ private fun SettingsScreen(
                             checked = settings.heroPosterColors,
                             onChecked = onHeroPosterColors,
                         ),
+                        if (settings.heroPosterColors) {
+                            SettingItem(
+                                title = stringResource(R.string.settings_hero_page),
+                                hint = stringResource(R.string.settings_hero_page_hint),
+                                checked = settings.heroPosterPage,
+                                onChecked = onHeroPosterPage,
+                            )
+                        } else {
+                            null
+                        },
                         SettingItem(
                             title = stringResource(R.string.settings_extract_plex),
                             hint = stringResource(R.string.settings_extract_plex_hint),

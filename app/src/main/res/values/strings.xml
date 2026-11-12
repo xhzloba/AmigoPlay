@@ -273,8 +273,10 @@
     <string name="settings_group_color">Цвет</string>
     <string name="settings_group_detail">Деталка</string>
     <string name="settings_sensors">Сенсоры</string>
-    <string name="settings_hero_colors">Цвет с обложки на главной</string>
-    <string name="settings_hero_colors_hint">Свечение и цвет play у главного слайдера берутся с обложки. Выключено — без цветного свечения.</string>
+    <string name="settings_hero_colors">UltraBlur на главной</string>
+    <string name="settings_hero_colors_hint">Цвета с обложки слайдера по алгоритму UltraBlur. Выключено — обычный фон темы.</string>
+    <string name="settings_hero_page">На всю главную</string>
+    <string name="settings_hero_page_hint">Включено — UltraBlur на весь экран и нижнее меню. Выключено — только свечение вокруг слайдера, как раньше.</string>
     <string name="settings_extract_backdrop">Цвета с кадра</string>
     <string name="settings_extract_backdrop_hint">Ретушь берётся из текущего backdrop и меняется вместе с кадром. Включено — «Как в Plex» выключается.</string>
     <string name="settings_extract_plex">Как в Plex</string>

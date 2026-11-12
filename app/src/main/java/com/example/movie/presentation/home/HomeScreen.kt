@@ -2,6 +2,7 @@ package com.example.movie.presentation.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Animatable
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -35,11 +36,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.movie.presentation.settings.LocalUserSettings
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -47,13 +51,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -65,6 +69,7 @@ import com.example.movie.domain.model.Movie
 import com.example.movie.domain.model.Shelf
 import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toMovie
+import com.example.movie.presentation.detail.drawPlexWash
 import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandRow
 import com.example.movie.presentation.home.components.BrandTopInset
@@ -77,6 +82,11 @@ import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
 import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.TopScrimBrand
+import com.example.movie.presentation.common.TopScrimTail
+import com.example.movie.presentation.common.topScrimFade
+import com.example.movie.presentation.common.topScrimPalette
+import com.example.movie.presentation.palette.PosterWash
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
@@ -88,6 +98,7 @@ private data class ShelfTint(
     val chip: Color,
     val dragging: Boolean,
 )
+
 internal val CatalogGap = 36.dp
 
 @Composable
@@ -105,6 +116,7 @@ fun HomeScreen(
     onOpenSection: (HomeSection) -> Unit = {},
     onPlayResume: (String) -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
+    onHeroDock: (Color?, Color?) -> Unit = { _, _ -> },
     presentSearch: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -112,24 +124,41 @@ fun HomeScreen(
     val capsuleAnim = remember { Animatable(PlayBlue) }
     var playRequest by remember { mutableStateOf(ShelfTint(PlayBlue, PlayBlue, false)) }
     LaunchedEffect(Unit) {
-        var settle: Job? = null
-        val glide = tween<Color>(640, easing = FastOutSlowInEasing)
-        snapshotFlow { playRequest }.collect { tint ->
-            if (tint.dragging) {
-                settle?.cancel()
-                settle = null
-                playAnim.snapTo(tint.play)
-                capsuleAnim.snapTo(tint.chip)
-            } else {
-                settle?.cancel()
-                settle = launch {
-                    coroutineScope {
-                        launch { playAnim.animateTo(tint.play, glide) }
-                        launch { capsuleAnim.animateTo(tint.chip, glide) }
-                    }
+        val glide = tween<Color>(720, easing = FastOutSlowInEasing)
+        snapshotFlow { playRequest.play to playRequest.chip }
+            .distinctUntilChanged()
+            .collect { (nextPlay, nextChip) ->
+                coroutineScope {
+                    launch { playAnim.animateTo(nextPlay, glide) }
+                    launch { capsuleAnim.animateTo(nextChip, glide) }
                 }
             }
+    }
+    var heroWash by remember { mutableStateOf<PosterWash?>(null) }
+    // Кэш живёт на HomeScreen: LazyColumn уничтожает карусель при скролле вниз.
+    val heroWashes = remember { mutableStateMapOf<String, PosterWash>() }
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val pageWashOn = settings.heroPosterColors && settings.heroPosterPage
+    val playTintOn = settings.heroPosterColors
+    LaunchedEffect(settings.heroPosterColors) {
+        if (!settings.heroPosterColors) {
+            heroWash = null
+            heroWashes.clear()
+            playRequest = ShelfTint(PlayBlue, PlayBlue, false)
         }
+    }
+    val paintedWash = heroWash.takeIf { pageWashOn }
+    SideEffect {
+        val dock = heroWash.takeIf { playTintOn }
+        onHeroDock(dock?.bottomLeft, dock?.bottomRight)
+    }
+    val homeBackground = if (paintedWash != null) {
+        Modifier.drawBehind {
+            drawRect(Color(0xFF121212))
+            drawPlexWash(paintedWash, 1f)
+        }
+    } else {
+        Modifier.appBackground()
     }
     val play = playAnim.value
     val logo = remember { LogoMood() }
@@ -164,7 +193,7 @@ fun HomeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .appBackground()
+                .then(homeBackground)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             when (val phase = state.phase) {
@@ -190,7 +219,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .appBackground()
+            .then(homeBackground)
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
             ),
@@ -233,7 +262,12 @@ fun HomeScreen(
             val playBlend = remember { androidx.compose.animation.core.Animatable(0f) }
             val listState = rememberLazyListState()
             val topInset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
-            LaunchedEffect(parkDistance) {
+            LaunchedEffect(parkDistance, playTintOn) {
+                // UltraBlur: Play остаётся цветом обложки, без ухода в синий при скролле.
+                if (playTintOn) {
+                    playBlend.snapTo(0f)
+                    return@LaunchedEffect
+                }
                 snapshotFlow {
                     listState.firstVisibleItemIndex > 0 ||
                         listState.firstVisibleItemScrollOffset >= parkDistance
@@ -284,9 +318,14 @@ fun HomeScreen(
                             movies = state.movies,
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
-                            onPlayColor = { mark, chip, dragging ->
-                                val next = ShelfTint(mark, chip, dragging)
-                                if (next != playRequest) playRequest = next
+                            heroWashes = heroWashes,
+                            onHeroWash = { wash ->
+                                // null при recreate карусели не сбрасываем — иначе мелькает фон темы
+                                if (wash != null) heroWash = wash
+                            },
+                            onPlayColor = { playColor, chip, _ ->
+                                if (!playTintOn) return@PosterCarousel
+                                playRequest = ShelfTint(playColor, chip, false)
                             },
                             onSettled = logo::onSettled,
                             modifier = Modifier.fillMaxWidth(),
@@ -415,6 +454,7 @@ fun HomeScreen(
                         (listState.firstVisibleItemScrollOffset / scrimDistance).coerceIn(0f, 1f)
                     }
                 },
+                wash = heroWash.takeIf { playTintOn },
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             BrandRow(
@@ -454,24 +494,27 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BrandScrim(progress: () -> Float, modifier: Modifier = Modifier) {
+private fun BrandScrim(
+    progress: () -> Float,
+    wash: PosterWash? = null,
+    modifier: Modifier = Modifier,
+) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    val theme = topScrimPalette()
+    val washBase = wash?.let { lerp(it.topLeft, it.topRight, 0.5f) }
+    val animatedWash by animateColorAsState(
+        targetValue = washBase ?: Color.Black,
+        animationSpec = tween(720, easing = FastOutSlowInEasing),
+        label = "brandScrimWash",
+    )
+    val palette = if (washBase != null) topScrimPalette(animatedWash) else theme
     Box(
         modifier
             .fillMaxWidth()
-            .height(top + BrandTopInset + 40.dp + 96.dp)
-            .graphicsLayer { alpha = progress() }
-            .graphicsLayer()
+            .height(top + BrandTopInset + TopScrimBrand + TopScrimTail)
+            .topScrimFade(progress)
             .drawBehind {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.84f),
-                        0.44f to Color.Black.copy(alpha = 0.74f),
-                        0.64f to Color.Black.copy(alpha = 0.42f),
-                        0.86f to Color.Transparent,
-                        1f to Color.Transparent,
-                    ),
-                )
+                drawRect(brush = palette.verticalBrush())
                 val y = top.toPx() + BrandTopInset.toPx() + 20.dp.toPx()
                 val radius = 140.dp.toPx()
                 val logoWidth = 36.dp.toPx() * (754f / 186f)
@@ -481,8 +524,8 @@ private fun BrandScrim(progress: () -> Float, modifier: Modifier = Modifier) {
                     drawCircle(
                         brush = Brush.radialGradient(
                             colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.58f),
-                                0.45f to Color.Black.copy(alpha = 0.26f),
+                                0f to palette.poolCore,
+                                0.45f to palette.poolMid,
                                 1f to Color.Transparent,
                             ),
                             center = center,

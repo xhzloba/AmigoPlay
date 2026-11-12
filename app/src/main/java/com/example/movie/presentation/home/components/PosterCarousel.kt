@@ -105,10 +105,10 @@ import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
-import com.example.movie.presentation.palette.dominantColors
-import com.example.movie.presentation.palette.forGlow
+import com.example.movie.presentation.palette.PosterWash
 import com.example.movie.presentation.palette.forCapsule
 import com.example.movie.presentation.palette.forWordmark
+import com.example.movie.presentation.palette.plexWash
 import com.example.movie.ui.theme.PlayBlue
 import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.Dispatchers
@@ -134,13 +134,13 @@ private val MetaNudge = 12.dp
 private val DotsNudge = 16.dp
 private val LogoSlot = 52.dp
 
-private data class PosterPalette(val primary: Color, val secondary: Color)
-
 @Composable
-fun PosterCarousel(
+internal fun PosterCarousel(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    heroWashes: MutableMap<String, PosterWash>,
+    onHeroWash: (PosterWash?) -> Unit = {},
     onPlayColor: (Color, Color, Boolean) -> Unit = { _, _, _ -> },
     onSettled: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -158,31 +158,35 @@ fun PosterCarousel(
     )
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val posterColors = remember { mutableStateMapOf<String, PosterPalette>() }
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val tintOn = settings.heroPosterColors
-    val shownColors = if (tintOn) posterColors else emptyMap()
+    val washOn = settings.heroPosterColors
+    val sliderGlow = washOn && !settings.heroPosterPage
     val activeIndex = if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
     val playOffset = pagerState.currentPageOffsetFraction
-    val play = wordmarkPlay(
-        movies = movies,
-        activeIndex = activeIndex,
-        offset = playOffset,
-        colors = shownColors,
-    )
-    val capsule = capsuleTint(
-        movies = movies,
-        activeIndex = activeIndex,
-        offset = playOffset,
-        colors = shownColors,
-    )
+    val heroWash = if (washOn) {
+        heroWash(
+            movies = movies,
+            activeIndex = activeIndex,
+            offset = playOffset,
+            washes = heroWashes,
+        )
+    } else {
+        null
+    }
+    val scrolling = pagerState.isScrollInProgress || playOffset.absoluteValue > 0.04f
     SideEffect {
-        if (!tintOn) {
-            onPlayColor(PlayBlue, PlayBlue, false)
+        if (!washOn) {
+            onHeroWash(null)
             return@SideEffect
         }
-        val color = play ?: return@SideEffect
-        onPlayColor(color, capsule ?: color, playOffset.absoluteValue > 0.02f)
+        // Не шлём null при пустом кэше — родитель держит последний wash.
+        if (heroWash != null) onHeroWash(heroWash)
+        // Play на settle в обоих режимах UltraBlur: forWordmark от углов, не от смеси — иначе фликер.
+        if (!scrolling) {
+            val play = wordmarkPlay(movies, activeIndex, 0f, heroWashes) ?: return@SideEffect
+            val chip = capsulePlay(movies, activeIndex, 0f, heroWashes) ?: play
+            onPlayColor(play, chip, false)
+        }
     }
     val active = movies.getOrNull(activeIndex)
     val tick = rememberHapticTick()
@@ -190,9 +194,9 @@ fun PosterCarousel(
     HapticOnAppend(movies.map { it.id })
     SettleEffect(pagerState, { pagerState.isScrollInProgress }, onSettled)
 
-    LaunchedEffect(movies, tintOn) {
-        if (!tintOn || movies.isEmpty()) return@LaunchedEffect
-        val started = HashSet<String>()
+    LaunchedEffect(movies, washOn) {
+        if (!washOn || movies.isEmpty()) return@LaunchedEffect
+        val started = HashSet(heroWashes.keys)
         snapshotFlow {
             if (movies.isEmpty()) 0 else pagerState.currentPage % movies.size
         }.collect { center ->
@@ -203,8 +207,8 @@ fun PosterCarousel(
                 listOf(movie, behind).forEach { item ->
                     if (!started.add(item.id)) return@forEach
                     launch {
-                        val palette = item.extractPosterPalette(context) ?: return@launch
-                        posterColors[item.id] = palette
+                        val wash = item.extractPosterWash(context) ?: return@launch
+                        heroWashes[item.id] = wash
                     }
                 }
             }
@@ -223,23 +227,18 @@ fun PosterCarousel(
             val fittedWidth = maxWidth * CoverWidthFraction
             val cardHeight = fittedWidth * CoverAspect
             val sidePadding = ((maxWidth - fittedWidth) / 2).coerceAtLeast(0.dp)
-            val glow = posterGlowColor(
-                movies = movies,
-                activeIndex = activeIndex,
-                offset = pagerState.currentPageOffsetFraction,
-                colors = shownColors,
-            )
+            val glow = sliderGlowColor(heroWash)
             val glowReveal = remember { Animatable(0f) }
             var revealMovies by remember { mutableStateOf(movies) }
-            val glowStrength = if (revealMovies != movies) 0f else glowReveal.value
-            LaunchedEffect(movies) {
+            val glowStrength = if (!sliderGlow || revealMovies != movies) 0f else glowReveal.value
+            LaunchedEffect(movies, sliderGlow) {
                 glowReveal.snapTo(0f)
                 revealMovies = movies
-                if (movies.isEmpty()) return@LaunchedEffect
+                if (!sliderGlow || movies.isEmpty()) return@LaunchedEffect
                 snapshotFlow {
                     val index = pagerState.currentPage % movies.size
-                    posterColors[movies[index].id]?.primary?.alpha ?: 0f
-                }.first { it > 0.04f }
+                    heroWashes[movies[index].id] != null
+                }.first { it }
                 glowReveal.animateTo(1f, tween(720, easing = FastOutSlowInEasing))
             }
             Column(
@@ -247,62 +246,71 @@ fun PosterCarousel(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
             Box(contentAlignment = Alignment.Center) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(cardHeight)
-                        .drawBehind {
-                            fun feather(center: Offset, radius: Float, color: Color, mid: Float, coreAlpha: Float, midAlpha: Float) {
-                                drawCircle(
-                                    brush = Brush.radialGradient(
-                                        colorStops = arrayOf(
-                                            0f to color.copy(alpha = coreAlpha),
-                                            mid to color.copy(alpha = midAlpha),
-                                            1f to Color.Transparent,
+                if (sliderGlow) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(cardHeight)
+                            .drawBehind {
+                                fun feather(
+                                    center: Offset,
+                                    radius: Float,
+                                    color: Color,
+                                    mid: Float,
+                                    coreAlpha: Float,
+                                    midAlpha: Float,
+                                ) {
+                                    drawCircle(
+                                        brush = Brush.radialGradient(
+                                            colorStops = arrayOf(
+                                                0f to color.copy(alpha = coreAlpha),
+                                                mid to color.copy(alpha = midAlpha),
+                                                1f to Color.Transparent,
+                                            ),
+                                            center = center,
+                                            radius = radius,
                                         ),
-                                        center = center,
                                         radius = radius,
-                                    ),
-                                    radius = radius,
-                                    center = center,
+                                        center = center,
+                                    )
+                                }
+                                val leftRadius = size.width * 0.52f
+                                val rightRadius = size.width * 0.42f
+                                feather(
+                                    center = Offset(size.width * 0.28f, size.height * 0.18f),
+                                    radius = leftRadius,
+                                    color = glow.primary,
+                                    mid = 0.42f,
+                                    coreAlpha = 0.95f * glowStrength,
+                                    midAlpha = 0.5f * glowStrength,
                                 )
-                            }
-                            val leftRadius = size.width * 0.52f
-                            val rightRadius = size.width * 0.42f
-                            feather(
-                                center = Offset(size.width * 0.28f, size.height * 0.18f),
-                                radius = leftRadius,
-                                color = glow.primary,
-                                mid = 0.42f,
-                                coreAlpha = 0.95f * glowStrength,
-                                midAlpha = 0.5f * glowStrength,
-                            )
-                            feather(
-                                center = Offset(size.width * 0.72f, size.height * 0.22f),
-                                radius = rightRadius,
-                                color = glow.secondary,
-                                mid = 0.4f,
-                                coreAlpha = 0.8f * glowStrength,
-                                midAlpha = 0.38f * glowStrength,
-                            )
-                            feather(
-                                center = Offset(size.width * 0.28f, size.height * 0.82f),
-                                radius = leftRadius,
-                                color = glow.primary,
-                                mid = 0.42f,
-                                coreAlpha = 0.95f * glowStrength,
-                                midAlpha = 0.5f * glowStrength,
-                            )
-                            feather(
-                                center = Offset(size.width * 0.72f, size.height * 0.78f),
-                                radius = rightRadius,
-                                color = glow.secondary,
-                                mid = 0.4f,
-                                coreAlpha = 0.8f * glowStrength,
-                                midAlpha = 0.38f * glowStrength,
-                            )
-                        },
-                )
+                                feather(
+                                    center = Offset(size.width * 0.72f, size.height * 0.22f),
+                                    radius = rightRadius,
+                                    color = glow.secondary,
+                                    mid = 0.4f,
+                                    coreAlpha = 0.8f * glowStrength,
+                                    midAlpha = 0.38f * glowStrength,
+                                )
+                                feather(
+                                    center = Offset(size.width * 0.28f, size.height * 0.82f),
+                                    radius = leftRadius,
+                                    color = glow.primary,
+                                    mid = 0.42f,
+                                    coreAlpha = 0.95f * glowStrength,
+                                    midAlpha = 0.5f * glowStrength,
+                                )
+                                feather(
+                                    center = Offset(size.width * 0.72f, size.height * 0.78f),
+                                    radius = rightRadius,
+                                    color = glow.secondary,
+                                    mid = 0.4f,
+                                    coreAlpha = 0.8f * glowStrength,
+                                    midAlpha = 0.38f * glowStrength,
+                                )
+                            },
+                    )
+                }
                 CompositionLocalProvider(LocalOverscrollConfiguration provides OverscrollConfiguration()) {
                 HorizontalPager(
                 state = pagerState,
@@ -329,7 +337,7 @@ fun PosterCarousel(
                 val wave = remember(movie.id) { PosterWave() }
                 val shine = remember(page) { Animatable(0f) }
                 val travel = shine.value
-                val shineTint = shownColors[movie.id]?.primary ?: Color.White
+                val shineTint = Color.White
                 LaunchedEffect(active, posterReady) {
                     if (!active || !posterReady) {
                         shine.snapTo(0f)
@@ -923,57 +931,71 @@ private fun PosterPage(
     )
 }
 
-private fun capsuleTint(
-    movies: List<Movie>,
-    activeIndex: Int,
-    offset: Float,
-    colors: Map<String, PosterPalette>,
-): Color? {
-    if (movies.isEmpty()) return null
-    val current = colors[movies[activeIndex].id]?.primary?.forCapsule() ?: return null
-    val direction = if (offset >= 0f) 1 else -1
-    val neighbor = colors[movies[(activeIndex + direction).floorMod(movies.size)].id]
-        ?.primary
-        ?.forCapsule()
-        ?: current
-    return lerp(current, neighbor, offset.absoluteValue.coerceIn(0f, 1f))
+private data class SliderGlow(val primary: Color, val secondary: Color)
+
+private fun sliderGlowColor(wash: PosterWash?): SliderGlow {
+    if (wash == null) return SliderGlow(Color.Transparent, Color.Transparent)
+    return SliderGlow(
+        primary = lerp(wash.topLeft, wash.bottomLeft, 0.4f),
+        secondary = lerp(wash.topRight, wash.bottomRight, 0.4f),
+    )
 }
+
+private fun PosterWash.playInk(): Color = lerp(topLeft, bottomLeft, 0.4f)
 
 private fun wordmarkPlay(
     movies: List<Movie>,
     activeIndex: Int,
     offset: Float,
-    colors: Map<String, PosterPalette>,
+    washes: Map<String, PosterWash>,
 ): Color? {
     if (movies.isEmpty()) return null
-    val current = colors[movies[activeIndex].id]?.primary?.forWordmark() ?: return null
+    val current = washes[movies[activeIndex].id]?.playInk()?.forWordmark() ?: return null
     val direction = if (offset >= 0f) 1 else -1
-    val neighbor = colors[movies[(activeIndex + direction).floorMod(movies.size)].id]
-        ?.primary
+    val neighbor = washes[movies[(activeIndex + direction).floorMod(movies.size)].id]
+        ?.playInk()
         ?.forWordmark()
         ?: current
     return lerp(current, neighbor, offset.absoluteValue.coerceIn(0f, 1f))
 }
 
-private fun posterGlowColor(
+private fun capsulePlay(
     movies: List<Movie>,
     activeIndex: Int,
     offset: Float,
-    colors: Map<String, PosterPalette>,
-): PosterPalette {
-    val empty = PosterPalette(Color.Transparent, Color.Transparent)
-    if (movies.isEmpty()) return empty
-    val current = colors[movies[activeIndex].id] ?: return empty
+    washes: Map<String, PosterWash>,
+): Color? {
+    if (movies.isEmpty()) return null
+    val current = washes[movies[activeIndex].id]?.playInk()?.forCapsule() ?: return null
     val direction = if (offset >= 0f) 1 else -1
-    val neighbor = colors[movies[(activeIndex + direction).floorMod(movies.size)].id] ?: current
+    val neighbor = washes[movies[(activeIndex + direction).floorMod(movies.size)].id]
+        ?.playInk()
+        ?.forCapsule()
+        ?: current
+    return lerp(current, neighbor, offset.absoluteValue.coerceIn(0f, 1f))
+}
+
+private fun heroWash(
+    movies: List<Movie>,
+    activeIndex: Int,
+    offset: Float,
+    washes: Map<String, PosterWash>,
+): PosterWash? {
+    if (movies.isEmpty()) return null
+    val current = washes[movies[activeIndex].id] ?: return null
+    val direction = if (offset >= 0f) 1 else -1
+    val neighbor = washes[movies[(activeIndex + direction).floorMod(movies.size)].id] ?: current
     val fraction = offset.absoluteValue.coerceIn(0f, 1f)
-    return PosterPalette(
-        primary = lerp(current.primary, neighbor.primary, fraction),
-        secondary = lerp(current.secondary, neighbor.secondary, fraction),
+    if (fraction <= 0.001f) return current
+    return PosterWash(
+        topLeft = lerp(current.topLeft, neighbor.topLeft, fraction),
+        topRight = lerp(current.topRight, neighbor.topRight, fraction),
+        bottomRight = lerp(current.bottomRight, neighbor.bottomRight, fraction),
+        bottomLeft = lerp(current.bottomLeft, neighbor.bottomLeft, fraction),
     )
 }
 
-private suspend fun Movie.extractPosterPalette(context: android.content.Context): PosterPalette? {
+private suspend fun Movie.extractPosterWash(context: android.content.Context): PosterWash? {
     val url = posterUrl ?: backdropUrl ?: return null
     val result = context.imageLoader.execute(
         ImageRequest.Builder(context)
@@ -988,9 +1010,9 @@ private suspend fun Movie.extractPosterPalette(context: android.content.Context)
     } else {
         source
     }
-    val colors = withContext(Dispatchers.Default) { bitmap.dominantColors { it.forGlow() } }
+    val wash = withContext(Dispatchers.Default) { bitmap.plexWash() }
     if (bitmap !== source) bitmap.recycle()
-    return colors?.let { PosterPalette(it.primary, it.secondary) }
+    return wash
 }
 
 private fun Int.floorMod(mod: Int): Int {

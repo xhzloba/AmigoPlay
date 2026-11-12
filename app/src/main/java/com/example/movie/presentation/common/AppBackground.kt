@@ -6,13 +6,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.ui.theme.CinemaBlack
@@ -118,4 +125,60 @@ internal fun Modifier.appBackground(): Modifier {
 internal fun appChrome(): Color {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     return if (settings.appTheme == THEME_GRAPHITE) Color(0xFF12141A) else CinemaBlack
+}
+
+/** Как у cinema-scrim: строка бренда + хвост. */
+internal val TopScrimBrand = 40.dp
+internal val TopScrimTail = 96.dp
+
+/** Цвета затемнения шапки (AmigoPlay / back / меню) при скролле. */
+internal data class TopScrimPalette(
+    val top: Color,
+    val mid: Color,
+    val low: Color,
+    val poolCore: Color,
+    val poolMid: Color,
+    val blur: Dp = 0.dp,
+) {
+    /** Та же кривая, что у «Как сейчас» — только base-цвет другой. */
+    fun verticalBrush(): Brush = Brush.verticalGradient(
+        0f to top,
+        0.44f to mid,
+        0.64f to low,
+        0.86f to Color.Transparent,
+        1f to Color.Transparent,
+    )
+}
+
+/** Те же альфы cinema-scrim, любой base (UltraBlur / тема). */
+internal fun topScrimPalette(base: Color): TopScrimPalette = TopScrimPalette(
+    top = base.copy(alpha = 0.84f),
+    mid = base.copy(alpha = 0.74f),
+    low = base.copy(alpha = 0.42f),
+    poolCore = base.copy(alpha = 0.58f),
+    poolMid = base.copy(alpha = 0.26f),
+)
+
+@Composable
+internal fun topScrimPalette(): TopScrimPalette {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    // Те же альфы, что cinema; graphite = тот же scrim, цвет GraphiteTopLeft.
+    val base = if (settings.appTheme == THEME_GRAPHITE) GraphiteTopLeft else Color.Black
+    return topScrimPalette(base)
+}
+
+@Composable
+internal fun Modifier.topScrimFade(progress: Float): Modifier = topScrimFade { progress }
+
+@Composable
+internal fun Modifier.topScrimFade(progress: () -> Float): Modifier {
+    val blurPx = with(LocalDensity.current) { topScrimPalette().blur.toPx() }
+    return graphicsLayer {
+        alpha = progress()
+        renderEffect = if (blurPx > 0f) {
+            BlurEffect(blurPx, blurPx, TileMode.Clamp)
+        } else {
+            null
+        }
+    }
 }

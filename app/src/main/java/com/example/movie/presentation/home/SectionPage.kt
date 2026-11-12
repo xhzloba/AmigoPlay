@@ -81,6 +81,10 @@ import com.example.movie.presentation.home.posterWave
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.TopScrimBrand
+import com.example.movie.presentation.common.TopScrimTail
+import com.example.movie.presentation.common.topScrimFade
+import com.example.movie.presentation.common.topScrimPalette
 import com.example.movie.ui.theme.PosterShape
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -330,21 +334,14 @@ internal fun PosterGrid(
 @Composable
 internal fun SectionScrim(progress: Float, modifier: Modifier = Modifier) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    val palette = topScrimPalette()
     Box(
         modifier
             .fillMaxWidth()
-            .height(top + BrandTopInset + 40.dp + 96.dp)
-            .graphicsLayer { alpha = progress }
+            .height(top + BrandTopInset + TopScrimBrand + TopScrimTail)
+            .topScrimFade(progress)
             .drawBehind {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.84f),
-                        0.44f to Color.Black.copy(alpha = 0.74f),
-                        0.64f to Color.Black.copy(alpha = 0.42f),
-                        0.86f to Color.Transparent,
-                        1f to Color.Transparent,
-                    ),
-                )
+                drawRect(brush = palette.verticalBrush())
                 val y = top.toPx() + BrandTopInset.toPx() + 18.dp.toPx()
                 val radius = 140.dp.toPx()
                 val backX = PosterGridInset.toPx() + 4.dp.toPx()
@@ -352,8 +349,8 @@ internal fun SectionScrim(progress: Float, modifier: Modifier = Modifier) {
                     drawCircle(
                         brush = Brush.radialGradient(
                             colorStops = arrayOf(
-                                0f to Color.Black.copy(alpha = 0.58f),
-                                0.45f to Color.Black.copy(alpha = 0.26f),
+                                0f to palette.poolCore,
+                                0.45f to palette.poolMid,
                                 1f to Color.Transparent,
                             ),
                             center = center,
