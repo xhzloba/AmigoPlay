@@ -144,9 +144,6 @@ internal fun FranchiseBlock(
         OpenTitle(
             title = stringResource(if (franchise.series) R.string.franchise_about_series else R.string.franchise_about),
             onOpen = onOpenAbout,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            fontWeight = FontWeight.Normal,
         )
         Spacer(Modifier.height(12.dp))
         val status = franchise.serialStatus
