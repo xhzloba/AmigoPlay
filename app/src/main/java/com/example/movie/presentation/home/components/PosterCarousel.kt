@@ -128,10 +128,10 @@ private const val NeighborScale = 0.84f
 private const val NeighborShift = 0.5f
 private const val DotWindow = 5
 private val ReflectionHeight = 104.dp
-private val CaptionLift = 48.dp
-private val LogoNudge = 20.dp
-private val MetaNudge = 12.dp
-private val DotsNudge = 16.dp
+private val CaptionLift = 58.dp
+private val LogoNudge = 22.dp
+private val MetaNudge = 14.dp
+private val DotsNudge = 18.dp
 private val LogoSlot = 52.dp
 
 @Composable
@@ -425,9 +425,9 @@ internal fun PosterCarousel(
             )
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         MovieCaption(movie = active)
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(12.dp))
         PagerDots(
             count = movies.size,
             activeIndex = activeIndex,
@@ -547,7 +547,7 @@ private fun MovieCaption(movie: Movie?) {
                 )
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Box(
             modifier = Modifier
                 .height(20.dp)
@@ -759,7 +759,7 @@ internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
                 SkeletonCard(cardWidth, cardHeight, shift = 0f, scale = 1f, pulse = pulse, z = 1f, solid = true)
             }
         }
-        Spacer(Modifier.height(ReflectionHeight + 8.dp - CaptionLift))
+        Spacer(Modifier.height(ReflectionHeight + 6.dp - CaptionLift))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -775,7 +775,7 @@ internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
                     .background(Color.White.copy(alpha = pulse)),
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Box(
             modifier = Modifier
                 .offset(y = -MetaNudge)
@@ -784,7 +784,7 @@ internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
                 .clip(RoundedCornerShape(6.dp))
                 .background(Color.White.copy(alpha = pulse)),
         )
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(12.dp))
         Row(
             modifier = Modifier.offset(y = -DotsNudge),
             horizontalArrangement = Arrangement.spacedBy(4.dp),

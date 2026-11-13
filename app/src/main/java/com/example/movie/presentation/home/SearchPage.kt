@@ -2,12 +2,7 @@
 
 package com.example.movie.presentation.home
 
-import android.app.Activity
-import android.content.Intent
-import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.OverscrollConfiguration
@@ -69,7 +64,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -141,20 +135,9 @@ internal fun SearchPage(
 ) {
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    val context = LocalContext.current
     val tick = rememberHapticTick()
     val voicePrompt = stringResource(R.string.search_voice)
-    var listening by remember { mutableStateOf(false) }
-    val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        listening = false
-        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
-        val spoken = result.data
-            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            ?.firstOrNull()
-            ?.trim()
-            .orEmpty()
-        if (spoken.isNotEmpty()) onQuery(spoken)
-    }
+    val voice = rememberVoiceDictation(onResult = onQuery)
     LaunchedEffect(Unit) { focus.requestFocus() }
     BackHandler(onBack = onClose)
     Column(
@@ -245,7 +228,7 @@ internal fun SearchPage(
                         Icon(
                             imageVector = ShellIcons.mic,
                             contentDescription = voicePrompt,
-                            tint = if (listening) PlayBlue else CinemaMuted,
+                            tint = if (voice.listening) PlayBlue else CinemaMuted,
                             modifier = Modifier
                                 .size(34.dp)
                                 .clickable(
@@ -254,17 +237,7 @@ internal fun SearchPage(
                                     onClick = {
                                         tick?.invoke()
                                         keyboard?.hide()
-                                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                            putExtra(
-                                                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                                                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-                                            )
-                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU")
-                                            putExtra(RecognizerIntent.EXTRA_PROMPT, voicePrompt)
-                                        }
-                                        listening = true
-                                        runCatching { voice.launch(intent) }
-                                            .onFailure { listening = false }
+                                        voice.toggle()
                                     },
                                 )
                                 .padding(7.dp),

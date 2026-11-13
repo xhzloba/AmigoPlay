@@ -34,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -331,7 +332,7 @@ private fun AboutPage(modifier: Modifier = Modifier) {
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = stringResource(R.string.settings_version),
+            text = stringResource(R.string.settings_version_current),
             modifier = Modifier.padding(horizontal = PosterGridInset),
             color = CinemaMuted,
             fontSize = 13.sp,
@@ -352,15 +353,6 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                 lineHeight = 38.sp,
                 letterSpacing = (-0.6).sp,
             )
-            if (updates.checked && updates.release == null) {
-                Text(
-                    text = stringResource(R.string.update_current),
-                    modifier = Modifier.padding(start = 12.dp),
-                    color = CinemaMuted,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                )
-            }
             Spacer(Modifier.weight(1f))
             Text(
                 text = stringResource(R.string.settings_about_description),
@@ -391,14 +383,11 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                 },
             )
         }
-        Text(
-            text = if (updates.checking) {
-                stringResource(R.string.update_checking)
-            } else {
-                stringResource(R.string.update_check)
-            },
+        Row(
             modifier = Modifier
                 .padding(start = PosterGridInset, end = PosterGridInset, top = if (offer != null) 14.dp else 18.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -407,22 +396,57 @@ private fun AboutPage(modifier: Modifier = Modifier) {
                         tick?.invoke()
                         updates.refresh(present = true)
                     },
-                ),
-            color = if (updates.checking) CinemaMuted else VersionBlue,
-            fontWeight = FontWeight.Medium,
-            fontSize = 15.sp,
-            lineHeight = 22.sp,
-        )
-        when (updates.notice) {
-            UpdateNotice.Current -> NoticeLine(
-                text = stringResource(R.string.update_current_notice),
-                color = CinemaMuted,
+                )
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.update_check),
+                color = Color.Black,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
             )
-            UpdateNotice.Failed -> NoticeLine(
-                text = stringResource(R.string.update_check_failed),
-                color = Color(0xFFE7B3B3),
-            )
-            null -> Unit
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier.size(14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (updates.checking) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        color = Color.Black,
+                        strokeWidth = 1.6.dp,
+                    )
+                }
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = PosterGridInset, end = PosterGridInset, top = 8.dp)
+                .height(18.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            val noticeText = when (updates.notice) {
+                UpdateNotice.Current -> stringResource(R.string.update_current_notice)
+                UpdateNotice.Failed -> stringResource(R.string.update_check_failed)
+                null -> null
+            }
+            if (noticeText != null) {
+                Text(
+                    text = noticeText,
+                    color = if (updates.notice == UpdateNotice.Failed) {
+                        Color(0xFFE7B3B3)
+                    } else {
+                        CinemaMuted
+                    },
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         Spacer(Modifier.height(28.dp))
         Changelog.releases.firstOrNull()?.let { release ->
@@ -489,17 +513,6 @@ private fun FeaturesSheet(onDismiss: () -> Unit) {
             }
         }
     }
-}
-
-@Composable
-private fun NoticeLine(text: String, color: Color) {
-    Text(
-        text = text,
-        modifier = Modifier.padding(start = PosterGridInset, end = PosterGridInset, top = 8.dp),
-        color = color,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-    )
 }
 
 @Composable

@@ -248,6 +248,11 @@
     <string name="search_clear_query">Очистить запрос</string>
     <string name="search_close">Закрыть поиск</string>
     <string name="search_voice">Голосовой поиск</string>
+    <string name="search_voice_unavailable">Голосовой ввод недоступен на устройстве</string>
+    <string name="search_voice_permission">Нужен доступ к микрофону</string>
+    <string name="search_voice_failed">Не удалось распознать речь</string>
+    <string name="search_voice_no_match">Речь не распознана</string>
+    <string name="search_voice_network">Нужен интернет для голосового ввода</string>
     <string name="nav_home">Главная</string>
     <string name="nav_catalog">Каталог</string>
     <string name="nav_favorites">Мое</string>
@@ -313,6 +318,7 @@
     <string name="settings_about_description">Описание</string>
     <string name="settings_about_features">Возможности</string>
     <string name="settings_version">Версия</string>
+    <string name="settings_version_current">Актуальная версия</string>
     <string name="update_current">Актуальная</string>
     <string name="update_current_notice">Установлена актуальная версия</string>
     <string name="update_available">Доступно обновление</string>
