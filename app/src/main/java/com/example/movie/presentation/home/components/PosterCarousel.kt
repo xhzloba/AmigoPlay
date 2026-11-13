@@ -132,6 +132,13 @@ private val CaptionLift = 58.dp
 private val LogoNudge = 22.dp
 private val MetaNudge = 14.dp
 private val DotsNudge = 18.dp
+private val DotsHeight = 12.dp
+/**
+ * После точек до полки. DotsNudge поднимает точки в слот над ними;
+ * слот DotsHeight остаётся в колонке → визуал ≈ 30+AfterDotsGap (~38.dp),
+ * чуть больше чипсы→герой (~29.dp).
+ */
+private val AfterDotsGap = 8.dp
 private val LogoSlot = 52.dp
 
 @Composable
@@ -438,6 +445,7 @@ internal fun PosterCarousel(
                 scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + delta) }
             },
         )
+        Spacer(Modifier.height(AfterDotsGap))
     }
 }
 
@@ -463,7 +471,7 @@ private fun PagerDots(
             modifier = Modifier
                 .offset(y = -DotsNudge)
                 .width(stride * window - 4.dp)
-                .height(12.dp)
+                .height(DotsHeight)
                 .clipToBounds(),
         ) {
             Row(

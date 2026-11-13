@@ -95,6 +95,8 @@ import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
 private val HomeBottomClearance = 96.dp
+/** Между полками и вокруг главного слайдера (до карусели и после точек). */
+private val HomeRailGap = 24.dp
 private const val HistoryRailSize = 15
 
 private data class ShelfTint(
@@ -322,11 +324,12 @@ fun HomeScreen(
                         showBrand = false,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(HomeRailGap))
                 }
                 item(key = "hero") {
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
                         PosterSkeleton(Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(HomeRailGap))
                     } else {
                         PosterCarousel(
                             movies = state.movies,
@@ -346,12 +349,31 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (
-                    settings.homeRailVisible(HomeRails.Recommendations) &&
+                val showRecommendations = settings.homeRailVisible(HomeRails.Recommendations) &&
                     (!state.recommendationsReady || state.recommendations.isNotEmpty())
-                ) {
+                val showHistory = settings.homeRailVisible(HomeRails.History) && state.history.isNotEmpty()
+                val showContinue = settings.homeRailVisible(HomeRails.Continue) && state.resume.isNotEmpty()
+                val showFavorites = settings.homeRailVisible(HomeRails.Favorites) && state.favorites.isNotEmpty()
+                val showWatched = settings.homeRailVisible(HomeRails.Watched) && state.watched.isNotEmpty()
+                val showWatching = settings.homeRailVisible(HomeRails.Watching) &&
+                    (!state.watchingReady || state.watching.isNotEmpty())
+                val showBest = settings.homeRailVisible(HomeRails.Best) &&
+                    (!state.bestReady || state.best.isNotEmpty())
+                // После героя зазор уже в карусели; между полками — HomeRailGap.
+                val railBeforePlaque = showRecommendations || showHistory || showContinue ||
+                    showFavorites || showWatched || showWatching || showBest
+                val firstRail = when {
+                    showRecommendations -> "recommendations"
+                    showHistory -> "history"
+                    showContinue -> "continue"
+                    showFavorites -> "favorites"
+                    showWatched -> "watched"
+                    showWatching -> "watching"
+                    showBest -> "best"
+                    else -> null
+                }
+                if (showRecommendations) {
                     item(key = "recommendations") {
-                        Spacer(Modifier.height(24.dp))
                         RecommendationRail(
                             movies = state.recommendations,
                             onMovieClick = onMovieClick,
@@ -363,9 +385,9 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (settings.homeRailVisible(HomeRails.History) && state.history.isNotEmpty()) {
+                if (showHistory) {
                     item(key = "history") {
-                        Spacer(Modifier.height(24.dp))
+                        if (firstRail != "history") Spacer(Modifier.height(HomeRailGap))
                         RecommendationRail(
                             movies = state.history.take(HistoryRailSize),
                             onMovieClick = onMovieClick,
@@ -379,9 +401,9 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (settings.homeRailVisible(HomeRails.Continue) && state.resume.isNotEmpty()) {
+                if (showContinue) {
                     item(key = "continue") {
-                        Spacer(Modifier.height(24.dp))
+                        if (firstRail != "continue") Spacer(Modifier.height(HomeRailGap))
                         val rail = state.resume.take(HistoryRailSize)
                         RecommendationRail(
                             movies = rail.map { it.toMovie() },
@@ -398,9 +420,9 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (settings.homeRailVisible(HomeRails.Favorites) && state.favorites.isNotEmpty()) {
+                if (showFavorites) {
                     item(key = "favorites") {
-                        Spacer(Modifier.height(24.dp))
+                        if (firstRail != "favorites") Spacer(Modifier.height(HomeRailGap))
                         RecommendationRail(
                             movies = state.favorites.take(HistoryRailSize),
                             onMovieClick = onMovieClick,
@@ -418,9 +440,9 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (settings.homeRailVisible(HomeRails.Watched) && state.watched.isNotEmpty()) {
+                if (showWatched) {
                     item(key = "watched") {
-                        Spacer(Modifier.height(24.dp))
+                        if (firstRail != "watched") Spacer(Modifier.height(HomeRailGap))
                         RecommendationRail(
                             movies = state.watched.take(HistoryRailSize),
                             onMovieClick = onMovieClick,
@@ -437,12 +459,9 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (
-                    settings.homeRailVisible(HomeRails.Watching) &&
-                    (!state.watchingReady || state.watching.isNotEmpty())
-                ) {
+                if (showWatching) {
                     item(key = "watching") {
-                        Spacer(Modifier.height(CatalogGap))
+                        if (firstRail != "watching") Spacer(Modifier.height(HomeRailGap))
                         RecommendationRail(
                             movies = state.watching,
                             onMovieClick = onMovieClick,
@@ -454,12 +473,9 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (
-                    settings.homeRailVisible(HomeRails.Best) &&
-                    (!state.bestReady || state.best.isNotEmpty())
-                ) {
+                if (showBest) {
                     item(key = "best") {
-                        Spacer(Modifier.height(CatalogGap))
+                        if (firstRail != "best") Spacer(Modifier.height(HomeRailGap))
                         RecommendationRail(
                             movies = state.best,
                             onMovieClick = onMovieClick,
@@ -472,7 +488,7 @@ fun HomeScreen(
                     }
                 }
                 item(key = "rails_look") {
-                    Spacer(Modifier.height(28.dp))
+                    if (railBeforePlaque) Spacer(Modifier.height(HomeRailGap))
                     HomeRailsLookPlaque(
                         onOpen = { railsLookOpen = true },
                         modifier = Modifier.fillMaxWidth(),
