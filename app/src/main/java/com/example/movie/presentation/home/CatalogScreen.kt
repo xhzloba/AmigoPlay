@@ -83,6 +83,7 @@ fun CatalogScreen(
     onSearch: () -> Unit,
     onAlerts: () -> Unit,
     onGenres: (type: String) -> Unit,
+    onOpenGenre: (type: String, genre: String) -> Unit,
     onOpenShelf: (type: String, sort: String) -> Unit,
     onHideBar: (Boolean) -> Unit = {},
     active: Boolean = false,
@@ -152,6 +153,18 @@ fun CatalogScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                 }
+                val hasWatching = rails.any { it.sort == CatalogSort.Watching }
+                if (!hasWatching) {
+                    item(key = "genres") {
+                        CatalogGenreChips(
+                            type = tab.type,
+                            onOpenAll = { onGenres(tab.type) },
+                            onGenre = { onOpenGenre(tab.type, it) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(CatalogGap))
+                    }
+                }
                 items(
                     count = rails.size,
                     key = { index -> rails[index].sort.name },
@@ -166,6 +179,15 @@ fun CatalogScreen(
                         onOpen = { onOpenShelf(tab.type, rail.sort.sort) },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    if (rail.sort == CatalogSort.Watching) {
+                        Spacer(Modifier.height(CatalogGap))
+                        CatalogGenreChips(
+                            type = tab.type,
+                            onOpenAll = { onGenres(tab.type) },
+                            onGenre = { onOpenGenre(tab.type, it) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
             CatalogScrim(

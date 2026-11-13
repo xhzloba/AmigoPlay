@@ -145,7 +145,7 @@ internal fun FranchiseBlock(
             title = stringResource(if (franchise.series) R.string.franchise_about_series else R.string.franchise_about),
             onOpen = onOpenAbout,
         )
-        Spacer(Modifier.height(12.dp))
+        // Как у «Актёры»: 12.dp до контента даёт сам padding первой InfoLine.
         val status = franchise.serialStatus
         if (franchise.series && !status.isNullOrBlank()) {
             val finished = status.equals("offline", ignoreCase = true)
@@ -193,7 +193,7 @@ internal fun FranchiseBlock(
             countries = franchise.countries.ifEmpty {
                 parseCountries(detail.country)
             },
-            previewLimit = 3,
+            previewLimit = 2,
         )
         InfoLine(stringResource(R.string.franchise_premiere), franchise.premiere.asDate())
         franchise.slogan?.let { InfoLine(stringResource(R.string.franchise_slogan), "«$it»") }
@@ -297,7 +297,7 @@ private fun previewInfoValue(value: String, limit: Int = InfoPreviewLimit): Stri
 private fun CountryInfoLine(
     label: String,
     countries: List<String>,
-    previewLimit: Int = 3,
+    previewLimit: Int = 2,
 ) {
     val names = countries.filter { it.isNotBlank() && it != "—" }
     val shown = if (names.size > previewLimit) names.take(previewLimit) else names
@@ -585,8 +585,8 @@ private fun Facts(facts: List<String>, onOpen: () -> Unit) {
             Text(
                 text = fact,
                 color = Color(0xFFC7C7CC),
-                fontSize = 15.sp,
-                lineHeight = 21.sp,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier

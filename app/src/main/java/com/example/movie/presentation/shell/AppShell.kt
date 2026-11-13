@@ -433,6 +433,13 @@ fun AppShell(
                         onSearch = homeViewModel::openSearch,
                         onAlerts = openAlerts,
                         onGenres = { genresType = it },
+                        onOpenGenre = { type, genre ->
+                            catalogListKey = if (genre == GenreAll) {
+                                "$type:popular"
+                            } else {
+                                "$type:g:$genre"
+                            }
+                        },
                         onOpenShelf = { type, sort -> catalogListKey = "$type:$sort" },
                         onHideBar = { barHidden = it },
                         active = tab == AppTab.Catalog,
@@ -456,6 +463,7 @@ fun AppShell(
         }
         if (genresShown) {
             CatalogGenresPage(
+                type = genresHold.orEmpty(),
                 onBack = { genresType = null },
                 onGenre = { name ->
                     val type = genresHold ?: return@CatalogGenresPage

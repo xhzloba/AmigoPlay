@@ -1,11 +1,14 @@
 package com.example.movie.presentation.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
@@ -17,6 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -36,16 +42,23 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
+import com.example.movie.presentation.common.THEME_GRAPHITE
+import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
+import com.example.movie.presentation.home.components.RailTitle
+import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.presentation.shell.ShellIcons
-import com.example.movie.presentation.common.appBackground
+import java.util.Locale
 
 internal const val GenreAll = "Все"
 
@@ -82,14 +95,99 @@ internal val CatalogGenres = listOf(
     "ток-шоу",
 )
 
+/** В «Фильмы» аниме не показываем — у него своя вкладка. */
+internal fun catalogGenresFor(type: String): List<String> =
+    if (type == "movie") CatalogGenres.filter { it != "аниме" } else CatalogGenres
+
+private val GenreChipShape = RoundedCornerShape(14.dp)
+private val GenreChipCinema = Color.White.copy(alpha = 0.08f)
+private val GenreChipGraphite = Color(0xFF2A2E38)
+private val GenreChipBorderCinema = Color.White.copy(alpha = 0.06f)
+private val GenreChipBorderGraphite = Color.White.copy(alpha = 0.10f)
+
+@Composable
+internal fun CatalogGenreChips(
+    type: String,
+    onOpenAll: () -> Unit,
+    onGenre: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val graphite = settings.appTheme == THEME_GRAPHITE
+    val fill = if (graphite) GenreChipGraphite else GenreChipCinema
+    val stroke = if (graphite) GenreChipBorderGraphite else GenreChipBorderCinema
+    val genres = remember(type) { catalogGenresFor(type).filter { it != GenreAll } }
+    val row = rememberLazyListState()
+    HapticOnChange(row) { row.firstVisibleItemIndex }
+    Column(modifier.fillMaxWidth()) {
+        RailTitle(
+            title = stringResource(R.string.catalog_genres),
+            onClick = onOpenAll,
+            leadingIcon = ShellIcons.genres,
+        )
+        Spacer(Modifier.height(10.dp))
+        LazyRow(
+            state = row,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = PosterGridInset),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(genres, key = { it }) { name ->
+                GenreChip(
+                    name = name,
+                    fill = fill,
+                    stroke = stroke,
+                    onClick = { onGenre(name) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreChip(
+    name: String,
+    fill: Color,
+    stroke: Color,
+    onClick: () -> Unit,
+) {
+    val tick = rememberHapticTick()
+    Text(
+        text = name.replaceFirstChar { ch ->
+            if (ch.isLowerCase()) ch.titlecase(Locale("ru")) else ch.toString()
+        },
+        color = Color.White.copy(alpha = 0.92f),
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier
+            .clip(GenreChipShape)
+            .background(fill)
+            .border(0.5.dp, stroke, GenreChipShape)
+            .clickable(
+                interactionSource = remember(name) { MutableInteractionSource() },
+                indication = null,
+                onClick = {
+                    tick?.invoke()
+                    onClick()
+                },
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
+}
+
 @Composable
 internal fun CatalogGenresPage(
+    type: String,
     onBack: () -> Unit,
     onGenre: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val header = top + BrandTopInset + 36.dp + 18.dp
+    val genres = remember(type) { catalogGenresFor(type) }
     val grid = rememberLazyGridState()
     val density = LocalDensity.current
     val scrim = if (grid.firstVisibleItemIndex > 0) {
@@ -121,7 +219,7 @@ internal fun CatalogGenresPage(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
-            items(CatalogGenres, key = { it }) { name ->
+            items(genres, key = { it }) { name ->
                 GenreTile(name = name, onClick = { onGenre(name) })
             }
         }
