@@ -352,6 +352,7 @@ fun AppShell(
                         homeDockLeft = left
                         homeDockRight = right
                     },
+                    onHideBar = { barHidden = it },
                     onOpenAlerts = openAlerts,
                     presentSearch = tab == AppTab.Home,
                     session = session,
@@ -433,6 +434,7 @@ fun AppShell(
                         onAlerts = openAlerts,
                         onGenres = { genresType = it },
                         onOpenShelf = { type, sort -> catalogListKey = "$type:$sort" },
+                        onHideBar = { barHidden = it },
                         active = tab == AppTab.Catalog,
                     )
                 }
@@ -509,10 +511,9 @@ fun AppShell(
         }
         val searchDim = if (tab == AppTab.Catalog) searchVeil.value else searchCover
         val barAlpha = (1f - searchDim) * (1f - genresAlpha) * (1f - alertsVeil.value)
-        val listOpen = sectionShown != null || listShown != null
-        LaunchedEffect(sectionShown, listShown) { barHidden = false }
+        LaunchedEffect(tab, sectionShown, listShown) { barHidden = false }
         val hide by animateFloatAsState(
-            targetValue = if (barHidden && listOpen) 1f else 0f,
+            targetValue = if (barHidden) 1f else 0f,
             animationSpec = tween(220),
             label = "barHide",
         )

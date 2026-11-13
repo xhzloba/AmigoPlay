@@ -65,6 +65,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setWhiteTitles(enabled: Boolean) = write { it.copy(whiteTitles = enabled) }
 
+    override fun setHideBottomBarOnScroll(enabled: Boolean) = write { it.copy(hideBottomBarOnScroll = enabled) }
+
     override fun setAppTheme(theme: String) = write {
         it.copy(appTheme = if (theme == "graphite") "graphite" else "cinema")
     }
@@ -94,6 +96,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_PLAYER_HDR, next.playerHdr)
             .putBoolean(KEY_WATCHED_BADGE, next.watchedBadge)
             .putBoolean(KEY_WHITE_TITLES, next.whiteTitles)
+            .putBoolean(KEY_HIDE_BAR, next.hideBottomBarOnScroll)
             .putString(KEY_THEME, next.appTheme)
             .commit()
         state.value = next
@@ -157,6 +160,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         playerHdr = prefs.getBoolean(KEY_PLAYER_HDR, true),
         watchedBadge = prefs.getBoolean(KEY_WATCHED_BADGE, true),
         whiteTitles = prefs.getBoolean(KEY_WHITE_TITLES, true),
+        hideBottomBarOnScroll = prefs.getBoolean(KEY_HIDE_BAR, true),
         appTheme = prefs.getString(KEY_THEME, "cinema") ?: "cinema",
         )
     }
@@ -188,6 +192,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_PLAYER_HDR = "player_hdr"
         const val KEY_WATCHED_BADGE = "watched_badge"
         const val KEY_WHITE_TITLES = "white_titles"
+        const val KEY_HIDE_BAR = "hide_bottom_bar_scroll"
         const val KEY_THEME = "app_theme"
     }
 }

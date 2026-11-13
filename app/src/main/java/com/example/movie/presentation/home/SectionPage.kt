@@ -56,7 +56,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.movie.R
+import com.example.movie.presentation.common.HideBarOnScroll
 import com.example.movie.presentation.common.PosterImage
+import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
@@ -148,22 +150,14 @@ internal fun SectionPage(
 ) {
     val grid = rememberLazyGridState()
     val density = LocalDensity.current
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val pageBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 88.dp
-    LaunchedEffect(grid) {
-        var anchorIndex = 0
-        var anchorOffset = 0
-        snapshotFlow { grid.firstVisibleItemIndex to grid.firstVisibleItemScrollOffset }
-            .collect { (index, offset) ->
-                val delta = if (index != anchorIndex) (index - anchorIndex) * 240 else offset - anchorOffset
-                val atTop = index == 0 && offset <= 4
-                if (atTop || kotlin.math.abs(delta) > 28) {
-                    onHideBar(!atTop && delta > 0)
-                    anchorIndex = index
-                    anchorOffset = offset
-                }
-            }
-    }
+    HideBarOnScroll(
+        enabled = settings.hideBottomBarOnScroll,
+        gridState = grid,
+        onHideBar = onHideBar,
+    )
     val header = top + BrandTopInset + 36.dp + 18.dp
     val scrim = if (grid.firstVisibleItemIndex > 0) {
         1f

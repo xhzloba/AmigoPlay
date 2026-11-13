@@ -111,6 +111,7 @@ fun SettingsRoute() {
         onWatchedBadge = repository::setWatchedBadge,
         onShowPosterTitles = repository::setShowPosterTitles,
         onWhiteTitles = repository::setWhiteTitles,
+        onHideBottomBarOnScroll = repository::setHideBottomBarOnScroll,
         onLargePosters = repository::setLargePosters,
         onAutoBackdrop = repository::setAutoBackdrop,
         onWatchGlow = repository::setWatchGlow,
@@ -131,6 +132,7 @@ private fun SettingsScreen(
     onWatchedBadge: (Boolean) -> Unit,
     onShowPosterTitles: (Boolean) -> Unit,
     onWhiteTitles: (Boolean) -> Unit,
+    onHideBottomBarOnScroll: (Boolean) -> Unit,
     onLargePosters: (Boolean) -> Unit,
     onAutoBackdrop: (Boolean) -> Unit,
     onWatchGlow: (Boolean) -> Unit,
@@ -191,6 +193,19 @@ private fun SettingsScreen(
                             hint = stringResource(R.string.settings_watched_badge_hint),
                             checked = settings.watchedBadge,
                             onChecked = onWatchedBadge,
+                        ),
+                    ),
+                )
+                Spacer(Modifier.height(22.dp))
+                SettingGroup(
+                    title = stringResource(R.string.settings_group_navigation),
+                    accent = PosterBlue,
+                    items = listOf(
+                        SettingItem(
+                            title = stringResource(R.string.settings_hide_bar_scroll),
+                            hint = stringResource(R.string.settings_hide_bar_scroll_hint),
+                            checked = settings.hideBottomBarOnScroll,
+                            onChecked = onHideBottomBarOnScroll,
                         ),
                     ),
                 )

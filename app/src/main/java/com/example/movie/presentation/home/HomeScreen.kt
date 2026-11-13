@@ -81,6 +81,7 @@ import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
+import com.example.movie.presentation.common.HideBarOnScroll
 import com.example.movie.presentation.common.appBackground
 import com.example.movie.presentation.common.TopScrimBrand
 import com.example.movie.presentation.common.TopScrimTail
@@ -119,6 +120,7 @@ fun HomeScreen(
     onPlayResume: (String) -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
     onHeroDock: (Color?, Color?) -> Unit = { _, _ -> },
+    onHideBar: (Boolean) -> Unit = {},
     presentSearch: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -264,6 +266,11 @@ fun HomeScreen(
             var brandHeight by remember { mutableIntStateOf(0) }
             val playBlend = remember { androidx.compose.animation.core.Animatable(0f) }
             val listState = rememberLazyListState()
+            HideBarOnScroll(
+                enabled = settings.hideBottomBarOnScroll,
+                listState = listState,
+                onHideBar = onHideBar,
+            )
             val topInset = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
             LaunchedEffect(parkDistance, playTintOn) {
                 // UltraBlur: Play остаётся цветом обложки, без ухода в синий при скролле.

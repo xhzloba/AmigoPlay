@@ -17,6 +17,7 @@ fun HomeRoute(
     onPlayResume: (String) -> Unit = {},
     onSearchCover: (Float) -> Unit = {},
     onHeroDock: (Color?, Color?) -> Unit = { _, _ -> },
+    onHideBar: (Boolean) -> Unit = {},
     onOpenAlerts: () -> Unit = {},
     presentSearch: Boolean = true,
     session: Int = 0,
@@ -56,6 +57,7 @@ fun HomeRoute(
         onPlayResume = onPlayResume,
         onSearchCover = onSearchCover,
         onHeroDock = onHeroDock,
+        onHideBar = onHideBar,
         presentSearch = presentSearch,
     )
 }

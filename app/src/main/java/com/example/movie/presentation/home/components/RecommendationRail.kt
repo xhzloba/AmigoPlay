@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +59,7 @@ import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.presentation.home.holdToPeek
 import com.example.movie.presentation.home.PosterWave
 import com.example.movie.presentation.home.posterWave
+import com.example.movie.presentation.home.pressToOpen
 import com.example.movie.presentation.home.rememberPressScale
 import com.example.movie.presentation.haptic.HapticOnAppend
 import com.example.movie.presentation.haptic.HapticOnChange
@@ -145,6 +147,7 @@ internal fun RecommendationRail(
                 movies = movies,
                 onMovieClick = onMovieClick,
                 onMoviePeek = onMoviePeek,
+                onOpen = onOpen,
                 onSettled = onSettled,
                 stickToStart = stickToStart,
                 progressOf = progressOf,
@@ -196,6 +199,7 @@ private fun RecommendationPager(
     movies: List<Movie>,
     onMovieClick: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
+    onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit,
     stickToStart: Boolean = false,
     progressOf: (Movie) -> Float? = { null },
@@ -229,7 +233,19 @@ private fun RecommendationPager(
     val favorites = rememberFavoriteIds()
     val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val end = (maxWidth - posterWidth - RailStart).coerceAtLeast(RailStart)
+        // Плашка «Все» занимает хвост после последнего постера, когда доскроллили до конца.
+        val trail = onOpen != null
+        val endPad = RailStart
+        val trailWidth = if (trail) {
+            (maxWidth - RailStart - posterWidth - PosterGap - endPad).coerceAtLeast(72.dp)
+        } else {
+            0.dp
+        }
+        val end = if (trail) {
+            endPad
+        } else {
+            (maxWidth - posterWidth - RailStart).coerceAtLeast(RailStart)
+        }
         CompositionLocalProvider(LocalOverscrollConfiguration provides OverscrollConfiguration()) {
         LazyRow(
             state = listState,
@@ -299,7 +315,68 @@ private fun RecommendationPager(
                     if (showTitles) PosterCaption(movie.title, movie.year)
                 }
             }
+            if (onOpen != null) {
+                item(key = "rail-see-all") {
+                    RailSeeAllCard(
+                        width = trailWidth,
+                        height = posterHeight,
+                        onClick = {
+                            tick?.invoke()
+                            onOpen()
+                        },
+                    )
+                }
+            }
         }
+        }
+    }
+}
+
+@Composable
+private fun RailSeeAllCard(
+    width: Dp,
+    height: Dp,
+    onClick: () -> Unit,
+) {
+    var pressed by remember { mutableStateOf(false) }
+    val pressScale = rememberPressScale(pressed)
+    val wave = remember { PosterWave() }
+    Column(Modifier.width(width)) {
+        Box(
+            modifier = Modifier
+                .width(width)
+                .height(height)
+                .graphicsLayer {
+                    scaleX = pressScale
+                    scaleY = pressScale
+                }
+                .clip(PosterShape)
+                .background(Color.Black.copy(alpha = 0.28f))
+                .posterWave(wave)
+                .pressToOpen(
+                    onPressed = { pressed = it },
+                    onClick = onClick,
+                    wave = wave,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.rail_see_all),
+                    color = Color.White.copy(alpha = 0.92f),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Icon(
+                    imageVector = ShellIcons.chevron,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.92f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
     }
 }

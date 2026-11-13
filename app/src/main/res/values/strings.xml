@@ -259,6 +259,7 @@
     <string name="favorites_sort_year">По году</string>
     <string name="favorites_sort_title">По названию</string>
     <string name="favorites_all">Все</string>
+    <string name="rail_see_all">Все</string>
     <string name="favorites_movies">Фильмы</string>
     <string name="favorites_series">Сериалы</string>
     <string name="favorites_cartoons">Мультфильмы</string>
@@ -273,6 +274,9 @@
     <string name="settings_theme_graphite">Графит</string>
     <string name="settings_theme_graphite_hint">Четыре близких графитовых цвета по углам. Переливаются по всему экрану.</string>
     <string name="settings_group_posters">Обложки</string>
+    <string name="settings_group_navigation">Навигация</string>
+    <string name="settings_hide_bar_scroll">Скрывать меню при скролле</string>
+    <string name="settings_hide_bar_scroll_hint">На главной, в каталоге и в полном списке нижнее меню уезжает вниз, когда листаете вниз, и возвращается, когда вверх.</string>
     <string name="settings_group_color">Цвет</string>
     <string name="settings_group_detail">Деталка</string>
     <string name="settings_sensors">Сенсоры</string>

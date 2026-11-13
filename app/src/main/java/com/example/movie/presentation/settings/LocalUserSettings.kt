@@ -55,5 +55,7 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setWhiteTitles(enabled: Boolean) = Unit
 
+    override fun setHideBottomBarOnScroll(enabled: Boolean) = Unit
+
     override fun setAppTheme(theme: String) = Unit
 }

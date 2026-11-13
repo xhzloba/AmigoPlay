@@ -25,6 +25,8 @@ data class UserSettings(
     val playerHdr: Boolean = true,
     val watchedBadge: Boolean = true,
     val whiteTitles: Boolean = true,
+    /** Прятать нижнее меню при скролле вниз (главная, каталог, полный список). */
+    val hideBottomBarOnScroll: Boolean = true,
     val appTheme: String = "cinema",
 )
 
@@ -72,6 +74,8 @@ interface UserSettingsRepository {
     fun setWatchedBadge(enabled: Boolean)
 
     fun setWhiteTitles(enabled: Boolean)
+
+    fun setHideBottomBarOnScroll(enabled: Boolean)
 
     fun setAppTheme(theme: String)
 }
