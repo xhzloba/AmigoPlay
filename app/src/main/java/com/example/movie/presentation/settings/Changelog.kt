@@ -42,6 +42,12 @@ internal object Changelog {
 
     val releases: List<Release> = listOf(
         Release(
+            version = "2.33.1",
+            fixed = listOf(
+                "«Ретушь полок» не срабатывает, пока включён UltraBlur на главной.",
+            ),
+        ),
+        Release(
             version = "2.33.0",
             added = listOf(
                 "Настройки → Обложки → «Ретушь полок» (по умолчанию выкл): при прокрутке полок на главной и в каталоге мягкая ретушь только с той стороны, куда уходит контент.",

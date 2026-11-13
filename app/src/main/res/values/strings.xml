@@ -305,7 +305,7 @@
     <string name="settings_large_posters">Крупные постеры</string>
     <string name="settings_large_posters_hint">Больше обложки в полках и в полном списке фильмов. Выключено — размер как сейчас.</string>
     <string name="settings_slider_shade">Ретушь полок</string>
-    <string name="settings_slider_shade_hint">При прокрутке полок ретушь только с той стороны, куда уходит контент: влево — слева, вправо — справа. Выключено — без ретуши.</string>
+    <string name="settings_slider_shade_hint">При прокрутке полок ретушь только с той стороны, куда уходит контент: влево — слева, вправо — справа. При UltraBlur на главной не срабатывает. Выключено — без ретуши.</string>
     <string name="settings_watched_badge">Галочка просмотренного</string>
     <string name="settings_watched_badge_hint">На обложке в слайдерах, каталоге и полном списке. Синяя галочка, если просмотрено. Белый кружок с чёрной закладкой, если в «Буду смотреть». Выключено — обеих отметок нет.</string>
     <string name="settings_logos">Логотипы</string>

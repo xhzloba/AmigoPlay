@@ -241,7 +241,8 @@ private fun RecommendationPager(
     }
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val sideRetouch = settings.sliderShade
+    // UltraBlur на главной красит фон — боковая ретушь полок тогда выкл.
+    val sideRetouch = settings.sliderShade && !settings.heroPosterColors
     val ink = appChrome()
     val scrolling = listState.isScrollInProgress
     // +1: контент уходит влево (листаем влево) → ретушь слева
