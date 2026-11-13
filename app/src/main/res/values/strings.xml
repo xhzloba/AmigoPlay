@@ -276,6 +276,8 @@
     <string name="settings_theme_graphite_hint">Четыре близких графитовых цвета по углам. Переливаются по всему экрану.</string>
     <string name="settings_group_posters">Обложки</string>
     <string name="settings_group_navigation">Навигация</string>
+    <string name="settings_nav_labels">Подписи в меню</string>
+    <string name="settings_nav_labels_hint">Названия под иконками нижнего меню. Выключено — только иконки чуть крупнее, на том же месте.</string>
     <string name="settings_hide_bar_scroll">Скрывать меню при скролле</string>
     <string name="settings_hide_bar_scroll_hint">На главной, в каталоге и в полном списке нижнее меню уезжает вниз, когда листаете вниз, и возвращается, когда вверх.</string>
     <string name="settings_group_color">Цвет</string>

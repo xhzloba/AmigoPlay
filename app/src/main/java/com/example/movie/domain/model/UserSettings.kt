@@ -27,6 +27,8 @@ data class UserSettings(
     val whiteTitles: Boolean = true,
     /** Прятать нижнее меню при скролле вниз (главная, каталог, полный список). */
     val hideBottomBarOnScroll: Boolean = true,
+    /** Подписи под иконками нижнего меню. */
+    val navLabels: Boolean = true,
     val appTheme: String = "cinema",
 )
 
@@ -76,6 +78,8 @@ interface UserSettingsRepository {
     fun setWhiteTitles(enabled: Boolean)
 
     fun setHideBottomBarOnScroll(enabled: Boolean)
+
+    fun setNavLabels(enabled: Boolean)
 
     fun setAppTheme(theme: String)
 }

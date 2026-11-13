@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -677,6 +678,11 @@ private fun AppBottomBar(
     val tick = rememberHapticTick()
     val press = ripple(color = Color(0xFF8E8E93))
     val updatePending = LocalAppUpdate.current.pending
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val showLabels = settings.navLabels
+    val iconSize = if (showLabels) 24.dp else 28.dp
+    // Слот иконка+подпись: 24 + 5 + 13 ≈ 42; без подписи иконка крупнее, слот тот же — выравнивание сверху.
+    val slotHeight = 42.dp
     val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val belowGesture = (nav + 4.dp).coerceAtLeast(22.dp)
     val leftTarget = (washLeft ?: WashDockFallback).dockInk()
@@ -730,6 +736,7 @@ private fun AppBottomBar(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(slotHeight)
                         .clip(RoundedCornerShape(22.dp))
                         .clickable(
                             interactionSource = remember(tab) { MutableInteractionSource() },
@@ -740,26 +747,29 @@ private fun AppBottomBar(
                                     onSelect(tab)
                                 }
                             },
-                        ),
+                        )
+                        .padding(top = if (showLabels) 0.dp else 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
+                    verticalArrangement = Arrangement.Top,
                 ) {
                     Icon(
                         imageVector = tab.icon,
                         contentDescription = stringResource(tab.label),
                         tint = if (lit) tab.color else IdleInk,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(iconSize),
                     )
-                    Text(
-                        text = stringResource(tab.label),
-                        modifier = Modifier.padding(top = 5.dp),
-                        color = if (lit) tab.color else IdleInk,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 11.sp,
-                        lineHeight = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (showLabels) {
+                        Text(
+                            text = stringResource(tab.label),
+                            modifier = Modifier.padding(top = 5.dp),
+                            color = if (lit) tab.color else IdleInk,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 11.sp,
+                            lineHeight = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 if (badge) {
                     UpdateBadge(

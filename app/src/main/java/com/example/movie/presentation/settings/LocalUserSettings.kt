@@ -57,5 +57,7 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setHideBottomBarOnScroll(enabled: Boolean) = Unit
 
+    override fun setNavLabels(enabled: Boolean) = Unit
+
     override fun setAppTheme(theme: String) = Unit
 }

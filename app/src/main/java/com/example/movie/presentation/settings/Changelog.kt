@@ -42,6 +42,12 @@ internal object Changelog {
 
     val releases: List<Release> = listOf(
         Release(
+            version = "2.30.0",
+            added = listOf(
+                "Настройки → Навигация → «Подписи в меню» (вкл): названия под иконками нижнего меню; выкл — иконки крупнее на том же месте.",
+            ),
+        ),
+        Release(
             version = "2.29.0",
             added = listOf(
                 "Скачать: у сезонов обложки из API, если нет — постер сериала; у «Весь сериал» без обложки.",
