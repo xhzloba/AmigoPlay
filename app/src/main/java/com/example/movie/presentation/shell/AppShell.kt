@@ -8,12 +8,15 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -728,6 +731,37 @@ private fun AppBottomBar(
         AppTab.entries.forEach { tab ->
             val lit = tab == selected
             val badge = tab == AppTab.Settings && updatePending
+            val interaction = remember(tab) { MutableInteractionSource() }
+            val pressed by interaction.collectIsPressedAsState()
+            val animateIcons = !showLabels
+            val pressScale by animateFloatAsState(
+                targetValue = if (animateIcons && pressed) 0.86f else 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.55f,
+                    stiffness = Spring.StiffnessHigh,
+                ),
+                label = "navPress",
+            )
+            val selectBounce = remember(tab) { Animatable(1f) }
+            LaunchedEffect(lit, animateIcons) {
+                if (!animateIcons) {
+                    selectBounce.snapTo(1f)
+                    return@LaunchedEffect
+                }
+                if (lit) {
+                    selectBounce.snapTo(0.72f)
+                    selectBounce.animateTo(
+                        1f,
+                        spring(
+                            dampingRatio = 0.36f,
+                            stiffness = 520f,
+                        ),
+                    )
+                } else {
+                    selectBounce.snapTo(1f)
+                }
+            }
+            val iconScale = if (animateIcons) pressScale * selectBounce.value else 1f
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -739,7 +773,7 @@ private fun AppBottomBar(
                         .height(slotHeight)
                         .clip(RoundedCornerShape(22.dp))
                         .clickable(
-                            interactionSource = remember(tab) { MutableInteractionSource() },
+                            interactionSource = interaction,
                             indication = press,
                             onClick = {
                                 if (tab != selected) {
@@ -756,7 +790,12 @@ private fun AppBottomBar(
                         imageVector = tab.icon,
                         contentDescription = stringResource(tab.label),
                         tint = if (lit) tab.color else IdleInk,
-                        modifier = Modifier.size(iconSize),
+                        modifier = Modifier
+                            .size(iconSize)
+                            .graphicsLayer {
+                                scaleX = iconScale
+                                scaleY = iconScale
+                            },
                     )
                     if (showLabels) {
                         Text(

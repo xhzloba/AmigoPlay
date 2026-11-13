@@ -28,7 +28,7 @@ data class UserSettings(
     /** Прятать нижнее меню при скролле вниз (главная, каталог, полный список). */
     val hideBottomBarOnScroll: Boolean = true,
     /** Подписи под иконками нижнего меню. */
-    val navLabels: Boolean = true,
+    val navLabels: Boolean = false,
     val appTheme: String = "cinema",
 )
 

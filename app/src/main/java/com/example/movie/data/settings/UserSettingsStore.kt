@@ -164,7 +164,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         watchedBadge = prefs.getBoolean(KEY_WATCHED_BADGE, true),
         whiteTitles = prefs.getBoolean(KEY_WHITE_TITLES, true),
         hideBottomBarOnScroll = prefs.getBoolean(KEY_HIDE_BAR, true),
-        navLabels = prefs.getBoolean(KEY_NAV_LABELS, true),
+        navLabels = prefs.getBoolean(KEY_NAV_LABELS, false),
         appTheme = prefs.getString(KEY_THEME, "cinema") ?: "cinema",
         )
     }
