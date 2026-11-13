@@ -20,27 +20,21 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,10 +56,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
 import com.example.movie.presentation.common.BookmarkFilled
+import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.common.PlexPlay
 import com.example.movie.presentation.common.THEME_GRAPHITE
-import com.example.movie.presentation.common.appBackground
-import com.example.movie.presentation.common.appChrome
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.settings.LocalUserSettings
@@ -104,11 +97,11 @@ private enum class RailsLookTab {
     Shelves,
 }
 
-private val SheetShape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
-private val MenuScrim = Color(0xFF3A3A3E).copy(alpha = 0.86f)
 private val PlaqueShape = RoundedCornerShape(18.dp)
+/** Как поверхности cinema: лёгкая прозрачность. На графите раньше была глухая #2A2E38. */
 private val CinemaPlaque = Color.White.copy(alpha = 0.07f)
-private val GraphitePlaque = Color(0xFF2A2E38)
+private val GraphitePlaque = Color(0xFF2A2E38).copy(alpha = 0.55f)
+private val GraphitePanel = Color(0xFF2A2E38)
 private val IconWellCinema = Color.White.copy(alpha = 0.10f)
 private val IconWellGraphite = Color.White.copy(alpha = 0.12f)
 
@@ -119,6 +112,8 @@ internal fun HomeRailsLookPlaque(
 ) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val graphite = settings.appTheme == THEME_GRAPHITE
+    val plaque = if (graphite) GraphitePlaque else CinemaPlaque
+    val iconWell = if (graphite) IconWellGraphite else IconWellCinema
     val tick = rememberHapticTick()
     var pressed by remember { mutableStateOf(false) }
     val scale = rememberPressScale(pressed)
@@ -132,7 +127,7 @@ internal fun HomeRailsLookPlaque(
                 scaleY = scale
             }
             .clip(PlaqueShape)
-            .background(if (graphite) GraphitePlaque else CinemaPlaque)
+            .background(plaque)
             .posterWave(wave, light = true)
             .pressToOpen(
                 onPressed = { pressed = it },
@@ -153,7 +148,7 @@ internal fun HomeRailsLookPlaque(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (graphite) IconWellGraphite else IconWellCinema),
+                    .background(iconWell),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -196,48 +191,23 @@ internal fun HomeRailsLookPlaque(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val repository = LocalUserSettings.current
     val settings by repository.settings.collectAsStateWithLifecycle()
     val graphite = settings.appTheme == THEME_GRAPHITE
     var tab by remember { mutableStateOf(RailsLookTab.Look) }
     // Чуть выше половины экрана; длинный список крутится внутри.
     val sheetCap = (LocalConfiguration.current.screenHeightDp * 0.58f).dp
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = appChrome(),
-        contentColor = Color.White,
-        scrimColor = MenuScrim,
-        dragHandle = null,
-        shape = SheetShape,
-        tonalElevation = 0.dp,
-    ) {
+    // Dialog как в деталке (HandleSheet) — скролл главной не закрывает попап.
+    HandleSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = sheetCap)
-                .appBackground()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {},
-                )
-                .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(bottom = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                Modifier
-                    .padding(top = 8.dp, bottom = 14.dp)
-                    .width(32.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.28f)),
-            )
             Text(
                 text = stringResource(R.string.home_rails_look_title),
                 color = Color.White,
@@ -280,7 +250,7 @@ internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (graphite) GraphitePlaque else Color.White.copy(alpha = 0.08f))
+                        .background(if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f))
                         .verticalScroll(rememberScrollState()),
                 ) {
                     when (page) {
@@ -382,7 +352,7 @@ private fun RailsLookTabs(
         modifier
             .height(44.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (graphite) GraphitePlaque else Color.White.copy(alpha = 0.08f))
+            .background(if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f))
             .padding(3.dp),
     ) {
         val gap = 2.dp

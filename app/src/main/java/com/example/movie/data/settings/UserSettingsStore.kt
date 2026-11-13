@@ -1,6 +1,7 @@
 package com.example.movie.data.settings
 
 import android.content.Context
+import com.example.movie.domain.model.DefaultHiddenHomeRails
 import com.example.movie.domain.model.UserSettings
 import com.example.movie.domain.model.UserSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -179,7 +180,11 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         hideBottomBarOnScroll = prefs.getBoolean(KEY_HIDE_BAR, true),
         navLabels = prefs.getBoolean(KEY_NAV_LABELS, false),
         sliderShade = prefs.getBoolean(KEY_SLIDER_SHADE, false),
-        hiddenHomeRails = prefs.getStringSet(KEY_HIDDEN_HOME_RAILS, emptySet())?.toSet().orEmpty(),
+        hiddenHomeRails = if (prefs.contains(KEY_HIDDEN_HOME_RAILS)) {
+            prefs.getStringSet(KEY_HIDDEN_HOME_RAILS, emptySet())?.toSet().orEmpty()
+        } else {
+            DefaultHiddenHomeRails
+        },
         appTheme = prefs.getString(KEY_THEME, "cinema") ?: "cinema",
         )
     }

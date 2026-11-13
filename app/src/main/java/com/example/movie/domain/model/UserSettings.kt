@@ -31,12 +31,23 @@ data class UserSettings(
     val navLabels: Boolean = false,
     /** Ретушь по бокам полок (слайдеров) на главной и в каталоге. */
     val sliderShade: Boolean = false,
-    /** Скрытые полки главной (id из HomeRails). Главный слайдер всегда. */
-    val hiddenHomeRails: Set<String> = emptySet(),
+    /** Скрытые полки главной (id из HomeRails). Главный слайдер всегда. По умолчанию все скрыты. */
+    val hiddenHomeRails: Set<String> = DefaultHiddenHomeRails,
     val appTheme: String = "cinema",
 ) {
     fun homeRailVisible(id: String): Boolean = id !in hiddenHomeRails
 }
+
+/** Совпадает с HomeRails.All — по дефолту на главной только слайдер. */
+val DefaultHiddenHomeRails: Set<String> = setOf(
+    "recommendations",
+    "history",
+    "continue",
+    "favorites",
+    "watched",
+    "watching",
+    "best",
+)
 
 interface UserSettingsRepository {
     val settings: StateFlow<UserSettings>
