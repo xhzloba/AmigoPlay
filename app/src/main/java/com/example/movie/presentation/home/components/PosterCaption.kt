@@ -40,9 +40,11 @@ internal fun largePostersOn(): Boolean {
     return settings.largePosters
 }
 
+/** Полки главной/каталога: чуть крупнее обычного, но мягче полного списка. */
 @Composable
-internal fun posterSize(base: Dp): Dp = if (largePostersOn()) base * 1.4f else base
+internal fun posterSize(base: Dp): Dp = if (largePostersOn()) base * 1.22f else base
 
+/** Полный список / избранное / поиск — прежний крупный режим (2 колонки). */
 @Composable
 internal fun posterGridColumns(): Int = if (largePostersOn()) 2 else 3
 

@@ -512,7 +512,7 @@ private fun UpdateBanner(
             .padding(horizontal = PosterGridInset)
             .fillMaxWidth()
             .clip(shape)
-            .background(CinemaSurface)
+            .background(settingsPanel())
             .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -664,7 +664,20 @@ private fun SettingsDivider() {
 }
 
 private val ThemeInk = Color(0xFF8AA0B8)
+private val ThemeInkGraphite = Color(0xFFA8B4C4)
 private val PosterBlue = Color(0xFF3B6EF5)
+private val PosterBlueGraphite = Color(0xFF6B8CFF)
+private val ColorVioletGraphite = Color(0xFFB08CFF)
+private val DetailGreenGraphite = Color(0xFF2BC48A)
+private val SensorAmberGraphite = Color(0xFFE0A83A)
+/** Приподнятая плашка на фоне graphite, чтобы не сливалась с #1A1E26. */
+private val GraphitePanel = Color(0xFF2A2E38)
+
+@Composable
+private fun settingsPanel(): Color {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    return if (settings.appTheme == THEME_GRAPHITE) GraphitePanel else CinemaSurface
+}
 
 @Composable
 private fun ThemeGroup(
@@ -681,7 +694,7 @@ private fun ThemeGroup(
     Text(
         text = stringResource(R.string.settings_group_theme),
         modifier = Modifier.padding(start = PosterGridInset + 4.dp, end = PosterGridInset, bottom = 8.dp),
-        color = ThemeInk,
+        color = if (graphite) ThemeInkGraphite else ThemeInk,
         fontWeight = FontWeight.SemiBold,
         fontSize = 13.sp,
         lineHeight = 16.sp,
@@ -693,7 +706,7 @@ private fun ThemeGroup(
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.08f)),
+            .background(if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f)),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -718,11 +731,13 @@ private fun ThemeGroup(
         )
         ThemeKey(
             glyph = "−",
+            graphite = graphite,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp),
             onClick = ::apply,
         )
         ThemeKey(
             glyph = "+",
+            graphite = graphite,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp),
             onClick = ::apply,
         )
@@ -732,6 +747,7 @@ private fun ThemeGroup(
 @Composable
 private fun ThemeKey(
     glyph: String,
+    graphite: Boolean,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
@@ -739,7 +755,10 @@ private fun ThemeKey(
         modifier
             .size(36.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.14f))
+            .background(
+                if (graphite) Color.White.copy(alpha = 0.12f)
+                else Color.White.copy(alpha = 0.14f),
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -773,10 +792,20 @@ private fun SettingGroup(
     accent: Color,
     items: List<SettingItem>,
 ) {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val graphite = settings.appTheme == THEME_GRAPHITE
+    val titleColor = when {
+        !graphite -> accent
+        accent == PosterBlue -> PosterBlueGraphite
+        accent == ColorViolet -> ColorVioletGraphite
+        accent == DetailGreen -> DetailGreenGraphite
+        accent == SensorAmber -> SensorAmberGraphite
+        else -> accent
+    }
     Text(
         text = title,
         modifier = Modifier.padding(start = PosterGridInset + 4.dp, end = PosterGridInset, bottom = 8.dp),
-        color = accent,
+        color = titleColor,
         fontWeight = FontWeight.SemiBold,
         fontSize = 13.sp,
         lineHeight = 16.sp,
@@ -786,7 +815,7 @@ private fun SettingGroup(
         modifier = Modifier
             .padding(horizontal = PosterGridInset)
             .clip(RoundedCornerShape(20.dp))
-            .background(CinemaSurface),
+            .background(settingsPanel()),
     ) {
         items.forEachIndexed { index, item ->
             if (index > 0) {
@@ -864,17 +893,20 @@ private fun SettingRow(
 
 @Composable
 private fun CinemaSwitch(checked: Boolean) {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val graphite = settings.appTheme == THEME_GRAPHITE
     val travel by animateDpAsState(
         targetValue = if (checked) 20.dp else 0.dp,
         animationSpec = spring(dampingRatio = 1f, stiffness = 500f),
         label = "switch",
     )
+    val offTrack = if (graphite) Color(0xFF3A3F4A) else Color(0xFF2C2C30)
     Box(
         modifier = Modifier
             .width(48.dp)
             .height(28.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (checked) Color.White else Color(0xFF2C2C30))
+            .background(if (checked) Color.White else offTrack)
             .padding(3.dp),
     ) {
         Box(
