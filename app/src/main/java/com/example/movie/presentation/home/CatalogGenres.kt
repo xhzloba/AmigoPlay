@@ -1,7 +1,6 @@
 package com.example.movie.presentation.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -99,11 +98,10 @@ internal val CatalogGenres = listOf(
 internal fun catalogGenresFor(type: String): List<String> =
     if (type == "movie") CatalogGenres.filter { it != "аниме" } else CatalogGenres
 
-private val GenreChipShape = RoundedCornerShape(14.dp)
-private val GenreChipCinema = Color.White.copy(alpha = 0.08f)
+// Как в Plex: stadium-пилюля, тёмный fill, без обводки.
+private val GenreChipShape = RoundedCornerShape(percent = 50)
+private val GenreChipCinema = Color(0xFF262626)
 private val GenreChipGraphite = Color(0xFF2A2E38)
-private val GenreChipBorderCinema = Color.White.copy(alpha = 0.06f)
-private val GenreChipBorderGraphite = Color.White.copy(alpha = 0.10f)
 
 @Composable
 internal fun CatalogGenreChips(
@@ -115,7 +113,6 @@ internal fun CatalogGenreChips(
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val graphite = settings.appTheme == THEME_GRAPHITE
     val fill = if (graphite) GenreChipGraphite else GenreChipCinema
-    val stroke = if (graphite) GenreChipBorderGraphite else GenreChipBorderCinema
     val genres = remember(type) { catalogGenresFor(type).filter { it != GenreAll } }
     val row = rememberLazyListState()
     HapticOnChange(row) { row.firstVisibleItemIndex }
@@ -136,7 +133,6 @@ internal fun CatalogGenreChips(
                 GenreChip(
                     name = name,
                     fill = fill,
-                    stroke = stroke,
                     onClick = { onGenre(name) },
                 )
             }
@@ -148,34 +144,44 @@ internal fun CatalogGenreChips(
 private fun GenreChip(
     name: String,
     fill: Color,
-    stroke: Color,
     onClick: () -> Unit,
 ) {
     val tick = rememberHapticTick()
-    Text(
-        text = name.replaceFirstChar { ch ->
-            if (ch.isLowerCase()) ch.titlecase(Locale("ru")) else ch.toString()
-        },
-        color = Color.White.copy(alpha = 0.92f),
-        fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+    var pressed by remember(name) { mutableStateOf(false) }
+    val scale = rememberPressScale(pressed)
+    val wave = remember(name) { PosterWave() }
+    Box(
         modifier = Modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(GenreChipShape)
             .background(fill)
-            .border(0.5.dp, stroke, GenreChipShape)
-            .clickable(
-                interactionSource = remember(name) { MutableInteractionSource() },
-                indication = null,
+            .posterWave(wave, light = true)
+            .pressToOpen(
+                onPressed = { pressed = it },
                 onClick = {
                     tick?.invoke()
                     onClick()
                 },
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    )
+                wave = wave,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = name.replaceFirstChar { ch ->
+                if (ch.isLowerCase()) ch.titlecase(Locale("ru")) else ch.toString()
+            },
+            color = Color.White,
+            fontWeight = FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+        )
+    }
 }
 
 @Composable

@@ -279,6 +279,12 @@
     <string name="settings_theme_cinema_hint">Плоский фон, как в приложении сейчас.</string>
     <string name="settings_theme_graphite">Графит</string>
     <string name="settings_theme_graphite_hint">Четыре близких графитовых цвета по углам. Переливаются по всему экрану.</string>
+    <string name="home_rails_look_title">Вид полок</string>
+    <string name="home_rails_look_hint">Оформление и какие полки показывать на главной</string>
+    <string name="home_rails_tab_look">Оформление</string>
+    <string name="home_rails_tab_shelves">Полки</string>
+    <string name="home_rails_shelves_note">Главный слайдер всегда на месте. Остальные полки можно скрыть.</string>
+    <string name="home_rails_shelf_hint">Показывать эту полку на главной</string>
     <string name="settings_group_posters">Обложки</string>
     <string name="settings_group_navigation">Навигация</string>
     <string name="settings_nav_labels">Подписи в меню</string>

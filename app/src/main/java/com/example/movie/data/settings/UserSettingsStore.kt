@@ -71,6 +71,15 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setSliderShade(enabled: Boolean) = write { it.copy(sliderShade = enabled) }
 
+    override fun setHomeRailVisible(id: String, visible: Boolean) = write { current ->
+        val next = if (visible) {
+            current.hiddenHomeRails - id
+        } else {
+            current.hiddenHomeRails + id
+        }
+        current.copy(hiddenHomeRails = next)
+    }
+
     override fun setAppTheme(theme: String) = write {
         it.copy(appTheme = if (theme == "graphite") "graphite" else "cinema")
     }
@@ -103,6 +112,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_HIDE_BAR, next.hideBottomBarOnScroll)
             .putBoolean(KEY_NAV_LABELS, next.navLabels)
             .putBoolean(KEY_SLIDER_SHADE, next.sliderShade)
+            .putStringSet(KEY_HIDDEN_HOME_RAILS, HashSet(next.hiddenHomeRails))
             .putString(KEY_THEME, next.appTheme)
             .commit()
         state.value = next
@@ -169,6 +179,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         hideBottomBarOnScroll = prefs.getBoolean(KEY_HIDE_BAR, true),
         navLabels = prefs.getBoolean(KEY_NAV_LABELS, false),
         sliderShade = prefs.getBoolean(KEY_SLIDER_SHADE, false),
+        hiddenHomeRails = prefs.getStringSet(KEY_HIDDEN_HOME_RAILS, emptySet())?.toSet().orEmpty(),
         appTheme = prefs.getString(KEY_THEME, "cinema") ?: "cinema",
         )
     }
@@ -203,6 +214,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_HIDE_BAR = "hide_bottom_bar_scroll"
         const val KEY_NAV_LABELS = "nav_labels"
         const val KEY_SLIDER_SHADE = "slider_shade"
+        const val KEY_HIDDEN_HOME_RAILS = "hidden_home_rails"
         const val KEY_THEME = "app_theme"
     }
 }

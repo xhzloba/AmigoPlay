@@ -145,6 +145,7 @@ fun HomeScreen(
     // Кэш живёт на HomeScreen: LazyColumn уничтожает карусель при скролле вниз.
     val heroWashes = remember { mutableStateMapOf<String, PosterWash>() }
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    var railsLookOpen by remember { mutableStateOf(false) }
     val pageWashOn = settings.heroPosterColors && settings.heroPosterPage
     val playTintOn = settings.heroPosterColors
     LaunchedEffect(settings.heroPosterColors) {
@@ -345,7 +346,10 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (!state.recommendationsReady || state.recommendations.isNotEmpty()) {
+                if (
+                    settings.homeRailVisible(HomeRails.Recommendations) &&
+                    (!state.recommendationsReady || state.recommendations.isNotEmpty())
+                ) {
                     item(key = "recommendations") {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
@@ -359,7 +363,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (state.history.isNotEmpty()) {
+                if (settings.homeRailVisible(HomeRails.History) && state.history.isNotEmpty()) {
                     item(key = "history") {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
@@ -375,7 +379,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (state.resume.isNotEmpty()) {
+                if (settings.homeRailVisible(HomeRails.Continue) && state.resume.isNotEmpty()) {
                     item(key = "continue") {
                         Spacer(Modifier.height(24.dp))
                         val rail = state.resume.take(HistoryRailSize)
@@ -394,7 +398,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (state.favorites.isNotEmpty()) {
+                if (settings.homeRailVisible(HomeRails.Favorites) && state.favorites.isNotEmpty()) {
                     item(key = "favorites") {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
@@ -414,7 +418,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (state.watched.isNotEmpty()) {
+                if (settings.homeRailVisible(HomeRails.Watched) && state.watched.isNotEmpty()) {
                     item(key = "watched") {
                         Spacer(Modifier.height(24.dp))
                         RecommendationRail(
@@ -433,7 +437,10 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (!state.watchingReady || state.watching.isNotEmpty()) {
+                if (
+                    settings.homeRailVisible(HomeRails.Watching) &&
+                    (!state.watchingReady || state.watching.isNotEmpty())
+                ) {
                     item(key = "watching") {
                         Spacer(Modifier.height(CatalogGap))
                         RecommendationRail(
@@ -447,7 +454,10 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (!state.bestReady || state.best.isNotEmpty()) {
+                if (
+                    settings.homeRailVisible(HomeRails.Best) &&
+                    (!state.bestReady || state.best.isNotEmpty())
+                ) {
                     item(key = "best") {
                         Spacer(Modifier.height(CatalogGap))
                         RecommendationRail(
@@ -460,6 +470,14 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                }
+                item(key = "rails_look") {
+                    Spacer(Modifier.height(28.dp))
+                    HomeRailsLookPlaque(
+                        onOpen = { railsLookOpen = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
                 }
             }
             BrandScrim(
@@ -490,6 +508,9 @@ fun HomeScreen(
         }
     }
     }
+        }
+        if (railsLookOpen) {
+            HomeRailsLookSheet(onDismiss = { railsLookOpen = false })
         }
         if (presentSearch && searchCover) {
             SearchPage(

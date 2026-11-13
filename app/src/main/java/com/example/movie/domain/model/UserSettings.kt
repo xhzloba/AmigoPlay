@@ -31,8 +31,12 @@ data class UserSettings(
     val navLabels: Boolean = false,
     /** Ретушь по бокам полок (слайдеров) на главной и в каталоге. */
     val sliderShade: Boolean = false,
+    /** Скрытые полки главной (id из HomeRails). Главный слайдер всегда. */
+    val hiddenHomeRails: Set<String> = emptySet(),
     val appTheme: String = "cinema",
-)
+) {
+    fun homeRailVisible(id: String): Boolean = id !in hiddenHomeRails
+}
 
 interface UserSettingsRepository {
     val settings: StateFlow<UserSettings>
@@ -84,6 +88,8 @@ interface UserSettingsRepository {
     fun setNavLabels(enabled: Boolean)
 
     fun setSliderShade(enabled: Boolean)
+
+    fun setHomeRailVisible(id: String, visible: Boolean)
 
     fun setAppTheme(theme: String)
 }
