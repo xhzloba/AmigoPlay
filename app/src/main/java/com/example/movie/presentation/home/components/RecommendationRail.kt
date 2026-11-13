@@ -44,6 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -77,11 +79,14 @@ internal fun RailTitle(
     title: String,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    leadingIcon: ImageVector? = null,
 ) {
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val white = settings.whiteTitles
     val color = if (white) Color.White else Color(0xFFB4B4B8)
+    val titleSize = if (white) 18.sp else CategoryTabFontSize
+    val iconSize = with(LocalDensity.current) { titleSize.toDp() }
     Row(
         modifier = modifier
             .padding(horizontal = PosterGridInset)
@@ -101,11 +106,20 @@ internal fun RailTitle(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leadingIcon != null) {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(iconSize),
+            )
+            Spacer(Modifier.width(8.dp))
+        }
         Text(
             text = title,
             color = color,
             fontWeight = if (white) FontWeight.Bold else FontWeight.Normal,
-            fontSize = if (white) 18.sp else CategoryTabFontSize,
+            fontSize = titleSize,
             lineHeight = if (white) TextUnit.Unspecified else CategoryTabLineHeight,
             letterSpacing = if (white) TextUnit.Unspecified else CategoryTabLetterSpacing,
         )
@@ -115,7 +129,7 @@ internal fun RailTitle(
                 imageVector = ShellIcons.chevron,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(iconSize),
             )
         }
     }
@@ -128,6 +142,7 @@ internal fun RecommendationRail(
     onMoviePeek: (Movie) -> Unit,
     modifier: Modifier = Modifier,
     title: String? = null,
+    leadingIcon: ImageVector? = null,
     onOpen: (() -> Unit)? = null,
     onSettled: () -> Unit = {},
     stickToStart: Boolean = false,
@@ -137,7 +152,7 @@ internal fun RecommendationRail(
     HapticOnAppend(movies.map { it.id })
     Column(modifier = modifier.fillMaxWidth().graphicsLayer()) {
         if (title != null) {
-            RailTitle(title = title, onClick = onOpen)
+            RailTitle(title = title, onClick = onOpen, leadingIcon = leadingIcon)
             Spacer(Modifier.height(10.dp))
         }
         if (movies.isEmpty()) {

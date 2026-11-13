@@ -232,6 +232,17 @@ private fun MovieMenu(
                     if (continued != null && onContinue != null) onContinue() else onWatch()
                 },
             )
+            if (continued != null) {
+                MenuRow(
+                    icon = TrashIcon,
+                    label = stringResource(R.string.menu_remove_resume),
+                    onClick = {
+                        tick?.invoke()
+                        resumeStore.forget(movie.id)
+                        onDismiss()
+                    },
+                )
+            }
             MenuRow(
                 icon = OverviewIcon,
                 label = stringResource(R.string.menu_overview),
@@ -673,6 +684,26 @@ private val PlayIcon = strokeIcon("play") {
     lineTo(18.4f, 12f)
     lineTo(9f, 17.6f)
     close()
+}
+
+private val TrashIcon = strokeIcon("trash") {
+    moveTo(9.2f, 5.2f)
+    lineTo(9.8f, 3.8f)
+    lineTo(14.2f, 3.8f)
+    lineTo(14.8f, 5.2f)
+    close()
+    moveTo(5.2f, 5.2f)
+    lineTo(18.8f, 5.2f)
+    moveTo(7.2f, 5.2f)
+    lineTo(7.2f, 18.6f)
+    quadTo(7.2f, 20f, 8.6f, 20f)
+    lineTo(15.4f, 20f)
+    quadTo(16.8f, 20f, 16.8f, 18.6f)
+    lineTo(16.8f, 5.2f)
+    moveTo(10.2f, 9f)
+    lineTo(10.2f, 16.4f)
+    moveTo(13.8f, 9f)
+    lineTo(13.8f, 16.4f)
 }
 
 private val OverviewIcon = strokeIcon("overview") {

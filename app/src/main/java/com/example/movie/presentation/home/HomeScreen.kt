@@ -81,13 +81,16 @@ import com.example.movie.presentation.home.components.LogoMood
 import com.example.movie.presentation.home.components.PageRefresh
 import com.example.movie.presentation.home.components.PosterCarousel
 import com.example.movie.presentation.home.components.RecommendationRail
+import com.example.movie.presentation.common.BookmarkFilled
 import com.example.movie.presentation.common.HideBarOnScroll
+import com.example.movie.presentation.common.PlexPlay
 import com.example.movie.presentation.common.appBackground
 import com.example.movie.presentation.common.TopScrimBrand
 import com.example.movie.presentation.common.TopScrimTail
 import com.example.movie.presentation.common.topScrimFade
 import com.example.movie.presentation.common.topScrimPalette
 import com.example.movie.presentation.palette.PosterWash
+import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.MovieTheme
 import com.example.movie.ui.theme.PlayBlue
 
@@ -364,6 +367,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_history),
+                            leadingIcon = ShellIcons.history,
                             onOpen = { onOpenSection(HomeSection.History) },
                             onSettled = logo::onSettled,
                             stickToStart = true,
@@ -380,6 +384,7 @@ fun HomeScreen(
                             onMovieClick = onPlayResume,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_continue),
+                            leadingIcon = PlexPlay,
                             onOpen = { onOpenSection(HomeSection.Continue) },
                             onSettled = logo::onSettled,
                             stickToStart = true,
@@ -397,6 +402,7 @@ fun HomeScreen(
                             onMovieClick = onMovieClick,
                             onMoviePeek = onMoviePeek,
                             title = stringResource(R.string.section_favorites),
+                            leadingIcon = BookmarkFilled,
                             onOpen = if (state.favorites.size >= HistoryRailSize) {
                                 { onOpenSection(HomeSection.Favorites) }
                             } else {

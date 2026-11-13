@@ -72,10 +72,11 @@
     <string name="age_badge">%1$d+</string>
     <string name="peek_director">Режиссёр</string>
     <string name="menu_watch">Смотреть</string>
+    <string name="menu_remove_resume">Удалить просмотр</string>
     <string name="menu_overview">Краткое описание</string>
     <string name="menu_overview_empty">Описания нет</string>
-    <string name="menu_favorite_add">Добавить в избранное</string>
-    <string name="menu_favorite_remove">Убрать из избранного</string>
+    <string name="menu_favorite_add">Буду смотреть</string>
+    <string name="menu_favorite_remove">Убрать из «Буду смотреть»</string>
     <string name="menu_watched">Просмотрено</string>
     <string name="menu_unwatched">Не просмотрено</string>
     <string name="menu_list">Добавить в список</string>
@@ -134,10 +135,10 @@
     <string name="notice_watched_series">Сериал добавлен в просмотренное</string>
     <string name="notice_watched_movie_off">Фильм убран из просмотренного</string>
     <string name="notice_watched_series_off">Сериал убран из просмотренного</string>
-    <string name="notice_favorite_movie">Фильм добавлен в избранное</string>
-    <string name="notice_favorite_series">Сериал добавлен в избранное</string>
-    <string name="notice_favorite_movie_off">Фильм убран из избранного</string>
-    <string name="notice_favorite_series_off">Сериал убран из избранного</string>
+    <string name="notice_favorite_movie">Фильм добавлен в «Буду смотреть»</string>
+    <string name="notice_favorite_series">Сериал добавлен в «Буду смотреть»</string>
+    <string name="notice_favorite_movie_off">Фильм убран из «Буду смотреть»</string>
+    <string name="notice_favorite_series_off">Сериал убран из «Буду смотреть»</string>
     <string name="menu_comment">Комментарий</string>
     <string name="menu_open_detail">Перейти</string>
     <string name="runtime_hours_minutes">%1$dч %2$dм</string>
@@ -230,7 +231,7 @@
     <string name="section_recommendations">Возможно, вам понравится</string>
     <string name="section_continue">Продолжить просмотр</string>
     <string name="section_history">История просмотров</string>
-    <string name="section_favorites">Избранное</string>
+    <string name="section_favorites">Буду смотреть</string>
     <string name="section_watched">Просмотрено</string>
     <string name="section_watching">Сейчас смотрят</string>
     <string name="kind_movie">Фильм</string>
@@ -264,8 +265,8 @@
     <string name="favorites_series">Сериалы</string>
     <string name="favorites_cartoons">Мультфильмы</string>
     <string name="favorites_anime">Аниме</string>
-    <string name="bookmark_add">В избранное</string>
-    <string name="bookmark_remove">Убрать из избранного</string>
+    <string name="bookmark_add">Буду смотреть</string>
+    <string name="bookmark_remove">Убрать из «Буду смотреть»</string>
     <string name="nav_settings">Настройки</string>
     <string name="settings_interface">Интерфейс</string>
     <string name="settings_group_theme">Тема</string>
@@ -297,7 +298,7 @@
     <string name="settings_large_posters">Крупные постеры</string>
     <string name="settings_large_posters_hint">Больше обложки в полках и в полном списке фильмов. Выключено — размер как сейчас.</string>
     <string name="settings_watched_badge">Галочка просмотренного</string>
-    <string name="settings_watched_badge_hint">На обложке в слайдерах, каталоге и полном списке. Синяя галочка, если просмотрено. Белый кружок с чёрной закладкой, если в избранном. Выключено — обеих отметок нет.</string>
+    <string name="settings_watched_badge_hint">На обложке в слайдерах, каталоге и полном списке. Синяя галочка, если просмотрено. Белый кружок с чёрной закладкой, если в «Буду смотреть». Выключено — обеих отметок нет.</string>
     <string name="settings_logos">Логотипы</string>
     <string name="settings_logos_hint">На главном слайдере и в деталке. Выключено — показывается название.</string>
     <string name="settings_backdrop_auto">Автокадры</string>

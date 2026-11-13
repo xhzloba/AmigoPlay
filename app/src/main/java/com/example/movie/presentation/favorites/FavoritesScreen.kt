@@ -367,7 +367,12 @@ internal fun FavoritesScreen(
                         item = item,
                         progress = mark?.fraction,
                         caption = mark?.progressCaption(),
-                        onMovieClick = if (library == LibrarySection.Continue) onPlayResume else onMovieClick,
+                        // В «Продолжить» тап открывает то же меню, что долгий тап — play и «Удалить просмотр».
+                        onMovieClick = if (library == LibrarySection.Continue) {
+                            { onMoviePeek(item.toMovie()) }
+                        } else {
+                            onMovieClick
+                        },
                         onMoviePeek = onMoviePeek,
                     )
                 }
@@ -472,7 +477,7 @@ private fun LibraryScrim(progress: Float, modifier: Modifier = Modifier) {
 }
 
 private enum class LibrarySection(@StringRes val label: Int) {
-    Favorites(R.string.nav_favorites),
+    Favorites(R.string.section_favorites),
     Continue(R.string.section_continue),
     Watched(R.string.favorites_watched),
     Downloads(R.string.favorites_downloaded),
