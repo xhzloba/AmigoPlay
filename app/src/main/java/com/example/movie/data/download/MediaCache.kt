@@ -18,6 +18,7 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.NoOpCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadHelper
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadRequest
@@ -58,6 +59,15 @@ internal object MediaCache {
     fun readSource(context: Context): CacheDataSource.Factory = synchronized(lock) {
         ensure(context)
         readRef!!
+    }
+
+    /** MediaItem со streamKeys скачивания — иначе Exo лезет в нескачанные дорожки и ждёт сеть. */
+    fun mediaItem(context: Context, downloadId: String): MediaItem? {
+        val download = runCatching {
+            manager(context).downloadIndex.getDownload(downloadId)
+        }.getOrNull() ?: return null
+        if (download.state != Download.STATE_COMPLETED) return null
+        return download.request.toMediaItem()
     }
 
     fun enqueue(context: Context, request: DownloadRequest, foreground: Boolean) {
@@ -147,10 +157,11 @@ internal object MediaCache {
         val cache = SimpleCache(directory, NoOpCacheEvictor(), database)
         cacheRef = cache
         val upstream = http()
+        // Read-only: online не дописывает в offline-кэш; offline читает только скачанное.
         readRef = CacheDataSource.Factory()
             .setCache(cache)
             .setUpstreamDataSourceFactory(upstream)
-            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+            .setCacheWriteDataSinkFactory(null)
         return DownloadManager(
             context,
             database,

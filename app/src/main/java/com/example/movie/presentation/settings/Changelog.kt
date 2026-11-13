@@ -42,6 +42,12 @@ internal object Changelog {
 
     val releases: List<Release> = listOf(
         Release(
+            version = "2.25.2",
+            fixed = listOf(
+                "Скачанное: воспроизведение без сети сразу, без предварительного онлайна — плеер берёт streamKeys скачивания.",
+            ),
+        ),
+        Release(
             version = "2.25.1",
             fixed = listOf(
                 "О фильме / О сериале: размер заголовка как у «Актёры».",

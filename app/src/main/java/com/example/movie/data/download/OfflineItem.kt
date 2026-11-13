@@ -125,4 +125,5 @@ private fun OfflineStream.toStream() = WatchStream(
     subtitles = subtitles.map { WatchSubtitle(it.url, it.name) },
     audioNames = audioNames,
     audioOrder = audioOrder,
+    manifestPicked = true,
 )

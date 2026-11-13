@@ -126,6 +126,7 @@ internal fun LiftExoPlayer(
     title: String,
     logoUrl: String?,
     startPositionMs: Long = 0L,
+    downloadIdOf: ((WatchStream) -> String?)? = null,
     onProgress: (Long, Long, Int?, Int?) -> Unit = { _, _, _, _ -> },
     onDismiss: () -> Unit,
 ) {
@@ -171,8 +172,13 @@ internal fun LiftExoPlayer(
             .apply { playWhenReady = true }
     }
     var pendingStart by remember(playback) { mutableLongStateOf(startPositionMs) }
-    LaunchedEffect(current.url, current.kind, current.manifestPicked, current.alternateUrl) {
-        if (!current.manifestPicked && current.alternateUrl != null) {
+    val resolveDownload = remember(downloadIdOf) { downloadIdOf }
+    LaunchedEffect(current.url, current.kind, current.manifestPicked, current.alternateUrl, resolveDownload) {
+        // Офлайн: не ходим в сеть за «более богатым» манифестом.
+        if (resolveDownload?.invoke(current) == null &&
+            !current.manifestPicked &&
+            current.alternateUrl != null
+        ) {
             val picked = withContext(Dispatchers.IO) { current.preferRicherManifest() }
             current = picked
             return@LaunchedEffect
@@ -180,7 +186,9 @@ internal fun LiftExoPlayer(
         val playing = player.currentMediaItem?.localConfiguration?.uri?.toString()
         if (playing == current.url && player.playbackState != Player.STATE_IDLE) return@LaunchedEffect
         val textOff = C.TRACK_TYPE_TEXT in player.trackSelectionParameters.disabledTrackTypes
-        player.setMediaItem(current.toMediaItem())
+        val downloadId = resolveDownload?.invoke(current)
+        val mediaItem = downloadId?.let { MediaCache.mediaItem(activity, it) } ?: current.toMediaItem()
+        player.setMediaItem(mediaItem)
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             .clearOverrides()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, textOff)
@@ -302,6 +310,8 @@ internal fun LiftExoPlayer(
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                // Офлайн: fallback манифеста снова полезет в сеть — пропускаем.
+                if (resolveDownload?.invoke(follow.stream) != null) return
                 val next = follow.stream.fallbackManifest() ?: return
                 if (next.url == follow.stream.url) return
                 current = next

@@ -71,7 +71,9 @@ import com.example.movie.R
 import com.example.movie.data.download.OfflineItem
 import com.example.movie.data.download.OfflinePhase
 import com.example.movie.data.download.OfflineStatus
+import com.example.movie.data.download.downloadId
 import com.example.movie.data.download.offlineItem
+import com.example.movie.data.download.toPlayback
 import com.example.movie.data.download.toPlayback
 import com.example.movie.data.player.WatchPlayback
 import com.example.movie.data.player.fetchLiftPlayback
@@ -773,11 +775,15 @@ internal fun OfflinePlayer(
                 }
             }
         }
+        val downloadIds = remember(item) {
+            item.streams.associate { stream -> stream.url to stream.downloadId(item.title.id) }
+        }
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             LiftExoPlayer(
                 playback = item.toPlayback(season, episode),
                 title = item.title.title,
                 logoUrl = item.title.logoUrl,
+                downloadIdOf = { stream -> downloadIds[stream.url] },
                 onDismiss = onDismiss,
             )
         }
