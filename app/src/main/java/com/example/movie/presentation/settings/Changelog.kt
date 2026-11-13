@@ -42,6 +42,12 @@ internal object Changelog {
 
     val releases: List<Release> = listOf(
         Release(
+            version = "2.29.0",
+            added = listOf(
+                "Скачать: у сезонов обложки из API, если нет — постер сериала; у «Весь сериал» без обложки.",
+            ),
+        ),
+        Release(
             version = "2.28.0",
             added = listOf(
                 "Каталог: после «Сейчас смотрят» слайдер жанров (чипы cinema/графит); тап открывает жанр, заголовок — полный список.",

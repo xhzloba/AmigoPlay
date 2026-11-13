@@ -320,6 +320,8 @@ internal fun DownloadSheet(
                             }
                             DownloadSeasonBlock(
                                 title = stringResource(R.string.franchise_season, season.number),
+                                posterUrl = season.posterUrl,
+                                fallbackPoster = title.posterUrl,
                                 progress = if (keys.isEmpty()) {
                                     null
                                 } else {
@@ -563,6 +565,8 @@ private fun DownloadPickRow(title: String, mark: Mark, onClick: () -> Unit) {
 @Composable
 private fun DownloadSeasonBlock(
     title: String,
+    posterUrl: String?,
+    fallbackPoster: String?,
     progress: String?,
     mark: Mark,
     enabled: Boolean,
@@ -603,6 +607,7 @@ private fun DownloadSeasonBlock(
                     .padding(end = 8.dp, top = 10.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                SeasonPoster(posterUrl, fallbackPoster)
                 Text(
                     text = title,
                     modifier = Modifier.weight(1f),
