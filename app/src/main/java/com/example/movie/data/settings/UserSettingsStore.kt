@@ -69,6 +69,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setNavLabels(enabled: Boolean) = write { it.copy(navLabels = enabled) }
 
+    override fun setSliderShade(enabled: Boolean) = write { it.copy(sliderShade = enabled) }
+
     override fun setAppTheme(theme: String) = write {
         it.copy(appTheme = if (theme == "graphite") "graphite" else "cinema")
     }
@@ -100,6 +102,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_WHITE_TITLES, next.whiteTitles)
             .putBoolean(KEY_HIDE_BAR, next.hideBottomBarOnScroll)
             .putBoolean(KEY_NAV_LABELS, next.navLabels)
+            .putBoolean(KEY_SLIDER_SHADE, next.sliderShade)
             .putString(KEY_THEME, next.appTheme)
             .commit()
         state.value = next
@@ -165,6 +168,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         whiteTitles = prefs.getBoolean(KEY_WHITE_TITLES, true),
         hideBottomBarOnScroll = prefs.getBoolean(KEY_HIDE_BAR, true),
         navLabels = prefs.getBoolean(KEY_NAV_LABELS, false),
+        sliderShade = prefs.getBoolean(KEY_SLIDER_SHADE, false),
         appTheme = prefs.getString(KEY_THEME, "cinema") ?: "cinema",
         )
     }
@@ -198,6 +202,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_WHITE_TITLES = "white_titles"
         const val KEY_HIDE_BAR = "hide_bottom_bar_scroll"
         const val KEY_NAV_LABELS = "nav_labels"
+        const val KEY_SLIDER_SHADE = "slider_shade"
         const val KEY_THEME = "app_theme"
     }
 }

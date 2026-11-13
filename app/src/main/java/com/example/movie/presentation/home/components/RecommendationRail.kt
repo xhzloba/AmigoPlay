@@ -2,8 +2,11 @@
 
 package com.example.movie.presentation.home.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
@@ -36,13 +39,20 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -56,6 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
 import com.example.movie.domain.model.Movie
 import com.example.movie.presentation.common.PosterImage
+import com.example.movie.presentation.common.appChrome
 import com.example.movie.presentation.home.holdCue
 import com.example.movie.presentation.settings.LocalUserSettings
 import com.example.movie.presentation.home.holdToPeek
@@ -68,11 +79,13 @@ import com.example.movie.presentation.haptic.HapticOnChange
 import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.shell.ShellIcons
 import com.example.movie.ui.theme.PosterShape
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val PosterWidth = 112.dp
 private val PosterAspect = 1.46f
 private val RailStart = PosterGridInset
 private val PosterGap = 14.dp
+private val SideRetouch = 56.dp
 
 @Composable
 internal fun RailTitle(
@@ -227,6 +240,55 @@ private fun RecommendationPager(
         if (stickToStart && head != null) listState.scrollToItem(0)
     }
     val tick = rememberHapticTick()
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val sideRetouch = settings.sliderShade
+    val ink = appChrome()
+    val scrolling = listState.isScrollInProgress
+    // +1: контент уходит влево (листаем влево) → ретушь слева
+    // -1: контент уходит вправо (листаем вправо) → ретушь справа
+    var scrollDir by remember { mutableIntStateOf(0) }
+    LaunchedEffect(listState, sideRetouch) {
+        if (!sideRetouch) {
+            scrollDir = 0
+            return@LaunchedEffect
+        }
+        var lastIndex = listState.firstVisibleItemIndex
+        var lastOffset = listState.firstVisibleItemScrollOffset
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }
+            .distinctUntilChanged()
+            .collect { (index, offset) ->
+                val delta = when {
+                    index > lastIndex -> 1
+                    index < lastIndex -> -1
+                    offset > lastOffset -> 1
+                    offset < lastOffset -> -1
+                    else -> 0
+                }
+                if (delta != 0) scrollDir = delta
+                lastIndex = index
+                lastOffset = offset
+            }
+    }
+    val leftTarget = if (sideRetouch && scrolling && scrollDir > 0) 1f else 0f
+    val rightTarget = if (sideRetouch && scrolling && scrollDir < 0) 1f else 0f
+    val leftStrength by animateFloatAsState(
+        targetValue = leftTarget,
+        animationSpec = tween(
+            durationMillis = if (leftTarget > 0f) 520 else 640,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "railRetouchL",
+    )
+    val rightStrength by animateFloatAsState(
+        targetValue = rightTarget,
+        animationSpec = tween(
+            durationMillis = if (rightTarget > 0f) 520 else 640,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "railRetouchR",
+    )
     SettleEffect(listState, { listState.isScrollInProgress }, onSettled)
     HapticOnChange(listState) { listState.firstVisibleItemIndex }
     val decay = rememberSplineBasedDecay<Float>()
@@ -269,7 +331,19 @@ private fun RecommendationPager(
             flingBehavior = flingBehavior,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(rowHeight),
+                .height(rowHeight)
+                .then(
+                    if (leftStrength > 0.01f || rightStrength > 0.01f) {
+                        Modifier.railSideRetouch(
+                            ink = ink,
+                            width = SideRetouch,
+                            left = leftStrength,
+                            right = rightStrength,
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
         ) {
             itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
                 var holdProgress by remember(movie.id) { mutableFloatStateOf(0f) }
@@ -346,6 +420,81 @@ private fun RecommendationPager(
         }
     }
 }
+
+/** Ретушь на стороне, куда уходит контент: влево → слева, вправо → справа. */
+private fun Modifier.railSideRetouch(
+    ink: Color,
+    width: Dp,
+    left: Float,
+    right: Float,
+): Modifier =
+    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val leftAmount = left.coerceIn(0f, 1f)
+            val rightAmount = right.coerceIn(0f, 1f)
+            if (leftAmount <= 0.01f && rightAmount <= 0.01f) return@drawWithContent
+            val w = width.toPx()
+            if (w < 1f) return@drawWithContent
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Black.copy(alpha = 1f - leftAmount),
+                        (w / size.width).coerceIn(0f, 0.45f) to Color.Black,
+                        (1f - w / size.width).coerceIn(0.55f, 1f) to Color.Black,
+                        1f to Color.Black.copy(alpha = 1f - rightAmount),
+                    ),
+                ),
+                blendMode = BlendMode.DstIn,
+            )
+            if (leftAmount > 0.01f) {
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0f to ink.copy(alpha = 0.78f * leftAmount),
+                            0.55f to ink.copy(alpha = 0.3f * leftAmount),
+                            1f to Color.Transparent,
+                        ),
+                        endX = w,
+                    ),
+                )
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF6A7A9A).copy(alpha = 0.28f * leftAmount),
+                            Color.Transparent,
+                        ),
+                        center = Offset(0f, size.height * 0.45f),
+                        radius = w * 1.4f,
+                    ),
+                    blendMode = BlendMode.Overlay,
+                )
+            }
+            if (rightAmount > 0.01f) {
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0f to Color.Transparent,
+                            0.45f to ink.copy(alpha = 0.3f * rightAmount),
+                            1f to ink.copy(alpha = 0.78f * rightAmount),
+                        ),
+                        startX = size.width - w,
+                        endX = size.width,
+                    ),
+                )
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF6A7A9A).copy(alpha = 0.28f * rightAmount),
+                            Color.Transparent,
+                        ),
+                        center = Offset(size.width, size.height * 0.45f),
+                        radius = w * 1.4f,
+                    ),
+                    blendMode = BlendMode.Overlay,
+                )
+            }
+        }
 
 @Composable
 private fun RailSeeAllCard(

@@ -59,5 +59,7 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setNavLabels(enabled: Boolean) = Unit
 
+    override fun setSliderShade(enabled: Boolean) = Unit
+
     override fun setAppTheme(theme: String) = Unit
 }

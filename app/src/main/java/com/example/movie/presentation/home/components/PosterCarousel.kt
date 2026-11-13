@@ -995,7 +995,7 @@ private fun heroWash(
     )
 }
 
-private suspend fun Movie.extractPosterWash(context: android.content.Context): PosterWash? {
+internal suspend fun Movie.extractPosterWash(context: android.content.Context): PosterWash? {
     val url = posterUrl ?: backdropUrl ?: return null
     val result = context.imageLoader.execute(
         ImageRequest.Builder(context)

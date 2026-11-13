@@ -114,6 +114,7 @@ fun SettingsRoute() {
         onWhiteTitles = repository::setWhiteTitles,
         onHideBottomBarOnScroll = repository::setHideBottomBarOnScroll,
         onNavLabels = repository::setNavLabels,
+        onSliderShade = repository::setSliderShade,
         onLargePosters = repository::setLargePosters,
         onAutoBackdrop = repository::setAutoBackdrop,
         onWatchGlow = repository::setWatchGlow,
@@ -136,6 +137,7 @@ private fun SettingsScreen(
     onWhiteTitles: (Boolean) -> Unit,
     onHideBottomBarOnScroll: (Boolean) -> Unit,
     onNavLabels: (Boolean) -> Unit,
+    onSliderShade: (Boolean) -> Unit,
     onLargePosters: (Boolean) -> Unit,
     onAutoBackdrop: (Boolean) -> Unit,
     onWatchGlow: (Boolean) -> Unit,
@@ -178,6 +180,12 @@ private fun SettingsScreen(
                             hint = stringResource(R.string.settings_large_posters_hint),
                             checked = settings.largePosters,
                             onChecked = onLargePosters,
+                        ),
+                        SettingItem(
+                            title = stringResource(R.string.settings_slider_shade),
+                            hint = stringResource(R.string.settings_slider_shade_hint),
+                            checked = settings.sliderShade,
+                            onChecked = onSliderShade,
                         ),
                         SettingItem(
                             title = stringResource(R.string.settings_poster_titles),

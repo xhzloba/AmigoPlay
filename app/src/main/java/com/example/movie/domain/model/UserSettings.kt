@@ -29,6 +29,8 @@ data class UserSettings(
     val hideBottomBarOnScroll: Boolean = true,
     /** Подписи под иконками нижнего меню. */
     val navLabels: Boolean = false,
+    /** Ретушь по бокам полок (слайдеров) на главной и в каталоге. */
+    val sliderShade: Boolean = false,
     val appTheme: String = "cinema",
 )
 
@@ -80,6 +82,8 @@ interface UserSettingsRepository {
     fun setHideBottomBarOnScroll(enabled: Boolean)
 
     fun setNavLabels(enabled: Boolean)
+
+    fun setSliderShade(enabled: Boolean)
 
     fun setAppTheme(theme: String)
 }
