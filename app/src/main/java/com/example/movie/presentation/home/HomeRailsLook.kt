@@ -496,7 +496,7 @@ internal fun HomeRailsCover(
     BackHandler(enabled = visible) { onDismiss() }
     val p = progress.value
     val contentAlpha = ((p - 0.78f) / 0.22f).coerceIn(0f, 1f)
-    val veil = color.copy(alpha = 0.94f)
+    val veil = color.copy(alpha = 1f)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val contentCap = maxHeight * 0.72f
         CornerIris(progress = p, color = veil, modifier = Modifier.fillMaxSize())

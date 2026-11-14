@@ -719,7 +719,6 @@ private fun DetailContent(
     ) {
         when {
             settings.extractPlex -> {
-                reveal.snapTo(1f)
                 val poster = detail.posterUrl?.takeIf { it.isNotBlank() }
                 val still = shownBackdrop
                 if (poster == null && still == null) {
@@ -753,7 +752,6 @@ private fun DetailContent(
                 if (extracted != null) backdropWash = extracted
             }
             settings.extractBackdrop -> {
-                reveal.snapTo(1f)
                 val url = shownBackdrop
                 if (url == null) {
                     backdropWash = flat
@@ -769,8 +767,28 @@ private fun DetailContent(
             }
         }
     }
+    val awaitingColors = colored && backdropWash == hidden
+    LaunchedEffect(detail.id, colored, awaitingColors) {
+        if (!colored) return@LaunchedEffect
+        if (awaitingColors) reveal.snapTo(0f)
+        else reveal.animateTo(1f, tween(900, easing = FastOutSlowInEasing))
+    }
     val washAlpha = reveal.value
-    val paintWash = if (settings.extractBackdrop || settings.extractPlex) animateWash(backdropWash) else target
+    val themeWash = when (settings.appTheme) {
+        THEME_GRAPHITE -> PosterWash(
+            Color(0xFF1A1E26),
+            Color(0xFF202228),
+            Color(0xFF14161C),
+            Color(0xFF101318),
+        )
+        THEME_BLACK -> hidden
+        else -> flat
+    }
+    val paintWash = if (colored) {
+        animateWash(if (awaitingColors) themeWash else backdropWash)
+    } else {
+        target
+    }
     var backdropColorReady by remember(detail.id, shownBackdrop) { mutableStateOf(false) }
     var watchGlow by remember(detail.id) { mutableStateOf<Color?>(null) }
     LaunchedEffect(detail.id, settings.watchGlow) {
@@ -802,6 +820,14 @@ private fun DetailContent(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
+                if (awaitingColors || (colored && washAlpha < 0.995f)) {
+                    when (settings.appTheme) {
+                        THEME_GRAPHITE -> drawGraphite()
+                        THEME_BLACK -> drawRect(Color.Black)
+                        else -> drawRect(CinemaBlack)
+                    }
+                    if (awaitingColors) return@drawBehind
+                }
                 if (!colored && settings.appTheme == THEME_GRAPHITE) {
                     drawGraphite()
                     return@drawBehind
