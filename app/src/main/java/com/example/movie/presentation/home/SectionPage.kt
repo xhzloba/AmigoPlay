@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -149,6 +150,7 @@ internal fun SectionPage(
     onHideBar: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    var confirmClear by remember { mutableStateOf(false) }
     val grid = rememberLazyGridState()
     val density = LocalDensity.current
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
@@ -198,9 +200,20 @@ internal fun SectionPage(
         SectionBar(
             title = title,
             onBack = onBack,
-            onClear = onClear,
+            onClear = onClear?.let { { confirmClear = true } },
             modifier = Modifier.align(Alignment.TopCenter),
         )
+        if (confirmClear && onClear != null) {
+            CoverPopup(onDismiss = { confirmClear = false }) {
+                HistoryClearSheet(
+                    onConfirm = {
+                        confirmClear = false
+                        onClear()
+                    },
+                    onCancel = { confirmClear = false },
+                )
+            }
+        }
     }
 }
 
@@ -219,6 +232,44 @@ private fun SectionBar(
             .padding(top = BrandTopInset)
             .height(36.dp),
     ) {
+        if (onClear != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                HistoryBack(onBack)
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 2.dp, end = 12.dp),
+                )
+                Text(
+                    text = stringResource(R.string.search_clear),
+                    color = Color(0xFF4DA3FF),
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .padding(end = PosterGridInset)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                tick?.invoke()
+                                onClear()
+                            },
+                        ),
+                )
+            }
+        } else {
         Text(
             text = title,
             color = Color.White,
@@ -230,28 +281,8 @@ private fun SectionBar(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = if (onClear != null) 108.dp else 56.dp),
+                .padding(horizontal = 56.dp),
         )
-        if (onClear != null) {
-            Text(
-                text = stringResource(R.string.search_clear),
-                color = Color(0xFF4DA3FF),
-                fontSize = 16.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = PosterGridInset)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            tick?.invoke()
-                            onClear()
-                        },
-                    ),
-            )
-        }
         Box(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -274,6 +305,97 @@ private fun SectionBar(
                 modifier = Modifier.size(22.dp),
             )
         }
+        }
+    }
+}
+
+@Composable
+private fun HistoryBack(onBack: () -> Unit) {
+    val tick = rememberHapticTick()
+    Box(
+        modifier = Modifier
+            .padding(start = PosterGridInset - 7.dp)
+            .size(36.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {
+                    tick?.invoke()
+                    onBack()
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = ShellIcons.back,
+            contentDescription = stringResource(R.string.section_back),
+            tint = Color.White,
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
+private fun HistoryClearSheet(
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val tick = rememberHapticTick()
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(start = 22.dp, end = 22.dp, bottom = 8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.history_clear_title),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            lineHeight = 23.sp,
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = stringResource(R.string.history_clear_body),
+            color = Color.White.copy(alpha = 0.82f),
+            fontSize = 15.sp,
+            lineHeight = 21.sp,
+        )
+        Spacer(Modifier.height(18.dp))
+        Text(
+            text = stringResource(R.string.history_clear_yes),
+            color = Color.White,
+            fontSize = 16.sp,
+            lineHeight = 21.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        tick?.invoke()
+                        onConfirm()
+                    },
+                )
+                .padding(vertical = 12.dp),
+        )
+        Text(
+            text = stringResource(R.string.history_clear_no),
+            color = Color.White.copy(alpha = 0.55f),
+            fontSize = 16.sp,
+            lineHeight = 21.sp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        tick?.invoke()
+                        onCancel()
+                    },
+                )
+                .padding(vertical = 12.dp),
+        )
     }
 }
 

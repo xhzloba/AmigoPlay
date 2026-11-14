@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -78,7 +79,6 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -423,29 +423,32 @@ internal fun PosterCarousel(
             val clamped = pageShift.absoluteValue.coerceIn(0f, 1f)
             val settle = (1f - clamped / 0.28f).coerceIn(0f, 1f)
             val appear = settle * settle * (3f - 2f * settle)
-            PosterReflection(
-                movie = active,
-                width = fittedWidth,
-                cardHeight = cardHeight,
-                appear = appear,
-                pageShift = pageShift,
+            HeroFooter(
+                cardWidth = fittedWidth,
+                reflection = {
+                    PosterReflection(
+                        movie = active,
+                        cardHeight = cardHeight,
+                        appear = appear,
+                        pageShift = pageShift,
+                    )
+                },
+                caption = { MovieCaption(movie = active) },
+                dots = {
+                    PagerDots(
+                        count = movies.size,
+                        activeIndex = activeIndex,
+                        offsetFraction = pagerState.currentPageOffsetFraction,
+                        onSelect = { index ->
+                            if (!loop) return@PagerDots
+                            val delta = index - activeIndex
+                            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + delta) }
+                        },
+                    )
+                },
             )
             }
         }
-        Spacer(Modifier.height(6.dp))
-        MovieCaption(movie = active)
-        Spacer(Modifier.height(12.dp))
-        PagerDots(
-            count = movies.size,
-            activeIndex = activeIndex,
-            offsetFraction = pagerState.currentPageOffsetFraction,
-            onSelect = { index ->
-                if (!loop) return@PagerDots
-                val delta = index - activeIndex
-                scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + delta) }
-            },
-        )
-        Spacer(Modifier.height(AfterDotsGap))
     }
 }
 
@@ -456,20 +459,19 @@ private fun PagerDots(
     offsetFraction: Float,
     onSelect: (Int) -> Unit,
 ) {
-    if (count <= 0) return
-    val window = minOf(DotWindow, count)
-    val position = activeIndex + offsetFraction
-    val maxStart = (count - window).coerceAtLeast(0).toFloat()
-    val anchor = (window - 1) / 2f
-    val start = (position - anchor).coerceIn(0f, maxStart)
-    val travel = position - start
-    val stride = 16.dp
-    val base = start.toInt()
-    val shift = start - base
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+    HeroDotsFrame {
+        if (count <= 0) return@HeroDotsFrame
+        val window = minOf(DotWindow, count)
+        val position = activeIndex + offsetFraction
+        val maxStart = (count - window).coerceAtLeast(0).toFloat()
+        val anchor = (window - 1) / 2f
+        val start = (position - anchor).coerceIn(0f, maxStart)
+        val travel = position - start
+        val stride = 16.dp
+        val base = start.toInt()
+        val shift = start - base
         Box(
             modifier = Modifier
-                .offset(y = -DotsNudge)
                 .width(stride * window - 4.dp)
                 .height(DotsHeight)
                 .clipToBounds(),
@@ -526,24 +528,15 @@ private fun PagerDots(
 
 @Composable
 private fun MovieCaption(movie: Movie?) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        var targetLift by remember { mutableStateOf(0.dp) }
-        val extraLift by animateDpAsState(
-            targetValue = targetLift,
-            animationSpec = tween(durationMillis = 220),
-            label = "caption-gap",
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(LogoSlot),
-            contentAlignment = Alignment.Center,
-        ) {
+    var targetLift by remember { mutableStateOf(0.dp) }
+    val extraLift by animateDpAsState(
+        targetValue = targetLift,
+        animationSpec = tween(durationMillis = 220),
+        label = "caption-gap",
+    )
+    HeroCaptionFrame(
+        metaLift = MetaNudge + extraLift,
+        logo = {
             if (movie != null) {
                 MovieLogoOrTitle(
                     movie = movie,
@@ -554,53 +547,46 @@ private fun MovieCaption(movie: Movie?) {
                     onContentHeight = { targetLift = it },
                 )
             }
-        }
-        Spacer(Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .height(20.dp)
-                .fillMaxWidth()
-                .offset(y = -(MetaNudge + extraLift)),
-            contentAlignment = Alignment.Center,
+        },
+        meta = {
+        if (movie != null) {
+        val meta = Color(0xFF8E8E93)
+        val genres = movie.genres
+            .split(',')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .take(2)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (movie != null) {
-                val meta = Color(0xFF8E8E93)
-                val genres = movie.genres
-                    .split(',')
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-                    .take(2)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    movie.year?.let { year ->
-                        Text(
-                            text = year.toString(),
-                            color = meta,
-                            fontSize = 14.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.Normal,
-                            maxLines = 1,
-                        )
-                    }
-                    if (genres.isNotEmpty()) {
-                        Text(
-                            text = genres.joinToString(", "),
-                            color = meta,
-                            fontSize = 14.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                    }
-                }
+            movie.year?.let { year ->
+                Text(
+                    text = year.toString(),
+                    color = meta,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                )
+            }
+            if (genres.isNotEmpty()) {
+                Text(
+                    text = genres.joinToString(", "),
+                    color = meta,
+                    fontSize = 14.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
             }
         }
-    }
+        }
+    },
+    )
 }
 
 @Composable
@@ -737,6 +723,90 @@ private fun LogoSkeleton() {
 }
 
 @Composable
+private fun HeroFooter(
+    cardWidth: Dp,
+    reflection: @Composable () -> Unit,
+    caption: @Composable () -> Unit,
+    dots: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // Слот отражения: в колонке только ReflectionHeight−CaptionLift, картинка 104.dp
+        // рисуется сверху и заходит на лого. Скелетон держит тот же слот.
+        Box(
+            modifier = Modifier
+                .width(cardWidth)
+                .height(ReflectionHeight - CaptionLift)
+                .wrapContentHeight(align = Alignment.Top, unbounded = true),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(cardWidth)
+                    .height(ReflectionHeight),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                reflection()
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        caption()
+        Spacer(Modifier.height(12.dp))
+        dots()
+        Spacer(Modifier.height(AfterDotsGap))
+    }
+}
+
+@Composable
+private fun HeroCaptionFrame(
+    metaLift: Dp,
+    logo: @Composable () -> Unit,
+    meta: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(LogoSlot),
+            contentAlignment = Alignment.Center,
+        ) {
+            logo()
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .height(20.dp)
+                .fillMaxWidth()
+                .offset(y = -metaLift),
+            contentAlignment = Alignment.Center,
+        ) {
+            meta()
+        }
+    }
+}
+
+@Composable
+private fun HeroDotsFrame(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        Box(
+            modifier = Modifier
+                .offset(y = -DotsNudge)
+                .height(DotsHeight),
+            contentAlignment = Alignment.Center,
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
 internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "cover-skeleton")
     val pulse by transition.animateFloat(
@@ -756,59 +826,70 @@ internal fun CoverStackSkeleton(modifier: Modifier = Modifier) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val cardWidth = maxWidth * CoverWidthFraction
             val cardHeight = cardWidth * CoverAspect
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(cardHeight),
-                contentAlignment = Alignment.Center,
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                SkeletonCard(cardWidth, cardHeight, shift = -NeighborShift, scale = NeighborScale, pulse = pulse, z = 0f)
-                SkeletonCard(cardWidth, cardHeight, shift = NeighborShift, scale = NeighborScale, pulse = pulse, z = 0f)
-                SkeletonCard(cardWidth, cardHeight, shift = 0f, scale = 1f, pulse = pulse, z = 1f, solid = true)
-            }
-        }
-        Spacer(Modifier.height(ReflectionHeight + 6.dp - CaptionLift))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .offset(y = -LogoNudge)
-                    .width(220.dp)
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = pulse)),
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .offset(y = -MetaNudge)
-                .width(64.dp)
-                .height(20.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color.White.copy(alpha = pulse)),
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.offset(y = -DotsNudge),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            repeat(DotWindow) { index ->
                 Box(
-                    modifier = Modifier.size(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(cardHeight),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(if (index == 0) 6.dp else if (index == DotWindow - 1) 3.dp else 5.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = pulse)),
-                    )
+                    SkeletonCard(cardWidth, cardHeight, shift = -NeighborShift, scale = NeighborScale, pulse = pulse, z = 0f)
+                    SkeletonCard(cardWidth, cardHeight, shift = NeighborShift, scale = NeighborScale, pulse = pulse, z = 0f)
+                    SkeletonCard(cardWidth, cardHeight, shift = 0f, scale = 1f, pulse = pulse, z = 1f, solid = true)
                 }
+                HeroFooter(
+                    cardWidth = cardWidth,
+                    reflection = {},
+                    caption = {
+                        HeroCaptionFrame(
+                            metaLift = MetaNudge,
+                            logo = {
+                                Box(
+                                    modifier = Modifier
+                                        .offset(y = -LogoNudge)
+                                        .width(220.dp)
+                                        .height(LogoSlot)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.White.copy(alpha = pulse)),
+                                )
+                            },
+                            meta = {
+                                Box(
+                                    modifier = Modifier
+                                        .width(64.dp)
+                                        .height(14.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.White.copy(alpha = pulse)),
+                                )
+                            },
+                        )
+                    },
+                    dots = {
+                        HeroDotsFrame {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                repeat(DotWindow) { index ->
+                                    Box(
+                                        modifier = Modifier.size(12.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(if (index == 0) 6.dp else if (index == DotWindow - 1) 3.dp else 5.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.White.copy(alpha = pulse)),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                )
             }
         }
     }
@@ -843,7 +924,6 @@ private fun SkeletonCard(
 @Composable
 private fun PosterReflection(
     movie: Movie?,
-    width: androidx.compose.ui.unit.Dp,
     cardHeight: androidx.compose.ui.unit.Dp,
     appear: Float,
     pageShift: Float,
@@ -868,18 +948,7 @@ private fun PosterReflection(
     val clamped = pageShift.absoluteValue.coerceIn(0f, 1f)
     Box(
         modifier = Modifier
-            .layout { measurable, constraints ->
-                val full = ReflectionHeight.roundToPx()
-                val lift = CaptionLift.roundToPx()
-                val placeable = measurable.measure(
-                    constraints.copy(minHeight = full, maxHeight = full),
-                )
-                layout(placeable.width, (full - lift).coerceAtLeast(0)) {
-                    placeable.place(0, 0)
-                }
-            }
-            .width(width)
-            .height(ReflectionHeight)
+            .fillMaxSize()
             .graphicsLayer {
                 transformOrigin = TransformOrigin(0.5f, 0f)
                 val scale = lerp(1f, NeighborScale, clamped)

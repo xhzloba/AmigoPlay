@@ -250,7 +250,7 @@ fun HomeScreen(
                     },
                 ),
         ) {
-    if (state.shelves.isEmpty()) {
+    if (state.shelves.isEmpty() && state.phase !is HomePhase.Loading) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -258,11 +258,6 @@ fun HomeScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             when (val phase = state.phase) {
-                HomePhase.Loading ->                 HomeSkeleton(
-                    onSearch = onOpenSearch,
-                    onAlerts = onOpenAlerts,
-                    modifier = Modifier.fillMaxSize(),
-                )
                 is HomePhase.Failed -> StatusMessage(
                     message = phase.reason.message(),
                     onRetry = onRetry,
@@ -361,25 +356,33 @@ fun HomeScreen(
                 ),
             ) {
                 item(key = "tabs") {
-                    CategoryTabs(
-                        shelves = state.shelves,
-                        selectedId = state.selectedId,
-                        play = playAnim,
-                        border = capsuleAnim.value,
-                        onSelect = onSelectShelf,
-                        onSearch = onOpenSearch,
-                        hat = logo.hat,
-                        mustache = logo.mustache,
-                        onMenuSettled = logo::onSettled,
-                        showBrand = false,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    if (state.shelves.isEmpty()) {
+                        CategoryTabsSkeleton(
+                            onSearch = onOpenSearch,
+                            onAlerts = onOpenAlerts,
+                            showBrand = false,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        CategoryTabs(
+                            shelves = state.shelves,
+                            selectedId = state.selectedId,
+                            play = playAnim,
+                            border = capsuleAnim.value,
+                            onSelect = onSelectShelf,
+                            onSearch = onOpenSearch,
+                            hat = logo.hat,
+                            mustache = logo.mustache,
+                            onMenuSettled = logo::onSettled,
+                            showBrand = false,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                     Spacer(Modifier.height(HeroTopGap))
                 }
                 item(key = "hero") {
                     if (state.phase is HomePhase.Loading && state.movies.isEmpty()) {
                         PosterSkeleton(Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(HomeRailGap))
                     } else {
                         PosterCarousel(
                             movies = state.movies,
@@ -652,36 +655,6 @@ private fun DataError.message(): String = when (this) {
     is DataError.Http -> stringResource(R.string.popular_http_error, code)
     is DataError.Parsing -> stringResource(R.string.popular_parse_error)
     is DataError.Unknown -> stringResource(R.string.popular_load_error)
-}
-
-@Composable
-private fun HomeSkeleton(onSearch: () -> Unit, onAlerts: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(top = BrandTopInset)) {
-        CategoryTabsSkeleton(onSearch = onSearch, onAlerts = onAlerts)
-        Spacer(Modifier.height(HeroTopGap))
-        CoverStackSkeleton(Modifier.fillMaxWidth())
-        Spacer(Modifier.height(HomeRailGap))
-        RecommendationRail(
-            movies = emptyList(),
-            onMovieClick = {},
-            onMoviePeek = {},
-            title = stringResource(R.string.section_recommendations),
-        )
-        Spacer(Modifier.height(HomeRailGap))
-        RecommendationRail(
-            movies = emptyList(),
-            onMovieClick = {},
-            onMoviePeek = {},
-            title = stringResource(R.string.section_watching),
-        )
-        Spacer(Modifier.height(HomeRailGap))
-        RecommendationRail(
-            movies = emptyList(),
-            onMovieClick = {},
-            onMoviePeek = {},
-            title = stringResource(R.string.section_best),
-        )
-    }
 }
 
 @Composable

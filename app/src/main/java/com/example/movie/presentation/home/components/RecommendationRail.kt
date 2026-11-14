@@ -30,6 +30,7 @@ import androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.snapFlingBehavior
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
@@ -196,15 +197,15 @@ internal fun RecommendationRailSkeleton(
             val showTitles = posterTitlesOn()
             val rowHeight = posterHeight + WatchedBadgeHang + if (showTitles) PosterCaptionBlock else 0.dp
             val count = ((maxWidth - RailStart) / (posterWidth + PosterGap)).toInt().coerceIn(2, 4)
-            Row(
+            LazyRow(
+                contentPadding = PaddingValues(start = RailStart, end = RailStart),
+                horizontalArrangement = Arrangement.spacedBy(PosterGap),
+                userScrollEnabled = false,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(rowHeight)
-                    .padding(start = RailStart),
-                horizontalArrangement = Arrangement.spacedBy(PosterGap),
-                verticalAlignment = Alignment.Top,
+                    .height(rowHeight),
             ) {
-                repeat(count) {
+                items(count) {
                     Column(Modifier.width(posterWidth)) {
                         Box(
                             modifier = Modifier

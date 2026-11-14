@@ -600,11 +600,14 @@ private fun IntArray.toMask(width: Int, height: Int): ImageBitmap {
 fun CategoryTabsSkeleton(
     onSearch: () -> Unit,
     onAlerts: () -> Unit = {},
+    showBrand: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        BrandRow(play = PlayBlue, onSearch = onSearch, onAlerts = onAlerts)
-        Spacer(Modifier.height(12.dp))
+        if (showBrand) {
+            BrandRow(play = PlayBlue, onSearch = onSearch, onAlerts = onAlerts)
+            Spacer(Modifier.height(12.dp))
+        }
         LazyRow(
             contentPadding = PaddingValues(start = HomeContentInset, end = HomeContentInset),
             horizontalArrangement = Arrangement.spacedBy(20.dp),

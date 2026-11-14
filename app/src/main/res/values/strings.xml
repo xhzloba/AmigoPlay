@@ -231,6 +231,10 @@
     <string name="section_recommendations">Возможно, вам понравится</string>
     <string name="section_continue">Продолжить просмотр</string>
     <string name="section_history">История просмотров</string>
+    <string name="history_clear_title">Удалить историю?</string>
+    <string name="history_clear_body">Все просмотры пропадут из истории. Вернуть их нельзя.</string>
+    <string name="history_clear_yes">Удалить</string>
+    <string name="history_clear_no">Не удалять</string>
     <string name="section_favorites">Буду смотреть</string>
     <string name="section_watched">Просмотрено</string>
     <string name="section_watching">Сейчас смотрят</string>
