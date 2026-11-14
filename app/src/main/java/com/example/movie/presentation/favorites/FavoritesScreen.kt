@@ -116,6 +116,7 @@ import com.example.movie.presentation.home.components.BrandLogoBleed
 import com.example.movie.presentation.home.components.BrandTopInset
 import com.example.movie.presentation.home.components.PosterGridInset
 import com.example.movie.presentation.home.components.PosterCaption
+import com.example.movie.presentation.home.components.PosterGap
 import com.example.movie.presentation.home.components.WatchedBadgeHang
 import com.example.movie.presentation.home.components.WatchProgress
 import com.example.movie.presentation.home.components.posterGridColumns
@@ -336,8 +337,8 @@ internal fun FavoritesScreen(
                     top = topInset + BrandTopInset + brandReserve + 12.dp,
                     bottom = 96.dp,
                 ),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(PosterGap),
+                verticalArrangement = Arrangement.spacedBy(PosterGap),
             ) {
                 item(key = "tabs", span = { GridItemSpan(maxLineSpan) }) {
                     FavoriteTabs(
@@ -965,9 +966,7 @@ private fun FavoritePoster(
                 )
             }
         }
-        if (showTitles) {
-            Spacer(Modifier.height(WatchedBadgeHang))
-            PosterCaption(item.title, item.year)
-        }
+        Spacer(Modifier.height(WatchedBadgeHang))
+        if (showTitles) PosterCaption(item.title, item.year)
     }
 }
