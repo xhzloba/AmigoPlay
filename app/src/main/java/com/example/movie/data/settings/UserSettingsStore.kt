@@ -84,7 +84,13 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
     }
 
     override fun setAppTheme(theme: String) = write {
-        it.copy(appTheme = if (theme == "graphite") "graphite" else "cinema")
+        it.copy(
+            appTheme = when (theme) {
+                "graphite" -> "graphite"
+                "black" -> "black"
+                else -> "cinema"
+            },
+        )
     }
 
     private fun write(transform: (UserSettings) -> UserSettings) {

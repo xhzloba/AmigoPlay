@@ -26,6 +26,7 @@ import com.example.movie.ui.theme.CinemaBlack
 
 internal const val THEME_CINEMA = "cinema"
 internal const val THEME_GRAPHITE = "graphite"
+internal const val THEME_BLACK = "black"
 
 private val GraphiteTopLeft = Color(0xFF1A1E26)
 private val GraphiteTopRight = Color(0xFF202228)
@@ -114,17 +115,21 @@ private fun renderGraphite(w: Int, h: Int): Bitmap {
 @Composable
 internal fun Modifier.appBackground(): Modifier {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    return if (settings.appTheme == THEME_GRAPHITE) {
-        drawBehind { drawGraphite() }
-    } else {
-        background(CinemaBlack)
+    return when (settings.appTheme) {
+        THEME_GRAPHITE -> drawBehind { drawGraphite() }
+        THEME_BLACK -> background(Color.Black)
+        else -> background(CinemaBlack)
     }
 }
 
 @Composable
 internal fun appChrome(): Color {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    return if (settings.appTheme == THEME_GRAPHITE) Color(0xFF12141A) else CinemaBlack
+    return when (settings.appTheme) {
+        THEME_GRAPHITE -> Color(0xFF12141A)
+        THEME_BLACK -> Color.Black
+        else -> CinemaBlack
+    }
 }
 
 /** Как у cinema-scrim: строка бренда + хвост. */

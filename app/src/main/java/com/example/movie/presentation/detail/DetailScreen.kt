@@ -167,6 +167,7 @@ import com.example.movie.presentation.common.LocalShelfNotices
 import com.example.movie.presentation.common.NoticeShelfFavorites
 import com.example.movie.presentation.common.NoticeShelfWatched
 import com.example.movie.presentation.common.PosterImage
+import com.example.movie.presentation.common.THEME_BLACK
 import com.example.movie.presentation.common.THEME_GRAPHITE
 import com.example.movie.presentation.common.appBackground
 import com.example.movie.presentation.common.drawGraphite
@@ -783,6 +784,10 @@ private fun DetailContent(
             .drawBehind {
                 if (!colored && settings.appTheme == THEME_GRAPHITE) {
                     drawGraphite()
+                    return@drawBehind
+                }
+                if (!colored && settings.appTheme == THEME_BLACK) {
+                    drawRect(Color.Black)
                     return@drawBehind
                 }
                 drawRect(Color(0xFF121212))

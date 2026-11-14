@@ -110,6 +110,9 @@ private val GraphitePanel = Color(0xFF2A2E38)
 private val IconWellCinema = Color.White.copy(alpha = 0.10f)
 private val IconWellGraphite = Color.White.copy(alpha = 0.12f)
 
+private fun themePanel(theme: String): Color =
+    if (theme == THEME_GRAPHITE) GraphitePanel else Color.White.copy(alpha = 0.08f)
+
 @Composable
 internal fun HomeRailsLookPlaque(
     onOpen: () -> Unit,
@@ -263,7 +266,7 @@ internal fun HomeRailsLookPlaque(
 internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
     val repository = LocalUserSettings.current
     val settings by repository.settings.collectAsStateWithLifecycle()
-    val graphite = settings.appTheme == THEME_GRAPHITE
+    val panel = themePanel(settings.appTheme)
     var tab by remember { mutableStateOf(RailsLookTab.Look) }
     // Чуть выше половины экрана; длинный список крутится внутри.
     val sheetCap = (LocalConfiguration.current.screenHeightDp * 0.58f).dp
@@ -331,7 +334,7 @@ internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
                         .fillMaxWidth()
                         .nestedScroll(keepSheet)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f))
+                        .background(panel)
                         .verticalScroll(rememberScrollState()),
                 ) {
                     when (page) {
@@ -424,7 +427,7 @@ private fun RailsLookTabs(
 ) {
     val tick = rememberHapticTick()
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val graphite = settings.appTheme == THEME_GRAPHITE
+    val panel = themePanel(settings.appTheme)
     val pillSpring = spring<Dp>(
         dampingRatio = 0.86f,
         stiffness = Spring.StiffnessMediumLow,
@@ -433,7 +436,7 @@ private fun RailsLookTabs(
         modifier
             .height(44.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f))
+            .background(panel)
             .padding(3.dp),
     ) {
         val gap = 2.dp
@@ -558,13 +561,12 @@ private fun RailsToggle(
 @Composable
 private fun RailsSwitch(checked: Boolean) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val graphite = settings.appTheme == THEME_GRAPHITE
+    val offTrack = if (settings.appTheme == THEME_GRAPHITE) Color(0xFF3A3F4A) else Color(0xFF2C2C30)
     val travel by animateDpAsState(
         targetValue = if (checked) 20.dp else 0.dp,
         animationSpec = spring(dampingRatio = 1f, stiffness = 500f),
         label = "rails-switch",
     )
-    val offTrack = if (graphite) Color(0xFF3A3F4A) else Color(0xFF2C2C30)
     Box(
         modifier = Modifier
             .width(48.dp)

@@ -111,8 +111,7 @@ internal fun CatalogGenreChips(
     modifier: Modifier = Modifier,
 ) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val graphite = settings.appTheme == THEME_GRAPHITE
-    val fill = if (graphite) GenreChipGraphite else GenreChipCinema
+    val fill = if (settings.appTheme == THEME_GRAPHITE) GenreChipGraphite else GenreChipCinema
     val genres = remember(type) { catalogGenresFor(type).filter { it != GenreAll } }
     val row = rememberLazyListState()
     HapticOnChange(row) { row.firstVisibleItemIndex }

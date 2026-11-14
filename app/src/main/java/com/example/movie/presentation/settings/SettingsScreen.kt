@@ -77,6 +77,7 @@ import com.example.movie.presentation.home.components.CategoryTabLineHeight
 import com.example.movie.domain.model.AppRelease
 import com.example.movie.domain.model.DownloadProgress
 import com.example.movie.presentation.common.HandleSheet
+import com.example.movie.presentation.common.THEME_BLACK
 import com.example.movie.presentation.common.THEME_CINEMA
 import com.example.movie.presentation.common.THEME_GRAPHITE
 import com.example.movie.presentation.common.appBackground
@@ -702,6 +703,13 @@ private val SensorAmberGraphite = Color(0xFFE0A83A)
 /** Приподнятая плашка на фоне graphite, чтобы не сливалась с #1A1E26. */
 private val GraphitePanel = Color(0xFF2A2E38)
 
+private val ThemeOrder = listOf(THEME_CINEMA, THEME_GRAPHITE, THEME_BLACK)
+
+private fun stepTheme(current: String, delta: Int): String {
+    val index = ThemeOrder.indexOf(current).let { if (it < 0) 0 else it }
+    return ThemeOrder[(index + delta).mod(ThemeOrder.size)]
+}
+
 @Composable
 private fun settingsPanel(): Color {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
@@ -715,10 +723,15 @@ private fun ThemeGroup(
 ) {
     val tick = rememberHapticTick()
     val graphite = selected == THEME_GRAPHITE
-    val next = if (graphite) THEME_CINEMA else THEME_GRAPHITE
-    fun apply() {
+    val panel = if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f)
+    val label = when (selected) {
+        THEME_GRAPHITE -> R.string.settings_theme_graphite
+        THEME_BLACK -> R.string.settings_theme_black
+        else -> R.string.settings_theme_cinema
+    }
+    fun apply(delta: Int) {
         tick?.invoke()
-        onSelect(next)
+        onSelect(stepTheme(selected, delta))
     }
     Text(
         text = stringResource(R.string.settings_group_theme),
@@ -735,7 +748,7 @@ private fun ThemeGroup(
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f)),
+            .background(panel),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -745,11 +758,11 @@ private fun ThemeGroup(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = ::apply,
+                    onClick = { apply(1) },
                 ),
         )
         Text(
-            text = stringResource(if (graphite) R.string.settings_theme_graphite else R.string.settings_theme_cinema),
+            text = stringResource(label),
             modifier = Modifier.padding(horizontal = 52.dp),
             color = Color.White,
             fontSize = 16.sp,
@@ -760,15 +773,15 @@ private fun ThemeGroup(
         )
         ThemeKey(
             glyph = "−",
-            graphite = graphite,
+            raised = graphite,
             modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp),
-            onClick = ::apply,
+            onClick = { apply(-1) },
         )
         ThemeKey(
             glyph = "+",
-            graphite = graphite,
+            raised = graphite,
             modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp),
-            onClick = ::apply,
+            onClick = { apply(1) },
         )
     }
 }
@@ -776,7 +789,7 @@ private fun ThemeGroup(
 @Composable
 private fun ThemeKey(
     glyph: String,
-    graphite: Boolean,
+    raised: Boolean,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
@@ -785,7 +798,7 @@ private fun ThemeKey(
             .size(36.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (graphite) Color.White.copy(alpha = 0.12f)
+                if (raised) Color.White.copy(alpha = 0.12f)
                 else Color.White.copy(alpha = 0.14f),
             )
             .clickable(
@@ -822,9 +835,9 @@ private fun SettingGroup(
     items: List<SettingItem>,
 ) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val graphite = settings.appTheme == THEME_GRAPHITE
+    val muted = settings.appTheme == THEME_GRAPHITE
     val titleColor = when {
-        !graphite -> accent
+        !muted -> accent
         accent == PosterBlue -> PosterBlueGraphite
         accent == ColorViolet -> ColorVioletGraphite
         accent == DetailGreen -> DetailGreenGraphite
@@ -923,13 +936,12 @@ private fun SettingRow(
 @Composable
 private fun CinemaSwitch(checked: Boolean) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val graphite = settings.appTheme == THEME_GRAPHITE
+    val offTrack = if (settings.appTheme == THEME_GRAPHITE) Color(0xFF3A3F4A) else Color(0xFF2C2C30)
     val travel by animateDpAsState(
         targetValue = if (checked) 20.dp else 0.dp,
         animationSpec = spring(dampingRatio = 1f, stiffness = 500f),
         label = "switch",
     )
-    val offTrack = if (graphite) Color(0xFF3A3F4A) else Color(0xFF2C2C30)
     Box(
         modifier = Modifier
             .width(48.dp)
