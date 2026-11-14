@@ -11,6 +11,7 @@ import com.example.movie.data.history.ViewHistoryStore
 import com.example.movie.domain.model.CatalogQuery
 import com.example.movie.domain.model.DataError
 import com.example.movie.domain.model.Movie
+import com.example.movie.domain.model.MoviePage
 import com.example.movie.domain.model.progressCaption
 import com.example.movie.domain.model.toMovie
 import com.example.movie.domain.usecase.GetRecommendationsUseCase
@@ -57,8 +58,7 @@ class SectionViewModel(
     private val favorites: FavoriteStore,
     private val watched: WatchedStore,
 ) : ViewModel() {
-    private val seen = mutableSetOf<String>()
-    private var page = 0
+    private val pages = ShelfPages()
     private var busy = false
     private val _state = MutableStateFlow(
         if (section.stored) {
@@ -124,7 +124,7 @@ class SectionViewModel(
 
     fun retry() {
         if (_state.value.movies.isEmpty()) {
-            page = 0
+            pages.rewind()
             _state.value = SectionUiState()
         }
         loadMore(force = true)
@@ -135,38 +135,65 @@ class SectionViewModel(
         if (busy || current.end) return
         if (!force && current.error != null) return
         busy = true
-        val next = page + 1
         val first = current.movies.isEmpty()
         _state.value = current.copy(loading = first, loadingMore = !first, error = null)
         viewModelScope.launch {
-            fetch(next)
-                .onSuccess { batch ->
-                    val fresh = batch.filter { seen.add(it.id) }
-                    if (fresh.isNotEmpty()) page = next
-                    _state.value = _state.value.copy(
-                        movies = _state.value.movies + fresh,
-                        loading = false,
-                        loadingMore = false,
-                        end = fresh.isEmpty() || !section.paged,
-                        error = null,
-                    )
+            try {
+                var skips = 0
+                while (true) {
+                    var stop = true
+                    fetch(pages.page + 1)
+                        .onSuccess { batch ->
+                            val take = pages.advance(batch.movies, hasMore = batch.hasMore, paged = section.paged)
+                            when {
+                                take.again && skips + 1 >= ShelfOverlapSkips -> {
+                                    skips++
+                                    _state.value = _state.value.copy(
+                                        loading = false,
+                                        loadingMore = false,
+                                        end = true,
+                                        error = null,
+                                    )
+                                }
+                                take.again -> {
+                                    skips++
+                                    stop = false
+                                    _state.value = _state.value.copy(
+                                        loading = false,
+                                        loadingMore = true,
+                                        end = false,
+                                        error = null,
+                                    )
+                                }
+                                else -> _state.value = _state.value.copy(
+                                    movies = _state.value.movies + take.fresh,
+                                    loading = false,
+                                    loadingMore = false,
+                                    end = take.end,
+                                    error = null,
+                                )
+                            }
+                        }
+                        .onFailure { error ->
+                            _state.value = _state.value.copy(
+                                loading = false,
+                                loadingMore = false,
+                                error = error as? DataError ?: DataError.Unknown(),
+                            )
+                        }
+                    if (stop) break
                 }
-                .onFailure { error ->
-                    _state.value = _state.value.copy(
-                        loading = false,
-                        loadingMore = false,
-                        error = error as? DataError ?: DataError.Unknown(),
-                    )
-                }
-            busy = false
+            } finally {
+                busy = false
+            }
         }
     }
 
-    private suspend fun fetch(page: Int) = when (section) {
-        HomeSection.Recommendations -> getRecommendations()
-        HomeSection.Watching -> getShelfMovies(CatalogQuery(sort = "watching"), page = page)
-        HomeSection.Best -> getShelfMovies(CatalogQuery(sort = "rating", type = "movie"), page = page)
+    private suspend fun fetch(page: Int): Result<MoviePage> = when (section) {
+        HomeSection.Recommendations -> getRecommendations().map { MoviePage(it, hasMore = false) }
+        HomeSection.Watching -> getShelfMovies.paged(CatalogQuery(sort = "watching"), page = page)
+        HomeSection.Best -> getShelfMovies.paged(CatalogQuery(sort = "rating", type = "movie"), page = page)
         HomeSection.History, HomeSection.Continue, HomeSection.Favorites, HomeSection.Watched ->
-            Result.success(emptyList())
+            Result.success(MoviePage(emptyList(), hasMore = false))
     }
 }

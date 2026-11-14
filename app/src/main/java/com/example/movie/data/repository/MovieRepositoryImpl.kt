@@ -46,8 +46,11 @@ internal class MovieRepositoryImpl(
         api.main(token).toShelves()
     }
 
-    override suspend fun getMovies(query: CatalogQuery, page: Int, limit: Int?): Result<List<Movie>> = runApi {
-        api.list(
+    override suspend fun getMovies(query: CatalogQuery, page: Int, limit: Int?): Result<List<Movie>> =
+        getMoviePage(query, page, limit).map { it.movies }
+
+    override suspend fun getMoviePage(query: CatalogQuery, page: Int, limit: Int?): Result<MoviePage> = runApi {
+        val response = api.list(
             sort = query.sort.takeIf { it.isNotBlank() },
             type = query.type,
             page = page,
@@ -56,13 +59,16 @@ internal class MovieRepositoryImpl(
             dolbyVision = if (query.dolbyVision) 1 else null,
             genre = query.genre?.takeIf { it.isNotBlank() },
         )
+        val cap = limit ?: if (query.uhd || query.dolbyVision) 15 else null
+        val movies = response
             .requireChannels()
             .map { it.toDomain() }
             .filter { it.id.isNotBlank() && it.title.isNotBlank() }
-            .let { movies ->
-                val cap = limit ?: if (query.uhd || query.dolbyVision) 15 else null
-                if (cap != null) movies.take(cap) else movies
-            }
+            .let { list -> if (cap != null) list.take(cap) else list }
+        MoviePage(
+            movies = movies,
+            hasMore = cap == null && !response.page?.next.isNullOrBlank(),
+        )
     }
 
     override suspend fun getRecommendations(): Result<List<Movie>> = runApi {

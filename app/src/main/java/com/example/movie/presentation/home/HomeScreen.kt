@@ -97,7 +97,7 @@ private val HomeBottomClearance = 96.dp
 /** Между полками. */
 internal val HomeRailGap = 24.dp
 /** Чипсы «Популярное» → обложки главного слайдера. Чуть плотнее полок. */
-private val HeroTopGap = 6.dp
+private val HeroTopGap = 10.dp
 /** В каталоге — тот же шаг, что HomeRailGap. */
 internal val CatalogGap = HomeRailGap
 

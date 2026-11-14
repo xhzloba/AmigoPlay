@@ -165,7 +165,6 @@ private fun MovieMenu(
     onSummary: () -> Unit,
     onPickSeasons: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val favorites = LocalAppContainer.current.favorites
     val watched = LocalAppContainer.current.watched
     val resumeStore = LocalAppContainer.current.resume
@@ -185,37 +184,7 @@ private fun MovieMenu(
     )
     val addedWatched = stringResource(R.string.notice_watched_movie)
     val removedWatched = stringResource(R.string.notice_watched_movie_off)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = appChrome(),
-        contentColor = Color.White,
-        scrimColor = MenuScrim,
-        dragHandle = null,
-        shape = SheetShape,
-        tonalElevation = 0.dp,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .appBackground()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {},
-                )
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(bottom = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(
-                Modifier
-                    .padding(top = 8.dp, bottom = 12.dp)
-                    .width(32.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.28f)),
-            )
+    CoverPopup(onDismiss = onDismiss) {
             MenuHeading(movie)
             if (continued != null) {
                 Spacer(Modifier.height(14.dp))
@@ -300,6 +269,48 @@ private fun MovieMenu(
                 label = stringResource(R.string.menu_comment),
                 enabled = false,
             )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CoverPopup(
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = appChrome(),
+        contentColor = Color.White,
+        scrimColor = MenuScrim,
+        dragHandle = null,
+        shape = SheetShape,
+        tonalElevation = 0.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .appBackground()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                )
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier
+                    .padding(top = 8.dp, bottom = 12.dp)
+                    .width(32.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.28f)),
+            )
+            content()
         }
     }
 }

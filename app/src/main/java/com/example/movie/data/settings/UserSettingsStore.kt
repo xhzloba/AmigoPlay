@@ -72,6 +72,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setSliderShade(enabled: Boolean) = write { it.copy(sliderShade = enabled) }
 
+    override fun setHideRailsLookHint(hidden: Boolean) = write { it.copy(hideRailsLookHint = hidden) }
+
     override fun setHomeRailVisible(id: String, visible: Boolean) = write { current ->
         val next = if (visible) {
             current.hiddenHomeRails - id
@@ -114,6 +116,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_NAV_LABELS, next.navLabels)
             .putBoolean(KEY_SLIDER_SHADE, next.sliderShade)
             .putStringSet(KEY_HIDDEN_HOME_RAILS, HashSet(next.hiddenHomeRails))
+            .putBoolean(KEY_HIDE_RAILS_LOOK_HINT, next.hideRailsLookHint)
             .putString(KEY_THEME, next.appTheme)
             .commit()
         state.value = next
@@ -186,6 +189,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         } else {
             DefaultHiddenHomeRails
         },
+        hideRailsLookHint = prefs.getBoolean(KEY_HIDE_RAILS_LOOK_HINT, false),
         appTheme = prefs.getString(KEY_THEME, "cinema") ?: "cinema",
         )
     }
@@ -221,6 +225,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_NAV_LABELS = "nav_labels"
         const val KEY_SLIDER_SHADE = "slider_shade"
         const val KEY_HIDDEN_HOME_RAILS = "hidden_home_rails"
+        const val KEY_HIDE_RAILS_LOOK_HINT = "hide_rails_look_hint"
         const val KEY_THEME = "app_theme"
     }
 }

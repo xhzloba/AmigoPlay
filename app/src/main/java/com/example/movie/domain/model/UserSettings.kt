@@ -34,6 +34,8 @@ data class UserSettings(
     val sliderShade: Boolean = false,
     /** Скрытые полки главной (id из HomeRails). Главный слайдер всегда. По умолчанию все скрыты. */
     val hiddenHomeRails: Set<String> = DefaultHiddenHomeRails,
+    /** Ссылка «Зачем это?» под плашкой «Вид полок». */
+    val hideRailsLookHint: Boolean = false,
     val appTheme: String = "cinema",
 ) {
     fun homeRailVisible(id: String): Boolean = id !in hiddenHomeRails
@@ -102,6 +104,8 @@ interface UserSettingsRepository {
     fun setSliderShade(enabled: Boolean)
 
     fun setHomeRailVisible(id: String, visible: Boolean)
+
+    fun setHideRailsLookHint(hidden: Boolean)
 
     fun setAppTheme(theme: String)
 }

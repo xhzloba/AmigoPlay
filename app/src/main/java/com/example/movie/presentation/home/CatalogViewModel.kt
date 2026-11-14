@@ -108,8 +108,7 @@ internal class CatalogListViewModel(
     private val query: CatalogQuery,
     private val getShelfMovies: GetShelfMoviesUseCase,
 ) : ViewModel() {
-    private val seen = mutableSetOf<String>()
-    private var page = 0
+    private val pages = ShelfPages()
     private var busy = false
     private val _state = MutableStateFlow(SectionUiState())
     val state: StateFlow<SectionUiState> = _state.asStateFlow()
@@ -120,8 +119,7 @@ internal class CatalogListViewModel(
 
     fun retry() {
         if (_state.value.movies.isEmpty()) {
-            page = 0
-            seen.clear()
+            pages.reset()
             _state.value = SectionUiState()
         }
         loadMore(force = true)
@@ -132,30 +130,57 @@ internal class CatalogListViewModel(
         if (busy || current.end) return
         if (!force && current.error != null) return
         busy = true
-        val next = page + 1
         val first = current.movies.isEmpty()
         _state.value = current.copy(loading = first, loadingMore = !first, error = null)
         viewModelScope.launch {
-            getShelfMovies(query, page = next)
-                .onSuccess { batch ->
-                    val fresh = batch.filter { seen.add(it.id) }
-                    if (fresh.isNotEmpty()) page = next
-                    _state.value = _state.value.copy(
-                        movies = _state.value.movies + fresh,
-                        loading = false,
-                        loadingMore = false,
-                        end = fresh.isEmpty(),
-                        error = null,
-                    )
+            try {
+                var skips = 0
+                while (true) {
+                    var stop = true
+                    getShelfMovies.paged(query, page = pages.page + 1)
+                        .onSuccess { batch ->
+                            val take = pages.advance(batch.movies, hasMore = batch.hasMore, paged = true)
+                            when {
+                                take.again && skips + 1 >= ShelfOverlapSkips -> {
+                                    skips++
+                                    _state.value = _state.value.copy(
+                                        loading = false,
+                                        loadingMore = false,
+                                        end = true,
+                                        error = null,
+                                    )
+                                }
+                                take.again -> {
+                                    skips++
+                                    stop = false
+                                    _state.value = _state.value.copy(
+                                        loading = false,
+                                        loadingMore = true,
+                                        end = false,
+                                        error = null,
+                                    )
+                                }
+                                else -> _state.value = _state.value.copy(
+                                    movies = _state.value.movies + take.fresh,
+                                    loading = false,
+                                    loadingMore = false,
+                                    end = take.end,
+                                    error = null,
+                                )
+                            }
+                        }
+                        .onFailure { error ->
+                            _state.value = _state.value.copy(
+                                loading = false,
+                                loadingMore = false,
+                                error = error as? DataError ?: DataError.Unknown(),
+                            )
+                        }
+                    if (stop) break
                 }
-                .onFailure { error ->
-                    _state.value = _state.value.copy(
-                        loading = false,
-                        loadingMore = false,
-                        error = error as? DataError ?: DataError.Unknown(),
-                    )
-                }
-            busy = false
+            } finally {
+                busy = false
+            }
         }
     }
 }

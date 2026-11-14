@@ -13,6 +13,9 @@ interface MovieRepository {
 
     suspend fun getMovies(query: CatalogQuery, page: Int = 1, limit: Int? = null): Result<List<Movie>>
 
+    /** Та же выдача, плюс `page.next`: есть следующая страница или лента кончилась. */
+    suspend fun getMoviePage(query: CatalogQuery, page: Int = 1, limit: Int? = null): Result<MoviePage>
+
     suspend fun getRecommendations(): Result<List<Movie>>
 
     suspend fun search(name: String, page: Int = 1): Result<MoviePage>

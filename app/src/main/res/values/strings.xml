@@ -281,6 +281,10 @@
     <string name="settings_theme_graphite_hint">Четыре близких графитовых цвета по углам. Переливаются по всему экрану.</string>
     <string name="home_rails_look_title">Вид полок</string>
     <string name="home_rails_look_hint">Оформление и какие полки показывать на главной</string>
+    <string name="home_rails_look_about_link">Зачем это?</string>
+    <string name="home_rails_look_about">Здесь настраивается главная.\n\n«Оформление» — размер обложек, подписи, ретушь и UltraBlur. Фон берёт цвет с обложки большого слайдера: на весь экран или только вокруг него.\n\n«Полки» — какие ряды показывать под слайдером. Сначала они выключены, на главной только он.</string>
+    <string name="home_rails_look_about_hide">Больше не показывать</string>
+    <string name="home_rails_look_about_hide_hint">Ссылка «Зачем это?» пропадёт с главной</string>
     <string name="home_rails_tab_look">Оформление</string>
     <string name="home_rails_tab_shelves">Полки</string>
     <string name="home_rails_shelves_note">Главный слайдер всегда на месте. Остальные полки можно скрыть.</string>

@@ -43,12 +43,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -56,7 +62,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.movie.R
 import com.example.movie.presentation.common.BookmarkFilled
-import com.example.movie.presentation.common.HandleSheet
 import com.example.movie.presentation.common.PlexPlay
 import com.example.movie.presentation.common.THEME_GRAPHITE
 import com.example.movie.presentation.haptic.rememberHapticTick
@@ -118,10 +123,15 @@ internal fun HomeRailsLookPlaque(
     val iconWell = if (graphite) IconWellGraphite else IconWellCinema
     val tick = rememberHapticTick()
     var pressed by remember { mutableStateOf(false) }
+    var about by remember { mutableStateOf(false) }
     val scale = rememberPressScale(pressed)
     val wave = remember { PosterWave() }
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start,
+    ) {
     Box(
-        modifier
+        Modifier
             .fillMaxWidth()
             .padding(horizontal = PosterGridInset)
             .graphicsLayer {
@@ -191,6 +201,62 @@ internal fun HomeRailsLookPlaque(
             )
         }
     }
+    if (!settings.hideRailsLookHint) {
+        Text(
+            text = stringResource(R.string.home_rails_look_about_link),
+            color = Color.White,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.Normal,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier
+                .padding(start = PosterGridInset, top = 12.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        tick?.invoke()
+                        about = true
+                    },
+                ),
+        )
+    }
+    }
+    if (about) {
+        val repository = LocalUserSettings.current
+        CoverPopup(onDismiss = { about = false }) {
+            Column(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 22.dp, end = 22.dp, bottom = 6.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_rails_look_title),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        lineHeight = 23.sp,
+                        letterSpacing = (-0.3).sp,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.home_rails_look_about),
+                        color = Color.White.copy(alpha = 0.82f),
+                        fontSize = 15.sp,
+                        lineHeight = 21.sp,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                RailsToggle(
+                    title = stringResource(R.string.home_rails_look_about_hide),
+                    hint = stringResource(R.string.home_rails_look_about_hide_hint),
+                    checked = settings.hideRailsLookHint,
+                    onChecked = repository::setHideRailsLookHint,
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -201,8 +267,20 @@ internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
     var tab by remember { mutableStateOf(RailsLookTab.Look) }
     // Чуть выше половины экрана; длинный список крутится внутри.
     val sheetCap = (LocalConfiguration.current.screenHeightDp * 0.58f).dp
-    // Dialog как в деталке (HandleSheet) — скролл главной не закрывает попап.
-    HandleSheet(onDismiss = onDismiss) {
+    val listCap = sheetCap - 108.dp
+    // Оверскролл списка не должен утаскивать шит вниз (скролл главной тоже).
+    val keepSheet = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset = available
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = available
+        }
+    }
+    CoverPopup(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -244,13 +322,14 @@ internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f, fill = false)
+                    .heightIn(max = listCap)
                     .padding(horizontal = PosterGridInset),
                 label = "rails-look-tab",
             ) { page ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .nestedScroll(keepSheet)
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (graphite) GraphitePanel else Color.White.copy(alpha = 0.08f))
                         .verticalScroll(rememberScrollState()),
