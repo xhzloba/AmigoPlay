@@ -42,6 +42,12 @@ internal object Changelog {
 
     val releases: List<Release> = listOf(
         Release(
+            version = "2.39.2",
+            fixed = listOf(
+                "В деталке мета сразу стоит под логотипом: отступ считается по картинке до первой раскладки и больше не подъезжает.",
+            ),
+        ),
+        Release(
             version = "2.39.1",
             fixed = listOf(
                 "Пока в деталке не готовы цвета, фон — текущая тема. Затем цвета проявляются плавно.",

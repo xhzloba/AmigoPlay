@@ -4,7 +4,6 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -80,7 +79,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -511,16 +509,24 @@ fun DetailScreen(
 ) {
     val detail = state.detail
     when {
-        detail != null -> DetailContent(
-            detail = detail,
-            franchiseReady = state.franchiseReady,
-            unavailable = state.unavailable,
-            onResolveWatch = onResolveWatch,
-            onOpenMovie = onOpenMovie,
-            onMoviePeek = onMoviePeek,
-            onBack = onBack,
-            modifier = modifier,
-        )
+        detail != null -> {
+            val logoInk = rememberLogoInk(detail)
+            if (logoInk == null) {
+                DetailArrival(modifier)
+            } else {
+                DetailContent(
+                    detail = detail,
+                    franchiseReady = state.franchiseReady,
+                    unavailable = state.unavailable,
+                    logoInk = logoInk,
+                    onResolveWatch = onResolveWatch,
+                    onOpenMovie = onOpenMovie,
+                    onMoviePeek = onMoviePeek,
+                    onBack = onBack,
+                    modifier = modifier,
+                )
+            }
+        }
         state.phase is DetailPhase.Failed -> DetailMessage(
             message = state.phase.reason.message(),
             onRetry = onRetry,
@@ -566,6 +572,7 @@ private fun DetailContent(
     detail: MovieDetail,
     franchiseReady: Boolean,
     unavailable: Boolean,
+    logoInk: Dp,
     onResolveWatch: () -> Unit,
     onOpenMovie: (String) -> Unit,
     onMoviePeek: (Movie) -> Unit,
@@ -869,11 +876,10 @@ private fun DetailContent(
         // Плашка — когда центр лого/тайтла на уровне Chromecast (не top бокса).
         val castDock = WindowInsets.statusBars.getTop(density).toFloat() +
             with(density) { DetailBarRow.toPx() / 2f }
-        var inkBelow by remember(detail.id, detail.logoUrl) { mutableStateOf(0.dp) }
         val useLogo = settings.showLogos && !detail.logoUrl.isNullOrBlank()
         val logoExtentPx = with(density) {
             if (useLogo) {
-                (DetailLogoHeight - inkBelow).toPx().coerceAtLeast(0f)
+                (DetailLogoHeight - logoInk).toPx().coerceAtLeast(0f)
             } else {
                 44.sp.toPx()
             }
@@ -1032,15 +1038,10 @@ private fun DetailContent(
                         )
                     },
             )
-            val logoLift by animateDpAsState(
-                targetValue = inkBelow,
-                animationSpec = tween(180),
-                label = "logo-gap",
-            )
             Layout(
                 content = {
                     Box(Modifier.graphicsLayer { alpha = 1f - barIn }) {
-                        LogoOrTitle(detail, onInkBelow = { inkBelow = it })
+                        LogoOrTitle(detail)
                     }
                     MetaRow(detail)
                 },
@@ -1048,7 +1049,7 @@ private fun DetailContent(
                 val logo = measurables[0].measure(constraints)
                 val meta = measurables[1].measure(constraints)
                 val gap = LogoMetaGap.roundToPx()
-                val metaY = (logo.height + gap - logoLift.roundToPx()).coerceAtLeast(gap)
+                val metaY = (logo.height + gap - logoInk.roundToPx()).coerceAtLeast(gap)
                 val logoX = ((constraints.maxWidth - logo.width) / 2).coerceAtLeast(0)
                 layout(constraints.maxWidth, metaY + meta.height) {
                     logo.place(logoX, 0)
@@ -1803,9 +1804,8 @@ private fun MovieDetail.releaseSub(awaiting: Boolean): SeriesSub {
 }
 
 @Composable
-private fun LogoOrTitle(detail: MovieDetail, onInkBelow: (Dp) -> Unit) {
+private fun LogoOrTitle(detail: MovieDetail) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val density = LocalDensity.current
     var failed by remember(detail.id, detail.logoUrl) {
         mutableStateOf(detail.logoUrl.isNullOrBlank())
     }
@@ -1828,21 +1828,14 @@ private fun LogoOrTitle(detail: MovieDetail, onInkBelow: (Dp) -> Unit) {
                 contentDescription = stringResource(R.string.logo_content_description, detail.title),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.Center,
-                onSuccess = { state ->
-                    ready = true
-                    onInkBelow(state.result.inkBelow(density, DetailLogoWidth, DetailLogoHeight))
-                },
-                onError = {
-                    failed = true
-                    onInkBelow(0.dp)
-                },
+                onSuccess = { ready = true },
+                onError = { failed = true },
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer { alpha = if (ready) 1f else 0f },
             )
         }
     } else {
-        SideEffect { onInkBelow(0.dp) }
         Text(
             text = detail.title,
             color = Color.White,
@@ -2023,12 +2016,37 @@ private fun DetailLogoSkeleton() {
     )
 }
 
-private fun SuccessResult.inkBelow(density: Density, maxWidth: Dp, maxHeight: Dp): Dp {
-    val raw = (drawable as? BitmapDrawable)?.bitmap ?: return 0.dp
-    val bitmap = if (raw.config == android.graphics.Bitmap.Config.HARDWARE) {
-        raw.copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return 0.dp
+/** Пустота под непрозрачными пикселями лого в слоте 300×84. Считается до первой раскладки меты. */
+@Composable
+private fun rememberLogoInk(detail: MovieDetail): Dp? {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+    val url = detail.logoUrl
+    if (!settings.showLogos || url.isNullOrBlank()) return 0.dp
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    var ink by remember(detail.id, url) { mutableStateOf<Dp?>(null) }
+    LaunchedEffect(detail.id, url) {
+        val result = context.imageLoader.execute(
+            ImageRequest.Builder(context)
+                .data(url)
+                .allowHardware(false)
+                .build(),
+        )
+        val raw = ((result as? SuccessResult)?.drawable as? BitmapDrawable)?.bitmap
+        ink = if (raw == null) {
+            0.dp
+        } else {
+            withContext(Dispatchers.Default) { raw.logoInkBelow(density, DetailLogoWidth, DetailLogoHeight) }
+        }
+    }
+    return ink
+}
+
+private fun android.graphics.Bitmap.logoInkBelow(density: Density, maxWidth: Dp, maxHeight: Dp): Dp {
+    val bitmap = if (config == android.graphics.Bitmap.Config.HARDWARE) {
+        copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return 0.dp
     } else {
-        raw
+        this
     }
     val width = bitmap.width
     val height = bitmap.height
@@ -2042,7 +2060,7 @@ private fun SuccessResult.inkBelow(density: Density, maxWidth: Dp, maxHeight: Dp
     }
     val maxW = with(density) { maxWidth.toPx() }
     val maxH = with(density) { maxHeight.toPx() }
-    val scale = min(maxW / width, maxH / height)
+    val scale = min(maxW / width.toFloat(), maxH / height.toFloat())
     val scaledHeight = height * scale
     val below = (maxH - scaledHeight) / 2f + (height - 1 - bottom) * scale
     return with(density) { below.toDp() }.coerceAtLeast(0.dp)
