@@ -61,6 +61,8 @@ private object DefaultUserSettings : UserSettingsRepository {
 
     override fun setSliderShade(enabled: Boolean) = Unit
 
+    override fun setDetailIris(enabled: Boolean) = Unit
+
     override fun setHomeRailVisible(id: String, visible: Boolean) = Unit
 
     override fun setHideRailsLookHint(hidden: Boolean) = Unit

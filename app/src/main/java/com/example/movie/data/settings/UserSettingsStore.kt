@@ -72,6 +72,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
 
     override fun setSliderShade(enabled: Boolean) = write { it.copy(sliderShade = enabled) }
 
+    override fun setDetailIris(enabled: Boolean) = write { it.copy(detailIris = enabled) }
+
     override fun setHideRailsLookHint(hidden: Boolean) = write { it.copy(hideRailsLookHint = hidden) }
 
     override fun setHomeRailVisible(id: String, visible: Boolean) = write { current ->
@@ -121,6 +123,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
             .putBoolean(KEY_HIDE_BAR, next.hideBottomBarOnScroll)
             .putBoolean(KEY_NAV_LABELS, next.navLabels)
             .putBoolean(KEY_SLIDER_SHADE, next.sliderShade)
+            .putBoolean(KEY_DETAIL_IRIS, next.detailIris)
             .putStringSet(KEY_HIDDEN_HOME_RAILS, HashSet(next.hiddenHomeRails))
             .putBoolean(KEY_HIDE_RAILS_LOOK_HINT, next.hideRailsLookHint)
             .putString(KEY_THEME, next.appTheme)
@@ -190,6 +193,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         hideBottomBarOnScroll = prefs.getBoolean(KEY_HIDE_BAR, true),
         navLabels = prefs.getBoolean(KEY_NAV_LABELS, false),
         sliderShade = prefs.getBoolean(KEY_SLIDER_SHADE, false),
+        detailIris = prefs.getBoolean(KEY_DETAIL_IRIS, false),
         hiddenHomeRails = if (prefs.contains(KEY_HIDDEN_HOME_RAILS)) {
             prefs.getStringSet(KEY_HIDDEN_HOME_RAILS, emptySet())?.toSet().orEmpty()
         } else {
@@ -230,6 +234,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         const val KEY_HIDE_BAR = "hide_bottom_bar_scroll"
         const val KEY_NAV_LABELS = "nav_labels"
         const val KEY_SLIDER_SHADE = "slider_shade"
+        const val KEY_DETAIL_IRIS = "detail_iris"
         const val KEY_HIDDEN_HOME_RAILS = "hidden_home_rails"
         const val KEY_HIDE_RAILS_LOOK_HINT = "hide_rails_look_hint"
         const val KEY_THEME = "app_theme"

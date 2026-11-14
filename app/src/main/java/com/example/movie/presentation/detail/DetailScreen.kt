@@ -530,19 +530,9 @@ fun DetailScreen(
     }
 }
 
-/** Пока карточка грузится: скелетоны в слотах лого, меты и рейтингов. */
+/** Пока карточка грузится: скелетон только в слоте лого. */
 @Composable
 private fun DetailArrival(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "detail-arrival")
-    val pulse by transition.animateFloat(
-        initialValue = 0.08f,
-        targetValue = 0.16f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "detail-arrival-pulse",
-    )
     BoxWithConstraints(modifier.fillMaxSize().appBackground()) {
         val lift = maxHeight * 0.07f
         val contentTop = maxHeight * 0.44f - lift
@@ -559,40 +549,10 @@ private fun DetailArrival(modifier: Modifier = Modifier) {
                     .width(DetailLogoWidth),
                 contentAlignment = Alignment.Center,
             ) {
-                DetailBone(210.dp, 28.dp, pulse, 8.dp)
-            }
-            Spacer(Modifier.height(LogoMetaGap))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DetailBone(36.dp, 22.dp, pulse)
-                DetailBone(36.dp, 14.dp, pulse)
-                DetailBone(52.dp, 14.dp, pulse)
-                DetailBone(128.dp, 14.dp, pulse)
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                DetailBone(54.dp, 14.dp, pulse)
-                DetailBone(46.dp, 14.dp, pulse)
-                DetailBone(42.dp, 14.dp, pulse)
+                DetailLogoSkeleton()
             }
         }
     }
-}
-
-@Composable
-private fun DetailBone(width: Dp, height: Dp, pulse: Float, radius: Dp = 6.dp) {
-    Box(
-        modifier = Modifier
-            .width(width)
-            .height(height)
-            .clip(RoundedCornerShape(radius))
-            .background(Color.White.copy(alpha = pulse)),
-    )
 }
 
 private data class WatchRequest(

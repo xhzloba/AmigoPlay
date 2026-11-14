@@ -119,6 +119,7 @@ fun SettingsRoute() {
         onLargePosters = repository::setLargePosters,
         onAutoBackdrop = repository::setAutoBackdrop,
         onWatchGlow = repository::setWatchGlow,
+        onDetailIris = repository::setDetailIris,
         onHaptic = repository::setHaptic,
         onAppTheme = repository::setAppTheme,
     )
@@ -142,6 +143,7 @@ private fun SettingsScreen(
     onLargePosters: (Boolean) -> Unit,
     onAutoBackdrop: (Boolean) -> Unit,
     onWatchGlow: (Boolean) -> Unit,
+    onDetailIris: (Boolean) -> Unit,
     onHaptic: (Boolean) -> Unit,
     onAppTheme: (String) -> Unit,
 ) {
@@ -277,6 +279,12 @@ private fun SettingsScreen(
                     title = stringResource(R.string.settings_group_detail),
                     accent = DetailGreen,
                     items = listOf(
+                        SettingItem(
+                            title = stringResource(R.string.settings_detail_iris),
+                            hint = stringResource(R.string.settings_detail_iris_hint),
+                            checked = settings.detailIris,
+                            onChecked = onDetailIris,
+                        ),
                         SettingItem(
                             title = stringResource(R.string.settings_logos),
                             hint = stringResource(R.string.settings_logos_hint),

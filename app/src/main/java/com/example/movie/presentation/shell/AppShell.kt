@@ -14,6 +14,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -93,7 +95,10 @@ import com.example.movie.presentation.home.CatalogScreen
 import com.example.movie.presentation.home.GenreAll
 import com.example.movie.presentation.home.CatalogSort
 import com.example.movie.presentation.home.HomeRails
+import com.example.movie.presentation.home.HomeRailsCover
+import com.example.movie.presentation.home.HomeRailsLookSheet
 import com.example.movie.presentation.home.HomeRoute
+import com.example.movie.presentation.home.RailsLookTab
 import com.example.movie.presentation.home.HomeSection
 import com.example.movie.presentation.home.HomeViewModel
 import com.example.movie.presentation.home.SearchPage
@@ -178,6 +183,9 @@ fun AppShell(
     var sectionShown by remember { mutableStateOf<HomeSection?>(null) }
     var barHidden by remember { mutableStateOf(false) }
     var barHeight by remember { mutableIntStateOf(0) }
+    var homeNavMenu by remember { mutableStateOf(false) }
+    var homeCoverAlive by remember { mutableStateOf(false) }
+    var railsLook by remember { mutableStateOf<RailsLookTab?>(null) }
     var homeDockLeft by remember { mutableStateOf<Color?>(null) }
     var homeDockRight by remember { mutableStateOf<Color?>(null) }
     LaunchedEffect(section) {
@@ -316,7 +324,9 @@ fun AppShell(
         !genresShown &&
         listShown == null &&
         tab == AppTab.Home &&
-        !homeState.searchOpen
+        !homeState.searchOpen &&
+        !homeNavMenu &&
+        !homeCoverAlive
     BackHandler(
         enabled = handleBack && resumePlayback == null && (alertsShown || peek != null || sectionShown != null || tab != AppTab.Home),
     ) {
@@ -342,6 +352,10 @@ fun AppShell(
     }
     LaunchedEffect(tab) {
         if (tab != AppTab.Home && tab != AppTab.Favorites) peek = null
+        homeNavMenu = false
+    }
+    LaunchedEffect(barHidden) {
+        if (barHidden) homeNavMenu = false
     }
     @Composable
     fun TabBody(which: AppTab, modifier: Modifier) {
@@ -358,6 +372,10 @@ fun AppShell(
                         homeDockRight = right
                     },
                     onHideBar = { barHidden = it },
+                    onOpenRailsLook = {
+                        sectionName = null
+                        railsLook = RailsLookTab.Look
+                    },
                     onOpenAlerts = openAlerts,
                     presentSearch = tab == AppTab.Home,
                     session = session,
@@ -542,9 +560,11 @@ fun AppShell(
             AppBottomBar(
                 selected = if (fromHome) null else tab,
                 onSelect = { next ->
+                    homeNavMenu = false
                     if (fromHome && next == AppTab.Home) sectionName = null
                     else onTabChange(next.name)
                 },
+                onHomeHold = { homeNavMenu = !homeNavMenu },
                 washLeft = homeDockLeft.takeIf { washBar },
                 washRight = homeDockRight.takeIf { washBar },
                 clear = onHome && shelvesOff,
@@ -553,6 +573,29 @@ fun AppShell(
                     .onSizeChanged { barHeight = it.height }
                     .offset { IntOffset(0, (barHeight * hide).toInt()) }
                     .graphicsLayer { alpha = barAlpha },
+            )
+        }
+        val flyoutSettings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+        val flyoutOnHome = tab == AppTab.Home && sectionShown == null
+        val flyoutShelvesOff = HomeRails.All.none { flyoutSettings.homeRailVisible(it.id) }
+        val flyoutWash = flyoutSettings.heroPosterColors &&
+            flyoutSettings.heroPosterPage &&
+            flyoutOnHome &&
+            !flyoutShelvesOff
+        HomeRailsCover(
+            visible = homeNavMenu && barAlpha > 0.02f,
+            color = if (flyoutWash) {
+                (homeDockLeft ?: WashDockFallback).dockInk()
+            } else {
+                appChrome()
+            },
+            onAlive = { homeCoverAlive = it },
+            onDismiss = { homeNavMenu = false },
+        )
+        railsLook?.let { tab ->
+            HomeRailsLookSheet(
+                initial = tab,
+                onDismiss = { railsLook = null },
             )
         }
         if (alertsShown) {
@@ -663,6 +706,7 @@ private fun Modifier.holdOffscreen(): Modifier =
     }.clearAndSetSemantics {}
 
 private val IdleInk = Color(0xFFC7C7CC)
+
 private val WashDockFallback = Color(0xFF121212)
 
 /** Чуть глубже угол UltraBlur — бар читаемый, палитра та же. */
@@ -678,6 +722,7 @@ private fun Color.dockInk(): Color {
 private fun AppBottomBar(
     selected: AppTab?,
     onSelect: (AppTab) -> Unit,
+    onHomeHold: () -> Unit,
     washLeft: Color? = null,
     washRight: Color? = null,
     clear: Boolean = false,
@@ -778,9 +823,17 @@ private fun AppBottomBar(
                         .fillMaxWidth()
                         .height(slotHeight)
                         .clip(RoundedCornerShape(22.dp))
-                        .clickable(
+                        .combinedClickable(
                             interactionSource = interaction,
                             indication = press,
+                            onLongClick = if (tab == AppTab.Home) {
+                                {
+                                    tick?.invoke()
+                                    onHomeHold()
+                                }
+                            } else {
+                                null
+                            },
                             onClick = {
                                 if (tab != selected) {
                                     tick?.invoke()

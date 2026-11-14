@@ -21,6 +21,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -44,6 +45,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import com.example.movie.presentation.common.appBackground
+import com.example.movie.presentation.common.appChrome
+import com.example.movie.presentation.home.CornerIris
 import kotlin.math.roundToInt
 import com.example.movie.di.LocalAppContainer
 import com.example.movie.presentation.common.LocalShelfNotices
@@ -111,12 +114,29 @@ class MainActivity : ComponentActivity() {
                         val openedId = stack.lastOrNull()
                         val detailShift = remember { Animatable(0f) }
                         val coverShift = remember { Animatable(0f) }
+                        val detailIris = remember { Animatable(0f) }
+                        var detailIrisOn by remember { mutableStateOf(false) }
                         var covering by remember { mutableStateOf(false) }
                         var presented by remember { mutableStateOf(stack.toList()) }
+                        val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
                         LaunchedEffect(stack.toList()) {
                             val move = tween<Float>(240, easing = FastOutSlowInEasing)
                             val target = stack.toList()
-                            if (target.size == presented.size + 1 && target.dropLast(1) == presented) {
+                            val pushing = target.size == presented.size + 1 &&
+                                target.dropLast(1) == presented
+                            if (pushing && settings.detailIris) {
+                                detailIrisOn = true
+                                detailIris.snapTo(0f)
+                                covering = false
+                                coverShift.snapTo(0f)
+                                detailIris.animateTo(1f, tween(480, easing = FastOutSlowInEasing))
+                                presented = target
+                                detailShift.snapTo(0f)
+                                detailIris.animateTo(0f, tween(400, easing = FastOutSlowInEasing))
+                                detailIrisOn = false
+                            } else if (pushing) {
+                                detailIris.snapTo(0f)
+                                detailIrisOn = false
                                 covering = false
                                 coverShift.snapTo(0f)
                                 presented = target
@@ -125,6 +145,8 @@ class MainActivity : ComponentActivity() {
                                 withFrameNanos { }
                                 detailShift.animateTo(0f, move)
                             } else {
+                                detailIris.snapTo(0f)
+                                detailIrisOn = false
                                 while (
                                     presented.size > target.size &&
                                     presented.take(target.size) == target
@@ -230,6 +252,24 @@ class MainActivity : ComponentActivity() {
                                         },
                                     )
                                 }
+                            }
+                        }
+                        if (detailIrisOn || detailIris.value > 0.001f) {
+                            Box(Modifier.fillMaxSize().zIndex(80f)) {
+                                CornerIris(
+                                    progress = detailIris.value,
+                                    color = appChrome().copy(alpha = 0.94f),
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = {},
+                                        ),
+                                )
                             }
                         }
                         }

@@ -159,6 +159,7 @@ fun HomeScreen(
     onSearchCover: (Float) -> Unit = {},
     onHeroDock: (Color?, Color?) -> Unit = { _, _ -> },
     onHideBar: (Boolean) -> Unit = {},
+    onOpenRailsLook: () -> Unit = {},
     presentSearch: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
@@ -180,7 +181,6 @@ fun HomeScreen(
     // Кэш живёт на HomeScreen: LazyColumn уничтожает карусель при скролле вниз.
     val heroWashes = remember { mutableStateMapOf<String, PosterWash>() }
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    var railsLookOpen by remember { mutableStateOf(false) }
     val pageWashOn = settings.heroPosterColors && settings.heroPosterPage
     val playTintOn = settings.heroPosterColors
     LaunchedEffect(settings.heroPosterColors) {
@@ -543,7 +543,7 @@ fun HomeScreen(
                 item(key = "rails_look") {
                     if (railBeforePlaque) Spacer(Modifier.height(HomeRailGap))
                     HomeRailsLookPlaque(
-                        onOpen = { railsLookOpen = true },
+                        onOpen = onOpenRailsLook,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(8.dp))
@@ -577,9 +577,6 @@ fun HomeScreen(
         }
     }
     }
-        }
-        if (railsLookOpen) {
-            HomeRailsLookSheet(onDismiss = { railsLookOpen = false })
         }
         if (presentSearch && searchCover) {
             SearchPage(

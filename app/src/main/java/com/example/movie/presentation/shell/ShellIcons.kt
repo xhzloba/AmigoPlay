@@ -43,6 +43,15 @@ internal object ShellIcons {
             fill = SolidColor(Color.Black),
         )
     }.build()
+    val brush: ImageVector = filled24(
+        "brush",
+        "M7,14c-1.66,0 -3,1.34 -3,3 0,1.31 -1.16,2 -2,2 0.92,1.22 2.49,2 4,2 2.21,0 4,-1.79 4,-4 0,-1.66 -1.34,-3 -3,-3zM20.71,4.63l-1.34,-1.34c-0.39,-0.39 -1.02,-0.39 -1.41,0L9,12.25 11.75,15l8.96,-8.96c0.39,-0.39 0.39,-1.02 0,-1.41z",
+    )
+    /** Три обложки на полке. */
+    val shelf: ImageVector = filled24(
+        "shelf",
+        "M3,3h5v11H3zM9.5,5h5v9h-5zM16,3h5v11h-5zM2,16h20v2H2z",
+    )
     val chevron: ImageVector = chevron(forward = true)
     val back: ImageVector = chevron(forward = false)
     val person: ImageVector = person()
@@ -52,6 +61,22 @@ internal object ShellIcons {
         "M42 24C42 31.2328 38.3435 37.6115 32.7782 41.3886C33.1935 41.2738 33.602 41.1447 34 41C45.1693 36.9384 47 32 47 32L48 35C48 35 44.3832 40.459 34.5 43.5C28 45.5 21 45 21 45C9.40202 45 0 35.598 0 24C0 12.402 9.40202 3 21 3C32.598 3 42 12.402 42 24ZM21 19C24.3137 19 27 16.3137 27 13C27 9.68629 24.3137 7 21 7C17.6863 7 15 9.68629 15 13C15 16.3137 17.6863 19 21 19ZM10 30C13.3137 30 16 27.3137 16 24C16 20.6863 13.3137 18 10 18C6.68629 18 4 20.6863 4 24C4 27.3137 6.68629 30 10 30ZM38 24C38 27.3137 35.3137 30 32 30C28.6863 30 26 27.3137 26 24C26 20.6863 28.6863 18 32 18C35.3137 18 38 20.6863 38 24ZM21 26C22.1046 26 23 25.1046 23 24C23 22.8954 22.1046 22 21 22C19.8954 22 19 22.8954 19 24C19 25.1046 19.8954 26 21 26ZM27 35C27 38.3137 24.3137 41 21 41C17.6863 41 15 38.3137 15 35C15 31.6863 17.6863 29 21 29C24.3137 29 27 31.6863 27 35Z",
     )
 }
+
+private fun filled24(name: String, vararg paths: String): ImageVector =
+    ImageVector.Builder(
+        name = name,
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        paths.forEach { data ->
+            addPath(
+                pathData = PathParser().parsePathString(data).toNodes(),
+                fill = SolidColor(Color.Black),
+            )
+        }
+    }.build()
 
 private fun filled(name: String, vararg paths: String): ImageVector =
     ImageVector.Builder(

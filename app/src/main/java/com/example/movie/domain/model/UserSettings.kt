@@ -32,6 +32,8 @@ data class UserSettings(
     val navLabels: Boolean = false,
     /** Ретушь по бокам полок (слайдеров) на главной и в каталоге. */
     val sliderShade: Boolean = false,
+    /** Переход в деталку: экран закрывается цветом темы из углов. */
+    val detailIris: Boolean = false,
     /** Скрытые полки главной (id из HomeRails). Главный слайдер всегда. По умолчанию все скрыты. */
     val hiddenHomeRails: Set<String> = DefaultHiddenHomeRails,
     /** Ссылка «Зачем это?» под плашкой «Вид полок». */
@@ -102,6 +104,8 @@ interface UserSettingsRepository {
     fun setNavLabels(enabled: Boolean)
 
     fun setSliderShade(enabled: Boolean)
+
+    fun setDetailIris(enabled: Boolean)
 
     fun setHomeRailVisible(id: String, visible: Boolean)
 

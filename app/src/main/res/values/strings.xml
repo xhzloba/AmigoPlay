@@ -328,6 +328,8 @@
     <string name="settings_logos_hint">На главном слайдере и в деталке. Выключено — показывается название.</string>
     <string name="settings_backdrop_auto">Автокадры</string>
     <string name="settings_backdrop_auto_hint">В деталке backdrop сам листается. Выключено — точки сверху, кадры свайпом.</string>
+    <string name="settings_detail_iris">Переход из углов</string>
+    <string name="settings_detail_iris_hint">При открытии фильма экран закрывается цветом темы из углов. Выключено — обычный сдвиг.</string>
     <string name="settings_watch_glow">Свечение плашки</string>
     <string name="settings_watch_glow_hint">При входе в деталку у «Смотреть» один раз проходит тонкая обводка цветом кадра. Снова только если зайти заново.</string>
     <string name="settings_haptic">Виброотклик</string>

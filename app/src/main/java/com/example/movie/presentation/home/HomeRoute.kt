@@ -18,6 +18,7 @@ fun HomeRoute(
     onSearchCover: (Float) -> Unit = {},
     onHeroDock: (Color?, Color?) -> Unit = { _, _ -> },
     onHideBar: (Boolean) -> Unit = {},
+    onOpenRailsLook: () -> Unit = {},
     onOpenAlerts: () -> Unit = {},
     presentSearch: Boolean = true,
     session: Int = 0,
@@ -58,6 +59,7 @@ fun HomeRoute(
         onSearchCover = onSearchCover,
         onHeroDock = onHeroDock,
         onHideBar = onHideBar,
+        onOpenRailsLook = onOpenRailsLook,
         presentSearch = presentSearch,
     )
 }

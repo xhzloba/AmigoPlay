@@ -1,20 +1,24 @@
 package com.example.movie.presentation.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -28,6 +32,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -36,6 +41,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +50,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -60,6 +69,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.hypot
 import com.example.movie.R
 import com.example.movie.presentation.common.BookmarkFilled
 import com.example.movie.presentation.common.PlexPlay
@@ -97,7 +107,7 @@ internal object HomeRails {
     )
 }
 
-private enum class RailsLookTab {
+internal enum class RailsLookTab {
     Look,
     Shelves,
 }
@@ -263,11 +273,13 @@ internal fun HomeRailsLookPlaque(
 }
 
 @Composable
-internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
-    val repository = LocalUserSettings.current
-    val settings by repository.settings.collectAsStateWithLifecycle()
+internal fun HomeRailsLookSheet(
+    onDismiss: () -> Unit,
+    initial: RailsLookTab = RailsLookTab.Look,
+) {
+    val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
     val panel = themePanel(settings.appTheme)
-    var tab by remember { mutableStateOf(RailsLookTab.Look) }
+    var tab by remember(initial) { mutableStateOf(initial) }
     // Чуть выше половины экрана; длинный список крутится внутри.
     val sheetCap = (LocalConfiguration.current.screenHeightDp * 0.58f).dp
     val listCap = sheetCap - 108.dp
@@ -337,80 +349,247 @@ internal fun HomeRailsLookSheet(onDismiss: () -> Unit) {
                         .background(panel)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    when (page) {
-                        RailsLookTab.Look -> {
-                            RailsToggle(
-                                title = stringResource(R.string.settings_hero_colors),
-                                hint = stringResource(R.string.settings_hero_colors_hint),
-                                checked = settings.heroPosterColors,
-                                onChecked = repository::setHeroPosterColors,
+                    HomeRailsLookBody(page)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeRailsLookBody(page: RailsLookTab) {
+    val repository = LocalUserSettings.current
+    val settings by repository.settings.collectAsStateWithLifecycle()
+    when (page) {
+        RailsLookTab.Look -> {
+            RailsToggle(
+                title = stringResource(R.string.settings_hero_colors),
+                hint = stringResource(R.string.settings_hero_colors_hint),
+                checked = settings.heroPosterColors,
+                onChecked = repository::setHeroPosterColors,
+            )
+            if (settings.heroPosterColors) {
+                RailsDivider()
+                RailsToggle(
+                    title = stringResource(R.string.settings_hero_page),
+                    hint = stringResource(R.string.settings_hero_page_hint),
+                    checked = settings.heroPosterPage,
+                    onChecked = repository::setHeroPosterPage,
+                )
+            }
+            RailsDivider()
+            RailsToggle(
+                title = stringResource(R.string.settings_large_posters),
+                hint = stringResource(R.string.settings_large_posters_hint),
+                checked = settings.largePosters,
+                onChecked = repository::setLargePosters,
+            )
+            RailsDivider()
+            RailsToggle(
+                title = stringResource(R.string.settings_slider_shade),
+                hint = stringResource(R.string.settings_slider_shade_hint),
+                checked = settings.sliderShade,
+                onChecked = repository::setSliderShade,
+            )
+            RailsDivider()
+            RailsToggle(
+                title = stringResource(R.string.settings_poster_titles),
+                hint = stringResource(R.string.settings_poster_titles_hint),
+                checked = settings.showPosterTitles,
+                onChecked = repository::setShowPosterTitles,
+            )
+            RailsDivider()
+            RailsToggle(
+                title = stringResource(R.string.settings_white_titles),
+                hint = stringResource(R.string.settings_white_titles_hint),
+                checked = settings.whiteTitles,
+                onChecked = repository::setWhiteTitles,
+            )
+            RailsDivider()
+            RailsToggle(
+                title = stringResource(R.string.settings_watched_badge),
+                hint = stringResource(R.string.settings_watched_badge_hint),
+                checked = settings.watchedBadge,
+                onChecked = repository::setWatchedBadge,
+            )
+        }
+        RailsLookTab.Shelves -> {
+            Text(
+                text = stringResource(R.string.home_rails_shelves_note),
+                color = CinemaMuted,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+            RailsDivider()
+            HomeRails.All.forEachIndexed { index, entry ->
+                if (index > 0) RailsDivider()
+                RailsToggle(
+                    title = stringResource(entry.titleRes),
+                    hint = stringResource(R.string.home_rails_shelf_hint),
+                    checked = settings.homeRailVisible(entry.id),
+                    icon = entry.icon,
+                    onChecked = { visible ->
+                        repository.setHomeRailVisible(entry.id, visible)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Круг как зрачок: схлопывается в точку. [progress] 0 — открыто, 1 — закрыто. */
+@Composable
+internal fun CornerIris(
+    progress: Float,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    if (progress <= 0f) return
+    Canvas(modifier) {
+        val hole = hypot(size.width, size.height) / 2f * (1f - progress)
+        val path = Path().apply {
+            fillType = PathFillType.EvenOdd
+            addRect(Rect(0f, 0f, size.width, size.height))
+            if (hole > 0.5f) {
+                addOval(
+                    Rect(
+                        center.x - hole,
+                        center.y - hole,
+                        center.x + hole,
+                        center.y + hole,
+                    ),
+                )
+            }
+        }
+        drawPath(path, color)
+    }
+}
+
+/**
+ * Долгий тап по «Главной»: цвет темы схлопывается кругом в центр,
+ * по центру оформление и полки одной высоты.
+ */
+@Composable
+internal fun HomeRailsCover(
+    visible: Boolean,
+    color: Color,
+    onAlive: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val progress = remember { Animatable(0f) }
+    var shown by remember { mutableStateOf(false) }
+    var tab by remember { mutableStateOf(RailsLookTab.Look) }
+    LaunchedEffect(visible) {
+        if (visible) {
+            shown = true
+            onAlive(true)
+            progress.animateTo(1f, tween(520, easing = FastOutSlowInEasing))
+        } else if (shown) {
+            progress.animateTo(0f, tween(360, easing = FastOutSlowInEasing))
+            tab = RailsLookTab.Look
+            shown = false
+            onAlive(false)
+        }
+    }
+    if (!shown) return
+    BackHandler(enabled = visible) { onDismiss() }
+    val p = progress.value
+    val contentAlpha = ((p - 0.78f) / 0.22f).coerceIn(0f, 1f)
+    val veil = color.copy(alpha = 0.94f)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val contentCap = maxHeight * 0.72f
+        CornerIris(progress = p, color = veil, modifier = Modifier.fillMaxSize())
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = contentAlpha
+                    val scale = 0.9f + 0.1f * contentAlpha
+                    scaleX = scale
+                    scaleY = scale
+                },
+        ) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 8.dp, end = 12.dp)
+                    .size(40.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = ShellIcons.close,
+                    contentDescription = stringResource(R.string.player_close),
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(0.9f)
+                    .height(contentCap)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {},
+                    ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                RailsLookTabs(
+                    selected = tab,
+                    onSelect = { tab = it },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(color),
+                ) {
+                    AnimatedContent(
+                        targetState = tab,
+                        transitionSpec = {
+                            val forward = targetState.ordinal > initialState.ordinal
+                            val enter = fadeIn(tween(220, easing = FastOutSlowInEasing)) +
+                                slideInHorizontally(tween(260, easing = FastOutSlowInEasing)) {
+                                    if (forward) it / 10 else -it / 10
+                                }
+                            val exit = fadeOut(tween(160, easing = FastOutSlowInEasing)) +
+                                slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) {
+                                    if (forward) -it / 12 else it / 12
+                                }
+                            (enter togetherWith exit).using(
+                                SizeTransform(clip = false) { _, _ -> snap() },
                             )
-                            if (settings.heroPosterColors) {
-                                RailsDivider()
-                                RailsToggle(
-                                    title = stringResource(R.string.settings_hero_page),
-                                    hint = stringResource(R.string.settings_hero_page_hint),
-                                    checked = settings.heroPosterPage,
-                                    onChecked = repository::setHeroPosterPage,
-                                )
-                            }
-                            RailsDivider()
-                            RailsToggle(
-                                title = stringResource(R.string.settings_large_posters),
-                                hint = stringResource(R.string.settings_large_posters_hint),
-                                checked = settings.largePosters,
-                                onChecked = repository::setLargePosters,
-                            )
-                            RailsDivider()
-                            RailsToggle(
-                                title = stringResource(R.string.settings_slider_shade),
-                                hint = stringResource(R.string.settings_slider_shade_hint),
-                                checked = settings.sliderShade,
-                                onChecked = repository::setSliderShade,
-                            )
-                            RailsDivider()
-                            RailsToggle(
-                                title = stringResource(R.string.settings_poster_titles),
-                                hint = stringResource(R.string.settings_poster_titles_hint),
-                                checked = settings.showPosterTitles,
-                                onChecked = repository::setShowPosterTitles,
-                            )
-                            RailsDivider()
-                            RailsToggle(
-                                title = stringResource(R.string.settings_white_titles),
-                                hint = stringResource(R.string.settings_white_titles_hint),
-                                checked = settings.whiteTitles,
-                                onChecked = repository::setWhiteTitles,
-                            )
-                            RailsDivider()
-                            RailsToggle(
-                                title = stringResource(R.string.settings_watched_badge),
-                                hint = stringResource(R.string.settings_watched_badge_hint),
-                                checked = settings.watchedBadge,
-                                onChecked = repository::setWatchedBadge,
-                            )
-                        }
-                        RailsLookTab.Shelves -> {
-                            Text(
-                                text = stringResource(R.string.home_rails_shelves_note),
-                                color = CinemaMuted,
-                                fontSize = 13.sp,
-                                lineHeight = 18.sp,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            )
-                            RailsDivider()
-                            HomeRails.All.forEachIndexed { index, entry ->
-                                if (index > 0) RailsDivider()
-                                RailsToggle(
-                                    title = stringResource(entry.titleRes),
-                                    hint = stringResource(R.string.home_rails_shelf_hint),
-                                    checked = settings.homeRailVisible(entry.id),
-                                    icon = entry.icon,
-                                    onChecked = { visible ->
-                                        repository.setHomeRailVisible(entry.id, visible)
-                                    },
-                                )
-                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.TopCenter,
+                        label = "rails-cover-tab",
+                    ) { page ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            HomeRailsLookBody(page)
                         }
                     }
                 }
