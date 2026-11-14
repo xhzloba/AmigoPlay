@@ -146,7 +146,8 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
                 .putBoolean(KEY_DEFAULTS_230, true)
                 .putBoolean(KEY_WHITE_TITLES, true)
                 .putBoolean(KEY_POSTER_TITLES, true)
-                .putBoolean(KEY_HERO_COLORS, false)
+                .putBoolean(KEY_HERO_COLORS, true)
+                .putBoolean(KEY_HERO_PAGE, true)
                 .putBoolean(KEY_PLEX, true)
                 .putBoolean(KEY_PLEX_BACKDROP, true)
                 .putBoolean(KEY_BACKDROP_COLORS, false)
@@ -159,7 +160,7 @@ class UserSettingsStore(context: Context) : UserSettingsRepository {
         extractBackdrop = prefs.getBoolean(KEY_BACKDROP_COLORS, false),
         extractPlex = prefs.getBoolean(KEY_PLEX, true),
         plexBackdrop = prefs.getBoolean(KEY_PLEX_BACKDROP, true),
-        heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, false),
+        heroPosterColors = prefs.getBoolean(KEY_HERO_COLORS, true),
         heroPosterPage = prefs.getBoolean(KEY_HERO_PAGE, true),
         showLogos = prefs.getBoolean(KEY_LOGOS, true),
         autoBackdrop = prefs.getBoolean(KEY_BACKDROP, true),

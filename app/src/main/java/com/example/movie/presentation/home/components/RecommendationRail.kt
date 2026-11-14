@@ -84,7 +84,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 private val PosterWidth = 112.dp
 private val PosterAspect = 1.46f
 private val RailStart = PosterGridInset
-private val PosterGap = 14.dp
+internal val PosterGap = 8.dp
 private val SideRetouch = 56.dp
 
 @Composable

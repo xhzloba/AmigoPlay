@@ -6,8 +6,9 @@ data class UserSettings(
     val extractBackdrop: Boolean = false,
     val extractPlex: Boolean = true,
     val plexBackdrop: Boolean = true,
-    val heroPosterColors: Boolean = false,
-    /** true = UltraBlur на всю главную; false = только зона слайдера (как раньше). */
+    /** UltraBlur на главной с обложки слайдера. По дефолту вкл (полки скрыты — только слайдер). */
+    val heroPosterColors: Boolean = true,
+    /** true = UltraBlur на всю главную; false = только зона слайдера. */
     val heroPosterPage: Boolean = true,
     val showLogos: Boolean = true,
     val autoBackdrop: Boolean = true,

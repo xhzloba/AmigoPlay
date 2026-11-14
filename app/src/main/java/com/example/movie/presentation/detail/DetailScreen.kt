@@ -188,6 +188,7 @@ import com.example.movie.presentation.haptic.rememberHapticTick
 import com.example.movie.presentation.home.components.MovieLogoShadow
 import com.example.movie.presentation.home.components.PosterCaption
 import com.example.movie.presentation.home.components.PosterCaptionBlock
+import com.example.movie.presentation.home.components.PosterGap
 import com.example.movie.presentation.home.components.posterSize
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
@@ -2321,7 +2322,7 @@ private fun MovieStrip(
             .fillMaxWidth()
             .height(posterWidth * 1.46f + if (showTitles) PosterCaptionBlock else 0.dp),
         contentPadding = PaddingValues(horizontal = DetailInset),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(PosterGap),
     ) {
         items(count = movies.size, key = { it }) { index ->
             val movie = movies[index]

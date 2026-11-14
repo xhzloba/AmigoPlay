@@ -111,7 +111,9 @@ internal fun HomeRailsLookPlaque(
     modifier: Modifier = Modifier,
 ) {
     val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
-    val graphite = settings.appTheme == THEME_GRAPHITE
+    // UltraBlur на всю главную = цветной wash; графитовая плашка там чужая — как cinema.
+    val washPage = settings.heroPosterColors && settings.heroPosterPage
+    val graphite = settings.appTheme == THEME_GRAPHITE && !washPage
     val plaque = if (graphite) GraphitePlaque else CinemaPlaque
     val iconWell = if (graphite) IconWellGraphite else IconWellCinema
     val tick = rememberHapticTick()

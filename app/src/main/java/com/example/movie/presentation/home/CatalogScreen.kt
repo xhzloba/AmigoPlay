@@ -151,7 +151,7 @@ fun CatalogScreen(
                         showBrand = false,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(HomeRailGap))
                 }
                 val hasWatching = rails.any { it.sort == CatalogSort.Watching }
                 if (!hasWatching) {

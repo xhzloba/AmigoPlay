@@ -92,6 +92,7 @@ import com.example.movie.presentation.home.CatalogListRoute
 import com.example.movie.presentation.home.CatalogScreen
 import com.example.movie.presentation.home.GenreAll
 import com.example.movie.presentation.home.CatalogSort
+import com.example.movie.presentation.home.HomeRails
 import com.example.movie.presentation.home.HomeRoute
 import com.example.movie.presentation.home.HomeSection
 import com.example.movie.presentation.home.HomeViewModel
@@ -532,10 +533,12 @@ fun AppShell(
         if (barAlpha > 0.02f) {
             val fromHome = sectionShown != null
             val settings by LocalUserSettings.current.settings.collectAsStateWithLifecycle()
+            val onHome = tab == AppTab.Home && sectionShown == null
+            val shelvesOff = HomeRails.All.none { settings.homeRailVisible(it.id) }
             val washBar = settings.heroPosterColors &&
                 settings.heroPosterPage &&
-                tab == AppTab.Home &&
-                sectionShown == null
+                onHome &&
+                !shelvesOff
             AppBottomBar(
                 selected = if (fromHome) null else tab,
                 onSelect = { next ->
@@ -544,6 +547,7 @@ fun AppShell(
                 },
                 washLeft = homeDockLeft.takeIf { washBar },
                 washRight = homeDockRight.takeIf { washBar },
+                clear = onHome && shelvesOff,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .onSizeChanged { barHeight = it.height }
@@ -676,6 +680,7 @@ private fun AppBottomBar(
     onSelect: (AppTab) -> Unit,
     washLeft: Color? = null,
     washRight: Color? = null,
+    clear: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val tick = rememberHapticTick()
@@ -700,12 +705,13 @@ private fun AppBottomBar(
         animationSpec = tween(520, easing = FastOutSlowInEasing),
         label = "barDockR",
     )
-    val washOn = washLeft != null
+    val washOn = washLeft != null && !clear
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(if (washOn) Color.Transparent else appChrome())
+            .background(if (washOn || clear) Color.Transparent else appChrome())
             .drawBehind {
+                if (clear) return@drawBehind
                 if (washOn) {
                     // Горизонталь как нижние углы UltraBlur + плотный scrim для иконок.
                     drawRect(brush = Brush.horizontalGradient(listOf(left, right)))
