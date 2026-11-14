@@ -74,6 +74,7 @@ import com.example.movie.presentation.home.components.WatchedBadgeHang
 import com.example.movie.presentation.home.components.rememberFavoriteIds
 import com.example.movie.presentation.home.components.rememberWatchedIds
 import com.example.movie.presentation.home.components.WatchProgress
+import com.example.movie.presentation.home.components.PosterGap
 import com.example.movie.presentation.home.components.posterGridColumns
 import com.example.movie.presentation.home.components.posterTitlesOn
 import com.example.movie.presentation.home.holdCue
@@ -305,8 +306,8 @@ internal fun PosterGrid(
         columns = GridCells.Fixed(posterGridColumns()),
         state = state,
         contentPadding = PaddingValues(start = PosterGridInset, end = PosterGridInset, top = topPadding, bottom = bottomPadding),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(PosterGap),
+        verticalArrangement = Arrangement.spacedBy(PosterGap),
         modifier = Modifier.fillMaxSize(),
     ) {
         val count = if (placeholder) 12 else movies.size

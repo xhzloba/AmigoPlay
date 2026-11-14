@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +37,10 @@ internal fun PosterImage(
     showLabel: Boolean = true,
     onSuccess: (() -> Unit)? = null,
 ) {
-    var failed by remember(url) { mutableStateOf(url.isNullOrBlank()) }
+    // LazyRow выбрасывает ячейку при скролле. remember сбрасывал failed,
+    // AsyncImage стартовал с пустого кадра и плейсхолдер мигал. Saveable
+    // держит уже решённый промах; новый url по-прежнему грузится с нуля.
+    var failed by rememberSaveable(url) { mutableStateOf(url.isNullOrBlank()) }
     LaunchedEffect(failed) {
         if (failed) onSuccess?.invoke()
     }

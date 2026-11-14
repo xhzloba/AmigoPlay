@@ -2,7 +2,6 @@ package com.example.movie.presentation.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Animatable
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -101,6 +100,38 @@ internal val HomeRailGap = 24.dp
 private val HeroTopGap = 6.dp
 /** В каталоге — тот же шаг, что HomeRailGap. */
 internal val CatalogGap = HomeRailGap
+
+private class WashMotion {
+    val topLeft = Animatable(Color(0xFF121212))
+    val topRight = Animatable(Color(0xFF121212))
+    val bottomRight = Animatable(Color(0xFF121212))
+    val bottomLeft = Animatable(Color(0xFF121212))
+
+    @Composable
+    fun current(): PosterWash = PosterWash(
+        topLeft = topLeft.value,
+        topRight = topRight.value,
+        bottomRight = bottomRight.value,
+        bottomLeft = bottomLeft.value,
+    )
+
+    suspend fun snap(wash: PosterWash) {
+        topLeft.snapTo(wash.topLeft)
+        topRight.snapTo(wash.topRight)
+        bottomRight.snapTo(wash.bottomRight)
+        bottomLeft.snapTo(wash.bottomLeft)
+    }
+
+    suspend fun glide(wash: PosterWash) {
+        val spec = tween<Color>(680, easing = FastOutSlowInEasing)
+        coroutineScope {
+            launch { topLeft.animateTo(wash.topLeft, spec) }
+            launch { topRight.animateTo(wash.topRight, spec) }
+            launch { bottomRight.animateTo(wash.bottomRight, spec) }
+            launch { bottomLeft.animateTo(wash.bottomLeft, spec) }
+        }
+    }
+}
 private const val HistoryRailSize = 15
 
 private data class ShelfTint(
@@ -159,10 +190,27 @@ fun HomeScreen(
             playRequest = ShelfTint(PlayBlue, PlayBlue, false)
         }
     }
-    val paintedWash = heroWash.takeIf { pageWashOn }
+    val washMotion = remember { WashMotion() }
+    var washPrimed by remember { mutableStateOf(false) }
+    var glideToken by remember { mutableIntStateOf(0) }
+    var glideSeen by remember { mutableIntStateOf(0) }
+    LaunchedEffect(state.selectedId) {
+        if (!washPrimed) return@LaunchedEffect
+        glideToken++
+    }
+    LaunchedEffect(heroWash, glideToken, state.movies) {
+        val target = heroWash ?: return@LaunchedEffect
+        val pending = glideToken != glideSeen
+        val fromShelf = state.movies.any { heroWashes[it.id] == target }
+        if (pending && !fromShelf) return@LaunchedEffect
+        if (pending) glideSeen = glideToken
+        if (pending && washPrimed) washMotion.glide(target) else washMotion.snap(target)
+        washPrimed = true
+    }
+    val paintedWash = if (pageWashOn && washPrimed) washMotion.current() else null
     SideEffect {
         // Dock бара только в режиме «на всю главную».
-        val dock = heroWash.takeIf { pageWashOn }
+        val dock = paintedWash
         onHeroDock(dock?.bottomLeft, dock?.bottomRight)
     }
     val homeBackground = if (paintedWash != null) {
@@ -506,7 +554,7 @@ fun HomeScreen(
                         (listState.firstVisibleItemScrollOffset / scrimDistance).coerceIn(0f, 1f)
                     }
                 },
-                wash = heroWash.takeIf { playTintOn },
+                wash = if (playTintOn) paintedWash ?: heroWash else null,
                 modifier = Modifier.align(Alignment.TopCenter),
             )
             BrandRow(
@@ -563,12 +611,7 @@ private fun BrandScrim(
     val top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val theme = topScrimPalette()
     val washBase = wash?.let { lerp(it.topLeft, it.topRight, 0.5f) }
-    val animatedWash by animateColorAsState(
-        targetValue = washBase ?: Color.Black,
-        animationSpec = tween(720, easing = FastOutSlowInEasing),
-        label = "brandScrimWash",
-    )
-    val palette = if (washBase != null) topScrimPalette(animatedWash) else theme
+    val palette = if (washBase != null) topScrimPalette(washBase) else theme
     Box(
         modifier
             .fillMaxWidth()
